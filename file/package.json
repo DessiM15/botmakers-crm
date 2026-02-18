@@ -45,7 +45,7 @@
     "jquery": "^3.7.1",
     "jsvectormap": "^1.6.0",
     "katex": "^0.16.11",
-    "next": "^15.0.4",
+    "next": "^15.5.12",
     "postcss": "^8.4.49",
     "postcss-loader": "^8.1.1",
     "postgres": "^3.4.8",
