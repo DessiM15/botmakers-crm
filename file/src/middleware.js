@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 // CRM routes that require team auth
@@ -81,9 +82,14 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 
-  // CRM routes: check team_users.is_active
+  // CRM routes: check team_users.is_active (use service role to bypass RLS)
   if (isCrmRoute && user) {
-    const { data: teamUser } = await supabase
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { data: teamUser } = await admin
       .from('team_users')
       .select('is_active')
       .eq('id', user.id)
