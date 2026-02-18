@@ -48,7 +48,7 @@ export function createAdminClient() {
 
 // Drizzle ORM client — lazy init so build doesn't crash without DATABASE_URL
 let _db;
-export function getDb() {
+function getDb() {
   if (!_db) {
     const queryClient = postgres(process.env.DATABASE_URL, { prepare: false });
     _db = drizzle(queryClient, { schema });
@@ -59,6 +59,11 @@ export function getDb() {
 // Convenience export — getter disguised as a constant via Proxy
 export const db = new Proxy({}, {
   get(_, prop) {
-    return getDb()[prop];
+    const target = getDb();
+    const value = target[prop];
+    if (typeof value === 'function') {
+      return value.bind(target);
+    }
+    return value;
   },
 });

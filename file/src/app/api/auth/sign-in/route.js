@@ -73,7 +73,7 @@ export async function POST(request) {
     );
   } catch (err) {
     return NextResponse.json(
-      { error: 'An unexpected error occurred. Please try again.', code: 'CB-AUTH-001' },
+      { error: 'An unexpected error occurred. Please try again.', code: 'CB-AUTH-001', debug: err.message },
       { status: 500 }
     );
   }

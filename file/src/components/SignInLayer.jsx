@@ -29,7 +29,7 @@ const SignInLayer = () => {
       const checkData = await checkRes.json();
 
       if (!checkRes.ok) {
-        setError(checkData.error || "Login failed.");
+        setError(checkData.debug ? `${checkData.error} [${checkData.debug}]` : (checkData.error || "Login failed."));
         setLoading(false);
         return;
       }
