@@ -50,7 +50,7 @@ export function createAdminClient() {
 let _db;
 function getDb() {
   if (!_db) {
-    const queryClient = postgres(process.env.DATABASE_URL, { prepare: false });
+    const queryClient = postgres(process.env.DATABASE_URL, { prepare: false, ssl: 'require' });
     _db = drizzle(queryClient, { schema });
   }
   return _db;
