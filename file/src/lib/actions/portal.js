@@ -10,16 +10,21 @@ import { proposalAccepted as proposalAcceptedNotif, clientQuestion as clientQues
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
-const magicLinkLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(3, '1 h'),
-  prefix: 'ratelimit:magic-link',
-});
+let _magicLinkLimiter;
+function getMagicLinkLimiter() {
+  if (!_magicLinkLimiter) {
+    const redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+    _magicLinkLimiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, '1 h'),
+      prefix: 'ratelimit:magic-link',
+    });
+  }
+  return _magicLinkLimiter;
+}
 
 /**
  * Send a magic link to a client email.
@@ -33,7 +38,7 @@ export async function sendMagicLink(email) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check rate limit
-    const { success: withinLimit } = await magicLinkLimiter.limit(normalizedEmail);
+    const { success: withinLimit } = await getMagicLinkLimiter().limit(normalizedEmail);
     if (!withinLimit) {
       return { error: 'Too many login attempts. Please try again later.' };
     }

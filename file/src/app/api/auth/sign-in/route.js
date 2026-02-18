@@ -6,24 +6,29 @@ import { teamUsers } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
-const ratelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(50, '15 m'), // TODO: revert to 5 after login testing
-  analytics: true,
-  prefix: 'ratelimit:signin',
-});
+let _ratelimit;
+function getRatelimit() {
+  if (!_ratelimit) {
+    const redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+    _ratelimit = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(50, '15 m'), // TODO: revert to 5 after login testing
+      analytics: true,
+      prefix: 'ratelimit:signin',
+    });
+  }
+  return _ratelimit;
+}
 
 export async function POST(request) {
   try {
     // Rate limit by IP
     const forwarded = request.headers.get('x-forwarded-for');
     const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
-    const { success, remaining } = await ratelimit.limit(ip);
+    const { success, remaining } = await getRatelimit().limit(ip);
 
     if (!success) {
       return NextResponse.json(
