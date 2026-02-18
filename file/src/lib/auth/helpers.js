@@ -1,7 +1,15 @@
-import { createServerSupabaseClient } from '@/lib/db/client';
-import { db } from '@/lib/db/client';
-import { teamUsers, clients } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/db/client';
+
+/** Convert snake_case PostgREST row to camelCase to match Drizzle interface */
+function toCamel(row) {
+  if (!row) return row;
+  const out = {};
+  for (const key of Object.keys(row)) {
+    const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    out[camel] = row[key];
+  }
+  return out;
+}
 
 /**
  * Get the current Supabase session from cookies.
@@ -22,15 +30,16 @@ export async function getTeamUser(cookieStore) {
   const session = await getSession(cookieStore);
   if (!session) return null;
 
-  const [teamUser] = await db
-    .select()
-    .from(teamUsers)
-    .where(eq(teamUsers.id, session.user.id))
-    .limit(1);
+  const admin = createAdminClient();
+  const { data: teamUser, error } = await admin
+    .from('team_users')
+    .select('*')
+    .eq('id', session.user.id)
+    .maybeSingle();
 
-  if (!teamUser || !teamUser.isActive) return null;
+  if (error || !teamUser || !teamUser.is_active) return null;
 
-  return { user: session.user, teamUser };
+  return { user: session.user, teamUser: toCamel(teamUser) };
 }
 
 /**
@@ -41,15 +50,16 @@ export async function getClientUser(cookieStore) {
   const session = await getSession(cookieStore);
   if (!session) return null;
 
-  const [client] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.authUserId, session.user.id))
-    .limit(1);
+  const admin = createAdminClient();
+  const { data: client, error } = await admin
+    .from('clients')
+    .select('*')
+    .eq('auth_user_id', session.user.id)
+    .maybeSingle();
 
-  if (!client) return null;
+  if (error || !client) return null;
 
-  return { user: session.user, client };
+  return { user: session.user, client: toCamel(client) };
 }
 
 /**
