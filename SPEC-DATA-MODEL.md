@@ -357,6 +357,31 @@ Existing columns from website form stay untouched. New CRM columns to add:
 
 ---
 
+## Table: email_drafts
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | UUID (PK) | No | gen_random_uuid() | |
+| recipient_email | TEXT | No | — | |
+| recipient_name | TEXT | Yes | NULL | |
+| recipient_lead_id | UUID | Yes | NULL | FK → leads |
+| recipient_client_id | UUID | Yes | NULL | FK → clients |
+| subject | TEXT | Yes | NULL | |
+| body_html | TEXT | Yes | NULL | |
+| body_text | TEXT | Yes | NULL | |
+| category | TEXT | Yes | NULL | follow_up, introduction, proposal_follow_up, check_in, thank_you, project_update, holiday, win_back, referral_request |
+| tone | TEXT | Yes | NULL | professional, friendly, casual |
+| custom_instructions | TEXT | Yes | NULL | |
+| status | TEXT | No | 'draft' | draft, sent |
+| sent_at | TIMESTAMPTZ | Yes | NULL | |
+| created_by | UUID | No | — | FK → team_users |
+| created_at | TIMESTAMPTZ | No | now() | |
+| updated_at | TIMESTAMPTZ | No | now() | |
+
+RLS: Team members can CRUD all drafts.
+
+---
+
 ## Default Project Phases Template
 
 | Phase | Sort | Default Milestones |

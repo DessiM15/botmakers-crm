@@ -17,3 +17,84 @@
 @import url("~/public/assets/css/lib/animate.min.css");
 @import url("~/public/assets/css/style.css");
 @import url("~/public/assets/css/extra.css");
+
+/* ======= Botmakers CRM Overrides ======= */
+
+/* Font override: Inter Tight */
+:root {
+  --font-family: "Inter Tight", sans-serif;
+}
+body,
+* {
+  font-family: "Inter Tight", sans-serif !important;
+}
+
+/* Branding color overrides */
+:root {
+  --primary-600: #033457;
+  --primary-700: #022a47;
+  --primary-800: #022038;
+  --primary-500: #044068;
+  --primary-400: #054f7a;
+}
+
+/* Green accent for success/CTA */
+.text-crm-accent {
+  color: #03FF00 !important;
+}
+.bg-crm-accent {
+  background-color: #03FF00 !important;
+}
+.btn-crm-accent {
+  background-color: #03FF00 !important;
+  color: #033457 !important;
+  border: none;
+  font-weight: 600;
+}
+.btn-crm-accent:hover {
+  background-color: #02cc00 !important;
+}
+
+/* Ensure sidebar active state uses branding */
+.sidebar-menu li a.active-page {
+  color: #03FF00 !important;
+}
+.sidebar-menu li a.active-page .menu-icon {
+  color: #03FF00 !important;
+}
+
+/* Portal layout styles */
+.portal-layout {
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+.portal-layout .portal-header {
+  background: #033457;
+  color: #ffffff;
+  padding: 16px 24px;
+}
+.portal-layout .portal-content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Proposal content rendered HTML */
+.proposal-content h3 { color: #fff; font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.proposal-content h4 { color: #fff; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.proposal-content p { margin-bottom: 12px; line-height: 1.6; }
+.proposal-content ul, .proposal-content ol { padding-left: 20px; margin-bottom: 12px; }
+.proposal-content li { margin-bottom: 4px; line-height: 1.5; }
+.proposal-content strong { color: #fff; }
+
+/* Quill editor dark theme overrides */
+.ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1) !important; background: rgba(255,255,255,0.03); }
+.ql-container.ql-snow { border-color: rgba(255,255,255,0.1) !important; min-height: 150px; }
+.ql-editor { color: #e2e8f0; }
+.ql-editor.ql-blank::before { color: rgba(255,255,255,0.3); }
+.ql-snow .ql-stroke { stroke: rgba(255,255,255,0.5); }
+.ql-snow .ql-fill { fill: rgba(255,255,255,0.5); }
+.ql-snow .ql-picker-label { color: rgba(255,255,255,0.5); }
+.ql-snow .ql-picker-options { background: #1a2332 !important; border-color: rgba(255,255,255,0.1) !important; }
+.ql-snow .ql-picker-item { color: rgba(255,255,255,0.7); }
+.ql-snow .ql-picker-item:hover { color: #fff; }

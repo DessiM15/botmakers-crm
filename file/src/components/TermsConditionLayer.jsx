@@ -63,7 +63,6 @@ const TermsConditionLayer = () => {
 
   const handleSave = () => {
     const editorContent = quillRef.current.getEditor().root.innerHTML;
-    console.log("Editor content:", editorContent);
   };
 
   // Quill editor modules with syntax highlighting (only load if highlight.js is ready)

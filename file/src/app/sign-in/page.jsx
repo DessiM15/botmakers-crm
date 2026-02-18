@@ -1,18 +1,12 @@
 import SignInLayer from "@/components/SignInLayer";
 
 export const metadata = {
-  title: "WowDash NEXT JS - Admin Dashboard Multipurpose Bootstrap 5 Template",
-  description:
-    "Wowdash NEXT JS is a developer-friendly, ready-to-use admin template designed for building attractive, scalable, and high-performing web applications.",
+  title: "Sign In — Botmakers CRM",
+  description: "Sign in to the Botmakers CRM dashboard.",
 };
 
 const Page = () => {
-  return (
-    <>
-      {/* SignInLayer */}
-      <SignInLayer />
-    </>
-  );
+  return <SignInLayer />;
 };
 
 export default Page;

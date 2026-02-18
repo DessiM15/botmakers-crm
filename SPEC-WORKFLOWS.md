@@ -165,3 +165,24 @@ Lead form on botmakers.ai already POSTs to Supabase. The CRM reads it.
 4. For each payment: link to invoice, insert payment record
 5. Show progress bar during backfill
 6. Log results: "Imported X invoices, Y payments"
+
+---
+
+## WF-15: AI Email Generation
+
+1. Team user navigates to /email-generator
+2. Selects recipient from leads/clients search or enters manually
+3. Selects template category (follow_up, introduction, proposal_follow_up, check_in, thank_you, project_update, holiday, win_back, referral_request)
+4. Selects tone (professional/friendly/casual)
+5. Optionally adds custom instructions
+6. Clicks "Generate" → POST /api/ai/generate-email
+7. API fetches recipient CRM history (lead score, pipeline stage, last 5 contacts, client info)
+8. Claude generates { subject, body_html, body_text } with Botmakers branding
+9. Email appears in editor — user can edit subject, body (ReactQuill), toggle HTML view
+10. Actions:
+    - "Copy HTML" → clipboard (for pasting into Gmail/Outlook)
+    - "Copy Plain Text" → clipboard
+    - "Save as Draft" → email_drafts table
+    - "Send from CRM" → Resend (from info@botmakers.ai) + log to contacts + activity_log
+11. "Regenerate" re-sends to Claude with same context for a fresh draft
+12. Drafts panel shows saved drafts — click to load, delete to remove

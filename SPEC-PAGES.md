@@ -111,6 +111,18 @@ All pages use the WowDash MasterLayout (sidebar + header). Dark navy theme locke
 - **Shows:** Content, Square sync status, payment history
 - **Actions:** Send, Send Reminder, Mark Paid
 
+### /email-generator — Email Generator
+- **AI-powered email drafting** for leads, clients, and prospects
+- **Recipient selector:** search leads + clients by name/email/company, or enter manually
+- **Template categories:** Follow-Up, Introduction, Proposal Follow-Up, Check-In, Thank You, Project Update, Holiday Greeting (7 holidays), Win-Back, Referral Request
+- **Tone selector:** Professional / Friendly / Casual
+- **Custom instructions:** optional textarea for extra AI context
+- **Generate button:** calls Claude API with recipient CRM history, returns subject + HTML body + plain text
+- **Editor:** subject input (editable) + ReactQuill rich text editor + HTML code view toggle + email preview (collapsible)
+- **Actions:** Copy HTML, Copy Plain Text, Save as Draft, Send from CRM (via Resend from info@botmakers.ai)
+- **Drafts panel:** sidebar with saved drafts list, click to load, delete option
+- **On send:** logs to activity_log + contacts table (type: email, direction: outbound)
+
 ### /settings — Settings
 - **Tabs:** Team | Integrations | Notifications | Defaults
 - **Team:** List members, invite form, deactivate toggle

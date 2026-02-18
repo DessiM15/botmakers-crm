@@ -68,7 +68,7 @@ A standalone CRM at crm.botmakers.ai that manages every stage from first contact
 2. **Vercel:** Auto-pull preview/deployment URLs as demo links
 3. **Resend:** All email notifications (7 trigger types)
 4. **Twilio:** SMS notifications (optional — graceful skip if not configured)
-5. **Claude AI:** Lead analysis, proposal drafting, reply polishing
+5. **Claude AI:** Lead analysis, proposal drafting, reply polishing, email generation (9 template categories, 3 tones)
 6. **Square (Production):** Real invoices, real checkout links, auto-invoice on milestones, payment webhooks, historical backfill
 
 ## Pipeline — 10 Stages
