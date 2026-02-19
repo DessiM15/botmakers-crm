@@ -7,10 +7,19 @@ import { eq } from 'drizzle-orm';
 import { analyzeLeadWithAI } from '@/lib/ai/client';
 
 export async function POST(request) {
+  // Auth check first — return early on failure
+  let cookieStore;
   try {
-    const cookieStore = await cookies();
+    cookieStore = await cookies();
     await requireTeam(cookieStore);
+  } catch {
+    return NextResponse.json(
+      { error: 'CB-AUTH-003: Not authorized' },
+      { status: 401 }
+    );
+  }
 
+  try {
     const body = await request.json();
     const { leadId } = body;
 
@@ -50,10 +59,7 @@ export async function POST(request) {
       .where(eq(leads.id, leadId));
 
     return NextResponse.json({ success: true, analysis });
-  } catch (error) {
-    if (error.message?.startsWith('CB-')) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
+  } catch {
     return NextResponse.json(
       { error: 'CB-INT-002: AI analysis failed' },
       { status: 500 }

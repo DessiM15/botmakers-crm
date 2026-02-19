@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "__cf_bm",
+      "value": "LjvLWGmTFLUXP_cv.okYPghETP5BLfT7gP5JVadJjwk-1771466697-1.0.1.1-VFjdmZmHAbZm6oKKCI9H_kAyRZ..1ZfRm6vuVEAGV003WE_TUATXY9vWU6jGJ9QlKXKX.IUCzUrc4NRKF0M5k0OSSWhYAfZZSpuaQ5Pisr0",
+      "domain": "supabase.co",
+      "path": "/",
+      "expires": 1771468497,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "sb-nqfgafvrxoqpnsakbtgw-auth-token",
+      "value": "{\"access_token\":\"eyJhbGciOiJFUzI1NiIsImtpZCI6Ijg2ZGRiYjlhLTlmYTItNDkzMy1hNzU4LTFkYmNkNmI4OGU0YyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL25xZmdhZnZyeG9xcG5zYWtidGd3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI5MjE0ZTYwMi1hNDlmLTRmOTAtYjY5ZC00NTAxYTA0MjI0ZTYiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxNDcwMjk3LCJpYXQiOjE3NzE0NjY2OTcsImVtYWlsIjoiZGVzc2lhaEBtLmJvdG1ha2Vycy5haSIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiZW1haWxfdmVyaWZpZWQiOnRydWUsImZ1bGxfbmFtZSI6IkRlZSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzcxNDY2Njk3fV0sInNlc3Npb25faWQiOiIyYTAzMGYzYS1jNjc2LTRjYzItYWU1OS00OTBhMTQwNTJmOTgiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.-wjyHB8EVFxsqC9p-zdG0CBmee_Q-LsGV4RA5QI_E-hKOePa3p2wUHtIt5hQUz8tAG0J4zG52UppmI3nj0zKTA\",\"refresh_token\":\"zk3xgwvlp2qj\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1771470299,\"user\":{\"id\":\"9214e602-a49f-4f90-b69d-4501a04224e6\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"dessiah@m.botmakers.ai\",\"email_confirmed_at\":\"2026-02-17T09:45:39.648679Z\",\"phone\":\"\",\"confirmed_at\":\"2026-02-17T09:45:39.648679Z\",\"last_sign_in_at\":\"2026-02-19T02:04:57.143995063Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"email_verified\":true,\"full_name\":\"Dee\"},\"identities\":[{\"identity_id\":\"98f8566b-73fb-4754-9354-71bbd7bff8f5\",\"id\":\"9214e602-a49f-4f90-b69d-4501a04224e6\",\"user_id\":\"9214e602-a49f-4f90-b69d-4501a04224e6\",\"identity_data\":{\"email\":\"dessiah@m.botmakers.ai\",\"email_verified\":false,\"phone_verified\":false,\"sub\":\"9214e602-a49f-4f90-b69d-4501a04224e6\"},\"provider\":\"email\",\"last_sign_in_at\":\"2026-02-13T07:50:27.043353Z\",\"created_at\":\"2026-02-13T07:50:27.043407Z\",\"updated_at\":\"2026-02-13T07:50:27.043407Z\",\"email\":\"dessiah@m.botmakers.ai\"}],\"created_at\":\"2026-02-13T07:50:27.042256Z\",\"updated_at\":\"2026-02-19T02:04:57.1462Z\",\"is_anonymous\":false}}",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

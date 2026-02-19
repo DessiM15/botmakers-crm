@@ -280,7 +280,7 @@ export async function getActivityLog({
 
   const offset = (page - 1) * perPage;
 
-  const { rows } = await db.execute(sql`
+  const entriesResult = await db.execute(sql`
     SELECT
       al.id,
       al.actor_id,
@@ -300,11 +300,13 @@ export async function getActivityLog({
     ORDER BY al.created_at DESC
     LIMIT ${perPage} OFFSET ${offset}
   `);
+  const rows = entriesResult.rows ?? [];
 
-  const [{ count: total }] = (await db.execute(sql`
+  const countResult = await db.execute(sql`
     SELECT COUNT(*) as count FROM activity_log al
     ${whereStr ? sql`WHERE ${whereStr}` : sql``}
-  `)).rows;
+  `);
+  const total = Number(countResult.rows?.[0]?.count ?? 0);
 
   return {
     entries: rows,
