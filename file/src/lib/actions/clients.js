@@ -123,6 +123,46 @@ export async function updateClient(clientId, formData) {
 }
 
 /**
+ * Delete a client (hard delete).
+ */
+export async function deleteClient(clientId) {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireTeam(cookieStore);
+
+    const [existing] = await db
+      .select({ id: clients.id, fullName: clients.fullName })
+      .from(clients)
+      .where(eq(clients.id, clientId))
+      .limit(1);
+
+    if (!existing) {
+      return { error: 'CB-DB-002: Client not found' };
+    }
+
+    await db.delete(clients).where(eq(clients.id, clientId));
+
+    await db.insert(activityLog).values({
+      actorId: teamUser.id,
+      actorType: 'team',
+      action: 'client.deleted',
+      entityType: 'client',
+      entityId: clientId,
+      metadata: { name: existing.fullName },
+    });
+
+    revalidatePath('/clients');
+
+    return { success: true };
+  } catch (error) {
+    if (error.message?.startsWith('CB-')) {
+      return { error: error.message };
+    }
+    return { error: 'CB-DB-001: Failed to delete client' };
+  }
+}
+
+/**
  * Convert a lead to a client (WF-4).
  * 1. Check if client with same email exists
  * 2. Insert client record from lead data

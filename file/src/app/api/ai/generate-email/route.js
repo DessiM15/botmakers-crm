@@ -109,6 +109,7 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, email: result });
   } catch (error) {
+    console.error('AI generate-email error:', error?.message || error);
     if (error.message?.startsWith('CB-')) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }

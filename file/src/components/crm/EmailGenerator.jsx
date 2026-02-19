@@ -161,6 +161,8 @@ export default function EmailGenerator({ teamUser }) {
 
     setGenerating(true);
     try {
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 60000);
       const res = await fetch('/api/ai/generate-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -174,7 +176,9 @@ export default function EmailGenerator({ teamUser }) {
           customInstructions: customInstructions || undefined,
           senderName: teamUser.fullName,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(fetchTimeout);
 
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -186,8 +190,12 @@ export default function EmailGenerator({ teamUser }) {
       setBodyHtml(data.email.body_html || '');
       setBodyText(data.email.body_text || '');
       toast.success('Email generated!');
-    } catch {
-      toast.error('Failed to generate email. Please try again.');
+    } catch (err) {
+      if (err?.name === 'AbortError') {
+        toast.error('Email generation timed out. Please try again.');
+      } else {
+        toast.error('Failed to generate email. Please try again.');
+      }
     } finally {
       setGenerating(false);
     }

@@ -150,15 +150,23 @@ export async function createDemo(projectId, data) {
       return { error: 'CB-API-001: Title and URL are required' };
     }
 
+    // Auto-prepend https:// if no protocol provided
+    let url = data.url.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
     // Validate URL protocol to prevent javascript: URIs
     try {
-      const parsed = new URL(data.url.trim());
+      const parsed = new URL(url);
       if (!['http:', 'https:'].includes(parsed.protocol)) {
         return { error: 'CB-API-001: URL must use https://' };
       }
     } catch {
       return { error: 'CB-API-001: Invalid URL format' };
     }
+
+    data.url = url;
 
     const [demo] = await db
       .insert(projectDemos)

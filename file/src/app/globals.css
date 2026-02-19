@@ -63,6 +63,12 @@ body,
   color: #03FF00 !important;
 }
 
+/* Sidebar hover: neon green on hover (not active) */
+.sidebar-menu li a:hover span,
+.sidebar-menu li a:hover .menu-icon {
+  color: #03FF00 !important;
+}
+
 /* Portal layout styles */
 .portal-layout {
   min-height: 100vh;

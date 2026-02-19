@@ -116,6 +116,8 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
 
     setAiGenerating(true);
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 90000);
       const res = await fetch('/api/ai/generate-proposal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,7 +127,9 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
           discoveryNotes,
           pricingType,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const json = await res.json();
 
       if (json.error) {
@@ -153,8 +157,12 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
         toast.success('Proposal generated! Review and edit below.');
         setStep(1);
       }
-    } catch {
-      toast.error('CB-INT-002: AI generation failed');
+    } catch (err) {
+      if (err?.name === 'AbortError') {
+        toast.error('AI generation timed out. Please try again.');
+      } else {
+        toast.error('CB-INT-002: AI generation failed');
+      }
     } finally {
       setAiGenerating(false);
     }

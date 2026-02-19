@@ -42,11 +42,13 @@ const ReposSection = ({ projectId, repos, setRepos }) => {
 
     if (res?.error) {
       toast.error(res.error);
-    } else {
-      toast.success('Repository linked');
+    } else if (res?.success) {
       setRepos((prev) => [res.repo, ...prev]);
       setOwner('');
       setRepoName('');
+      toast.success('Repository linked successfully!');
+    } else {
+      toast.error('Unexpected response from server');
     }
   };
 
@@ -359,9 +361,9 @@ const DemosSection = ({ projectId, demos, setDemos, phases }) => {
               </div>
               <div className="col-sm-6">
                 <input
-                  type="url"
+                  type="text"
                   className="form-control form-control-sm bg-base text-white"
-                  placeholder="https://..."
+                  placeholder="https://example.vercel.app"
                   value={form.url}
                   onChange={(e) => setForm((prev) => ({ ...prev, url: e.target.value }))}
                   disabled={creating}

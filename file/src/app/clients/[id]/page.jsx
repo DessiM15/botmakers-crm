@@ -9,13 +9,17 @@ import { getProposalsByClientId } from '@/lib/db/queries/proposals';
 import { getInvoicesByClientId } from '@/lib/db/queries/invoices';
 
 export async function generateMetadata({ params }) {
-  const { id } = await params;
-  const client = await getClientById(id);
-  return {
-    title: client
-      ? `${client.fullName} — Botmakers CRM`
-      : 'Client Not Found — Botmakers CRM',
-  };
+  try {
+    const { id } = await params;
+    const client = await getClientById(id);
+    return {
+      title: client
+        ? `${client.fullName} — Botmakers CRM`
+        : 'Client Not Found — Botmakers CRM',
+    };
+  } catch {
+    return { title: 'Client — Botmakers CRM' };
+  }
 }
 
 const Page = async ({ params }) => {
@@ -28,12 +32,21 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  const [client, clientProjects, clientProposals, clientInvoices] = await Promise.all([
-    getClientById(id),
-    getProjectsByClientId(id),
-    getProposalsByClientId(id),
-    getInvoicesByClientId(id),
-  ]);
+
+  let client, clientProjects, clientProposals, clientInvoices;
+  try {
+    [client, clientProjects, clientProposals, clientInvoices] = await Promise.all([
+      getClientById(id),
+      getProjectsByClientId(id).catch(() => []),
+      getProposalsByClientId(id).catch(() => []),
+      getInvoicesByClientId(id).catch(() => []),
+    ]);
+  } catch {
+    client = await getClientById(id).catch(() => null);
+    clientProjects = [];
+    clientProposals = [];
+    clientInvoices = [];
+  }
 
   if (!client) {
     notFound();

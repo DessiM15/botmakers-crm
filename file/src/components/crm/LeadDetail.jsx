@@ -98,11 +98,15 @@ const LeadDetail = ({ lead: initialLead, contacts: initialContacts, teamMembers 
   const handleRunAnalysis = async () => {
     setAiLoading(true);
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
       const res = await fetch('/api/ai/analyze-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leadId: lead.id }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const json = await res.json();
       if (json.error) {
         toast.error(json.error);
@@ -115,8 +119,12 @@ const LeadDetail = ({ lead: initialLead, contacts: initialContacts, teamMembers 
         }));
         toast.success('AI analysis complete');
       }
-    } catch {
-      toast.error('CB-INT-002: AI analysis failed');
+    } catch (err) {
+      if (err?.name === 'AbortError') {
+        toast.error('Analysis timed out. Please try again.');
+      } else {
+        toast.error('CB-INT-002: AI analysis failed');
+      }
     } finally {
       setAiLoading(false);
     }

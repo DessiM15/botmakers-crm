@@ -71,7 +71,7 @@ const DashBoardLayer = ({ teamUser, metrics, alerts, activity }) => {
                 <Link
                   key={action.href}
                   href={action.href}
-                  className="btn btn-outline-primary-600 d-flex align-items-center gap-8 text-start"
+                  className="btn btn-outline-primary-600 text-white d-flex align-items-center gap-8 text-start"
                 >
                   <Icon icon={action.icon} className="text-xl" />
                   {action.label}
