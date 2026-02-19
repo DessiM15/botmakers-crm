@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { ToastContainer } from "react-toastify";
 export default function PluginInit() {
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -10,5 +11,5 @@ export default function PluginInit() {
       require("react-modal-video/css/modal-video.min.css");
     }
   }, []);
-  return <></>;
+  return <ToastContainer position="top-right" autoClose={4000} theme="dark" />;
 }
