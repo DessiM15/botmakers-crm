@@ -262,9 +262,10 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
                                 <span
                                   className={`text-sm ${
                                     ms.status === 'completed'
-                                      ? 'text-secondary-light text-decoration-line-through'
-                                      : 'text-white'
+                                      ? 'text-decoration-line-through'
+                                      : ''
                                   }`}
+                                  style={{ color: '#000' }}
                                 >
                                   {ms.title}
                                 </span>
@@ -295,7 +296,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
                                 style={{ fontSize: '12px' }}
                               />
                             </td>
-                            <td className="align-middle">
+                            <td className="align-middle" style={{ color: '#000' }}>
                               <div className="d-flex align-items-center gap-1">
                                 <input
                                   type="checkbox"
@@ -310,22 +311,23 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
                                 {ms.triggersInvoice && (
                                   <input
                                     type="number"
-                                    className="form-control form-control-sm bg-base text-white border-secondary-subtle"
+                                    className="form-control form-control-sm bg-base border-secondary-subtle"
                                     placeholder="$"
                                     defaultValue={ms.invoiceAmount || ''}
                                     onBlur={(e) =>
                                       handleInvoiceAmountChange(ms.id, e.target.value)
                                     }
-                                    style={{ fontSize: '12px', width: '80px' }}
+                                    style={{ fontSize: '12px', width: '80px', color: '#000' }}
                                   />
                                 )}
                               </div>
                             </td>
                             <td className="align-middle text-end">
                               <button
-                                className="btn btn-sm text-secondary-light p-0"
+                                className="btn btn-sm p-0"
                                 onClick={() => handleDeleteMilestone(ms.id)}
                                 title="Delete"
+                                style={{ color: '#000' }}
                               >
                                 <Icon icon="mdi:delete-outline" style={{ fontSize: '14px' }} />
                               </button>
