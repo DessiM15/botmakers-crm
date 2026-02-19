@@ -247,23 +247,23 @@ const ClientTable = ({ initialData }) => {
                             style={{ cursor: 'pointer' }}
                           >
                             <td className="px-3 py-3">
-                              <span className="text-white fw-medium text-sm">
+                              <span className="fw-medium text-sm" style={{ color: '#000' }}>
                                 {client.fullName}
                               </span>
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
                               {client.company || '—'}
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
                               {client.email}
                             </td>
-                            <td className="px-3 py-3 text-white text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
                               {String(client.projectCount)}
                             </td>
-                            <td className="px-3 py-3 text-white text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
                               {formatCurrency(client.openInvoiceTotal)}
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
                               {client.lastContact
                                 ? formatRelativeTime(client.lastContact)
                                 : 'Never'}
