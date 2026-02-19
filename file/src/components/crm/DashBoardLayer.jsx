@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import MetricCards from './MetricCards';
 import AlertsPanel from './AlertsPanel';
+import UpcomingTasks from './UpcomingTasks';
 import ActivityFeed from './ActivityFeed';
 
 function getGreeting() {
@@ -26,7 +27,7 @@ const quickActions = [
   { label: 'Projects', href: '/projects', icon: 'solar:code-bold' },
 ];
 
-const DashBoardLayer = ({ teamUser, metrics, alerts, activity }) => {
+const DashBoardLayer = ({ teamUser, metrics, alerts, activity, upcomingMilestones = [] }) => {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -51,17 +52,17 @@ const DashBoardLayer = ({ teamUser, metrics, alerts, activity }) => {
       {/* Metric Cards */}
       <MetricCards metrics={metrics} />
 
-      {/* Alerts + Activity Feed + Quick Actions */}
+      {/* Alerts + Upcoming Tasks + Quick Actions */}
       <section className="row gy-4 mt-1">
         <div className="col-xxl-4 col-lg-6">
           <AlertsPanel alerts={alerts} />
         </div>
 
-        <div className="col-xxl-5 col-lg-6">
-          <ActivityFeed activity={activity} />
+        <div className="col-xxl-4 col-lg-6">
+          <UpcomingTasks milestones={upcomingMilestones} />
         </div>
 
-        <div className="col-xxl-3 col-lg-12">
+        <div className="col-xxl-4 col-lg-12">
           <div className="card h-100">
             <div className="card-header border-bottom">
               <h6 className="text-lg fw-semibold mb-0">Quick Actions</h6>
@@ -79,6 +80,13 @@ const DashBoardLayer = ({ teamUser, metrics, alerts, activity }) => {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Activity Feed */}
+      <section className="row gy-4 mt-1">
+        <div className="col-12">
+          <ActivityFeed activity={activity} />
         </div>
       </section>
     </>

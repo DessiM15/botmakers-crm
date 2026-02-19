@@ -316,6 +316,61 @@ export async function milestoneCompletedEmail(clientEmail, clientName, projectNa
 }
 
 /**
+ * Project completed — email to client.
+ */
+export async function projectCompletedEmail(clientEmail, clientName, projectName) {
+  const firstName = clientName.split(' ')[0];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+  const html = brandedEmail(
+    'Project Complete',
+    'Your Project is Complete!',
+    `<p style="margin:0 0 16px;color:#94a3b8;font-size:15px;line-height:1.6;">
+      Hi ${firstName}, your project <strong style="color:#ffffff;">${projectName}</strong> has been completed!
+    </p>
+    <p style="margin:0 0 24px;color:#94a3b8;font-size:15px;line-height:1.6;">
+      View the final deliverables in your portal.
+    </p>
+    ${actionButton('View in Portal', `${siteUrl}/portal`)}`
+  );
+
+  await sendNotification('milestone_completed', {
+    recipients: [clientEmail],
+    subject: `Project Completed: ${projectName}`,
+    html,
+  });
+}
+
+/**
+ * Demo approved — email to client.
+ */
+export async function demoApprovedEmail(clientEmail, clientName, demoTitle, demoUrl, projectName) {
+  const firstName = clientName.split(' ')[0];
+
+  const html = brandedEmail(
+    'Demo Ready',
+    'A New Demo is Ready for Review',
+    `<p style="margin:0 0 16px;color:#94a3b8;font-size:15px;line-height:1.6;">
+      Hi ${firstName}, a new demo is ready for your review on
+      <strong style="color:#ffffff;">${projectName}</strong>:
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <tr><td style="padding:16px;background-color:rgba(255,255,255,0.03);border-radius:8px;">
+        <p style="margin:0 0 8px;color:#ffffff;font-size:16px;font-weight:600;">${demoTitle}</p>
+        <a href="${demoUrl}" style="color:#03FF00;font-size:14px;">${demoUrl}</a>
+      </td></tr>
+    </table>
+    ${actionButton('View Demo', demoUrl)}`
+  );
+
+  await sendNotification('demo_shared', {
+    recipients: [clientEmail],
+    subject: `Demo Ready: ${demoTitle}`,
+    html,
+  });
+}
+
+/**
  * Question replied — email to client.
  */
 export async function questionRepliedEmail(clientEmail, clientName, projectName, replyText) {

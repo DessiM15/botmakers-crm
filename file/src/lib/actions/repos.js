@@ -1,12 +1,13 @@
 'use server';
 
 import { db } from '@/lib/db/client';
-import { projectRepos, projectDemos, activityLog } from '@/lib/db/schema';
+import { projectRepos, projectDemos, activityLog, projects, clients } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { validateRepo, getRepoCommits } from '@/lib/integrations/github';
+import { demoApprovedEmail } from '@/lib/email/notifications';
 
 /**
  * Link a GitHub repo to a project.
@@ -256,6 +257,26 @@ export async function toggleDemoApproval(demoId, projectId) {
       entityId: projectId,
       metadata: { demoId, title: demo.title },
     });
+
+    // Send client email when demo is approved (non-blocking)
+    if (newApproved) {
+      const [proj] = await db
+        .select({ clientId: projects.clientId, name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1);
+
+      if (proj?.clientId) {
+        const [client] = await db
+          .select({ email: clients.email, fullName: clients.fullName })
+          .from(clients)
+          .where(eq(clients.id, proj.clientId))
+          .limit(1);
+        if (client) {
+          demoApprovedEmail(client.email, client.fullName, demo.title, demo.url, proj.name).catch(() => {});
+        }
+      }
+    }
 
     revalidatePath(`/projects/${projectId}`);
 

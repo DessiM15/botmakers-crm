@@ -7,13 +7,14 @@ import {
   projectMilestones,
   activityLog,
   clients,
+  leads,
 } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, ne, sql } from 'drizzle-orm';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { projectCreateSchema, milestoneUpdateSchema } from '@/lib/utils/validators';
-import { milestoneCompletedEmail } from '@/lib/email/notifications';
+import { milestoneCompletedEmail, projectCompletedEmail } from '@/lib/email/notifications';
 
 /**
  * Create a new project with phases and milestones.
@@ -145,6 +146,7 @@ export async function updateProject(projectId, formData) {
 
 /**
  * Update project status.
+ * When completing: auto-completes all milestones, updates linked lead, sends client email.
  */
 export async function updateProjectStatus(projectId, status) {
   try {
@@ -160,10 +162,55 @@ export async function updateProjectStatus(projectId, status) {
 
     await db.update(projects).set(updateData).where(eq(projects.id, projectId));
 
+    // If completing, auto-complete all remaining milestones
+    if (status === 'completed') {
+      await db
+        .update(projectMilestones)
+        .set({ status: 'completed', completedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(projectMilestones.projectId, projectId),
+            ne(projectMilestones.status, 'completed')
+          )
+        );
+
+      // Update linked lead to project_delivered
+      const [proj] = await db
+        .select({ leadId: projects.leadId, clientId: projects.clientId, name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1);
+
+      if (proj?.leadId) {
+        await db
+          .update(leads)
+          .set({
+            pipelineStage: 'project_delivered',
+            pipelineStageChangedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(leads.id, proj.leadId));
+
+        revalidatePath('/pipeline');
+      }
+
+      // Send client email (non-blocking)
+      if (proj?.clientId) {
+        const [client] = await db
+          .select({ email: clients.email, fullName: clients.fullName })
+          .from(clients)
+          .where(eq(clients.id, proj.clientId))
+          .limit(1);
+        if (client) {
+          projectCompletedEmail(client.email, client.fullName, proj.name).catch(() => {});
+        }
+      }
+    }
+
     await db.insert(activityLog).values({
       actorId: teamUser.id,
       actorType: 'team',
-      action: 'project.status_changed',
+      action: status === 'completed' ? 'project.completed' : 'project.status_changed',
       entityType: 'project',
       entityId: projectId,
       metadata: { status },
@@ -171,6 +218,7 @@ export async function updateProjectStatus(projectId, status) {
 
     revalidatePath(`/projects/${projectId}`);
     revalidatePath('/projects');
+    revalidatePath('/');
 
     return { success: true };
   } catch (error) {

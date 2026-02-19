@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react/dist/iconify.js';
@@ -24,8 +24,14 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
   const router = useRouter();
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState('overview');
-  const [, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [statusChanging, setStatusChanging] = useState(false);
+
+  // Sync local state when server re-renders with new data
+  useEffect(() => {
+    setProject(initialProject);
+  }, [initialProject]);
 
   // Editable overview fields
   const [editForm, setEditForm] = useState({
@@ -37,6 +43,19 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
     startDate: project.startDate || '',
     targetEndDate: project.targetEndDate || '',
   });
+
+  // Sync edit form when project changes
+  useEffect(() => {
+    setEditForm({
+      name: project.name,
+      projectType: project.projectType || '',
+      description: project.description || '',
+      pricingType: project.pricingType,
+      totalValue: project.totalValue || '0',
+      startDate: project.startDate || '',
+      targetEndDate: project.targetEndDate || '',
+    });
+  }, [project]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -55,13 +74,54 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
   };
 
   const handleStatusChange = async (status) => {
+    if (status === 'completed') {
+      setShowCompleteConfirm(true);
+      return;
+    }
+
+    setStatusChanging(true);
     const res = await updateProjectStatus(project.id, status);
+    setStatusChanging(false);
     if (res?.error) {
       toast.error(res.error);
     } else {
       toast.success('Status updated');
       setProject((prev) => ({ ...prev, status }));
     }
+  };
+
+  const handleConfirmComplete = async () => {
+    setShowCompleteConfirm(false);
+    setStatusChanging(true);
+    const res = await updateProjectStatus(project.id, 'completed');
+    setStatusChanging(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Project completed');
+      // Update all milestones to completed and progress to 100%
+      setProject((prev) => ({
+        ...prev,
+        status: 'completed',
+        progress: 100,
+        completedMilestones: prev.totalMilestones,
+        phases: prev.phases.map((phase) => ({
+          ...phase,
+          milestones: phase.milestones.map((ms) => ({ ...ms, status: 'completed' })),
+        })),
+      }));
+    }
+  };
+
+  // Callback from MilestoneEditor when milestone status changes
+  const handleProgressChange = (totalMs, completedMs) => {
+    const progress = totalMs > 0 ? Math.round((completedMs / totalMs) * 100) : 0;
+    setProject((prev) => ({
+      ...prev,
+      progress,
+      completedMilestones: completedMs,
+      totalMilestones: totalMs,
+    }));
   };
 
   const statusObj =
@@ -225,6 +285,7 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                       className="form-select bg-base text-white"
                       value={project.status}
                       onChange={(e) => handleStatusChange(e.target.value)}
+                      disabled={statusChanging}
                     >
                       {PROJECT_STATUSES.map((s) => (
                         <option key={s.value} value={s.value}>
@@ -447,6 +508,7 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
         <MilestoneEditor
           projectId={project.id}
           phases={project.phases}
+          onProgressChange={handleProgressChange}
         />
       )}
 
@@ -508,7 +570,7 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                     </thead>
                     <tbody>
                       {projectInvoices.map((inv) => {
-                        const statusObj = INVOICE_STATUSES.find((s) => s.value === inv.status) || INVOICE_STATUSES[0];
+                        const invStatusObj = INVOICE_STATUSES.find((s) => s.value === inv.status) || INVOICE_STATUSES[0];
                         return (
                           <tr
                             key={inv.id}
@@ -526,9 +588,9 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                             <td>
                               <span
                                 className="badge fw-medium"
-                                style={{ background: `${statusObj.color}22`, color: statusObj.color }}
+                                style={{ background: `${invStatusObj.color}22`, color: invStatusObj.color }}
                               >
-                                {statusObj.label}
+                                {invStatusObj.label}
                               </span>
                             </td>
                             <td>
@@ -560,6 +622,46 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
             </div>
           )}
         </>
+      )}
+
+      {/* Complete Project Confirmation Modal */}
+      {showCompleteConfirm && (
+        <div
+          className="modal d-block"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setShowCompleteConfirm(false)}
+        >
+          <div className="modal-dialog modal-sm modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content bg-base">
+              <div className="modal-header border-secondary-subtle">
+                <h6 className="modal-title text-white fw-semibold">Complete Project</h6>
+                <button
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowCompleteConfirm(false)}
+                />
+              </div>
+              <div className="modal-body">
+                <p className="text-white text-sm mb-0">
+                  Mark project as completed? This will complete all remaining milestones.
+                </p>
+              </div>
+              <div className="modal-footer border-secondary-subtle">
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => setShowCompleteConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleConfirmComplete}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

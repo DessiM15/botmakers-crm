@@ -12,6 +12,7 @@ import {
 import {
   eq,
   and,
+  asc,
   gte,
   lt,
   lte,
@@ -169,6 +170,33 @@ export async function getAlerts(staleDays = 7) {
   ]);
 
   return { staleLeads, overdueMilestones, pendingQuestions };
+}
+
+/**
+ * Upcoming milestones — due within N days, not completed.
+ */
+export async function getUpcomingMilestones(days = 7, limit = 10) {
+  return db
+    .select({
+      id: projectMilestones.id,
+      title: projectMilestones.title,
+      status: projectMilestones.status,
+      dueDate: projectMilestones.dueDate,
+      projectId: projectMilestones.projectId,
+      projectName: projects.name,
+    })
+    .from(projectMilestones)
+    .innerJoin(projects, eq(projectMilestones.projectId, projects.id))
+    .where(
+      and(
+        ne(projectMilestones.status, 'completed'),
+        sql`${projectMilestones.dueDate} IS NOT NULL`,
+        sql`${projectMilestones.dueDate} <= CURRENT_DATE + interval '${sql.raw(String(days))} days'`,
+        eq(projects.status, 'in_progress')
+      )
+    )
+    .orderBy(asc(projectMilestones.dueDate))
+    .limit(limit);
 }
 
 export async function getRecentActivity(limit = 15) {

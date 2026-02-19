@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
@@ -20,13 +20,17 @@ const MILESTONE_STATUSES = [
   { value: 'overdue', label: 'Overdue', color: '#dc3545', icon: 'mdi:alert-circle' },
 ];
 
-const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
+const MilestoneEditor = ({ projectId, phases: initialPhases, onProgressChange }) => {
   const router = useRouter();
   const [phases, setPhases] = useState(initialPhases);
   const [expandedPhases, setExpandedPhases] = useState(
     initialPhases.reduce((acc, p) => ({ ...acc, [p.id]: true }), {})
   );
-  const [, startTransition] = useTransition();
+
+  // Sync local state when server data changes (after router.refresh)
+  useEffect(() => {
+    setPhases(initialPhases);
+  }, [initialPhases]);
 
   // Add milestone modal
   const [addMsModal, setAddMsModal] = useState(null); // { phaseId }
@@ -44,49 +48,97 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
     setExpandedPhases((prev) => ({ ...prev, [phaseId]: !prev[phaseId] }));
   };
 
-  // Handle milestone status change
-  const handleStatusChange = async (milestone, newStatus) => {
-    if (newStatus === 'completed' && milestone.status !== 'completed') {
-      let msg = 'Mark this milestone as complete? The client will be notified.';
-      if (milestone.triggersInvoice && milestone.invoiceAmount) {
-        msg += `\n\nThis will also generate a ${formatCurrency(milestone.invoiceAmount)} invoice.`;
-      }
-
-      setConfirmDialog({
-        message: msg,
-        onConfirm: async () => {
-          setConfirmDialog(null);
-          await doUpdateMilestone(milestone.id, { status: 'completed' });
-        },
-      });
-      return;
+  // Optimistically update milestone status in local state
+  const optimisticStatusUpdate = (milestoneId, newStatus) => {
+    setPhases((prev) =>
+      prev.map((phase) => ({
+        ...phase,
+        milestones: phase.milestones.map((ms) =>
+          ms.id === milestoneId ? { ...ms, status: newStatus } : ms
+        ),
+      }))
+    );
+    // Notify parent of progress change
+    if (onProgressChange) {
+      const allMs = phases.flatMap((p) => p.milestones);
+      const updatedMs = allMs.map((ms) =>
+        ms.id === milestoneId ? { ...ms, status: newStatus } : ms
+      );
+      const total = updatedMs.length;
+      const completed = updatedMs.filter((m) => m.status === 'completed').length;
+      onProgressChange(total, completed);
     }
-
-    await doUpdateMilestone(milestone.id, { status: newStatus });
   };
 
-  const doUpdateMilestone = async (milestoneId, data) => {
-    const res = await updateMilestone(milestoneId, data);
+  // Revert optimistic update
+  const revertStatusUpdate = (milestoneId, oldStatus) => {
+    setPhases((prev) =>
+      prev.map((phase) => ({
+        ...phase,
+        milestones: phase.milestones.map((ms) =>
+          ms.id === milestoneId ? { ...ms, status: oldStatus } : ms
+        ),
+      }))
+    );
+    if (onProgressChange) {
+      const allMs = phases.flatMap((p) => p.milestones);
+      const total = allMs.length;
+      const completed = allMs.filter((m) =>
+        m.id === milestoneId ? oldStatus === 'completed' : m.status === 'completed'
+      ).length;
+      onProgressChange(total, completed);
+    }
+  };
+
+  // Handle milestone status change — no confirmation dialog
+  const handleStatusChange = async (milestone, newStatus) => {
+    if (newStatus === milestone.status) return;
+
+    const oldStatus = milestone.status;
+    optimisticStatusUpdate(milestone.id, newStatus);
+
+    const res = await updateMilestone(milestone.id, { status: newStatus });
+    if (res?.error) {
+      revertStatusUpdate(milestone.id, oldStatus);
+      toast.error(res.error);
+    } else {
+      toast.success('Milestone updated');
+    }
+  };
+
+  // Toggle complete/pending via circle click
+  const handleCircleToggle = (milestone) => {
+    const newStatus = milestone.status === 'completed' ? 'pending' : 'completed';
+    handleStatusChange(milestone, newStatus);
+  };
+
+  const handleDueDateChange = async (milestoneId, dueDate) => {
+    const res = await updateMilestone(milestoneId, { dueDate: dueDate || null });
     if (res?.error) {
       toast.error(res.error);
     } else {
       toast.success('Milestone updated');
-      startTransition(() => router.refresh());
     }
   };
 
-  const handleDueDateChange = async (milestoneId, dueDate) => {
-    await doUpdateMilestone(milestoneId, { dueDate: dueDate || null });
-  };
-
   const handleTriggersInvoiceChange = async (milestoneId, triggersInvoice) => {
-    await doUpdateMilestone(milestoneId, { triggersInvoice });
+    const res = await updateMilestone(milestoneId, { triggersInvoice });
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Milestone updated');
+    }
   };
 
   const handleInvoiceAmountChange = async (milestoneId, invoiceAmount) => {
-    await doUpdateMilestone(milestoneId, {
+    const res = await updateMilestone(milestoneId, {
       invoiceAmount: invoiceAmount ? parseFloat(invoiceAmount) : null,
     });
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Milestone updated');
+    }
   };
 
   // Add milestone
@@ -107,7 +159,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
       toast.success('Milestone added');
       setAddMsModal(null);
       setNewMsTitle('');
-      startTransition(() => router.refresh());
+      router.refresh();
     }
   };
 
@@ -122,7 +174,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
           toast.error(res.error);
         } else {
           toast.success('Milestone deleted');
-          startTransition(() => router.refresh());
+          router.refresh();
         }
       },
     });
@@ -143,7 +195,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
     } else {
       toast.success('Phase added');
       setNewPhaseName('');
-      startTransition(() => router.refresh());
+      router.refresh();
     }
   };
 
@@ -158,7 +210,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
           toast.error(res.error);
         } else {
           toast.success('Phase deleted');
-          startTransition(() => router.refresh());
+          router.refresh();
         }
       },
     });
@@ -257,7 +309,18 @@ const MilestoneEditor = ({ projectId, phases: initialPhases }) => {
                               <div className="d-flex align-items-center gap-2">
                                 <Icon
                                   icon={statusObj.icon}
-                                  style={{ fontSize: '16px', color: statusObj.color, flexShrink: 0 }}
+                                  className="milestone-circle"
+                                  style={{
+                                    fontSize: '16px',
+                                    color: statusObj.color,
+                                    flexShrink: 0,
+                                    cursor: 'pointer',
+                                    transition: 'color 0.15s',
+                                  }}
+                                  onClick={() => handleCircleToggle(ms)}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = '#03FF00'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = statusObj.color; }}
+                                  title={ms.status === 'completed' ? 'Mark pending' : 'Mark complete'}
                                 />
                                 <span
                                   className={`text-sm ${

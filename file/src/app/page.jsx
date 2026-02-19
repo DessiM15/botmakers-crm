@@ -7,6 +7,7 @@ import {
   getMetrics,
   getAlerts,
   getRecentActivity,
+  getUpcomingMilestones,
 } from '@/lib/db/queries/dashboard';
 
 export const metadata = {
@@ -24,10 +25,11 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  const [metrics, alerts, activity] = await Promise.all([
+  const [metrics, alerts, activity, upcomingMilestones] = await Promise.all([
     getMetrics(),
     getAlerts(),
     getRecentActivity(),
+    getUpcomingMilestones(),
   ]);
 
   return (
@@ -37,6 +39,7 @@ const Page = async () => {
         metrics={metrics}
         alerts={alerts}
         activity={activity}
+        upcomingMilestones={upcomingMilestones}
       />
     </MasterLayout>
   );

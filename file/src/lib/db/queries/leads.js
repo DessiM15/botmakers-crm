@@ -1,6 +1,6 @@
 import { db } from '@/lib/db/client';
 import { leads, teamUsers, contacts } from '@/lib/db/schema';
-import { eq, asc, desc, isNull, ilike, or, and, sql, count } from 'drizzle-orm';
+import { eq, asc, desc, ilike, or, and, sql, count } from 'drizzle-orm';
 
 /**
  * Fetch all leads for the pipeline board.
@@ -24,7 +24,6 @@ export async function getLeadsByStage() {
     })
     .from(leads)
     .leftJoin(teamUsers, eq(leads.assignedTo, teamUsers.id))
-    .where(isNull(leads.convertedToClientId))
     .orderBy(asc(leads.pipelineStageChangedAt));
 
   // Group by pipeline stage, defaulting NULL to 'new_lead'
