@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { createClient, deleteClient } from '@/lib/actions/clients';
@@ -136,6 +137,7 @@ const ClientTable = ({ initialData }) => {
 
   return (
     <>
+      <style>{`.client-name-link:hover { color: #03FF00 !important; }`}</style>
       {/* Search Bar */}
       <div className="card p-3 mb-4">
         <div className="d-flex flex-wrap align-items-center gap-3">
@@ -247,9 +249,14 @@ const ClientTable = ({ initialData }) => {
                             style={{ cursor: 'pointer' }}
                           >
                             <td className="px-3 py-3">
-                              <span className="fw-medium text-sm" style={{ color: '#000' }}>
+                              <Link
+                                href={`/clients/${client.id}`}
+                                className="fw-medium text-sm client-name-link"
+                                style={{ color: '#000', textDecoration: 'none' }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 {client.fullName}
-                              </span>
+                              </Link>
                             </td>
                             <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
                               {client.company || '—'}

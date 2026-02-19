@@ -58,6 +58,7 @@ export async function createClient(formData) {
     });
 
     revalidatePath('/clients');
+    revalidatePath(`/clients/${newClient.id}`);
 
     return { success: true, client: newClient };
   } catch (error) {

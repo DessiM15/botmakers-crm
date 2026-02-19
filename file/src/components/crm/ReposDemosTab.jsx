@@ -319,7 +319,7 @@ const DemosSection = ({ projectId, demos, setDemos, phases }) => {
           d.id === demoId ? { ...d, isApproved: res.isApproved } : d
         )
       );
-      toast.success(res.isApproved ? 'Demo approved for clients' : 'Demo unapproved');
+      toast.success(res.isApproved ? 'Demo approved — client notified' : 'Demo unapproved');
     }
   };
 
