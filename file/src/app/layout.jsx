@@ -10,8 +10,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang='en' data-theme='dark'>
-      <PluginInit />
-      <body suppressHydrationWarning={true} className='dark'>{children}</body>
+      <body suppressHydrationWarning={true} className='dark'>
+        <PluginInit />
+        {children}
+      </body>
     </html>
   );
 }

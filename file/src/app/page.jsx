@@ -10,6 +10,8 @@ import {
   getUpcomingMilestones,
   getRevenueMetrics,
   getLeadSourceAnalytics,
+  getUnassignedLeads,
+  getTeamMembersForAssignment,
 } from '@/lib/db/queries/dashboard';
 import { getPendingFollowUps } from '@/lib/db/queries/follow-ups';
 
@@ -28,7 +30,7 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  const [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps] = await Promise.all([
+  const [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign] = await Promise.all([
     getMetrics(),
     getAlerts(),
     getRecentActivity(),
@@ -36,6 +38,8 @@ const Page = async () => {
     getRevenueMetrics(),
     getLeadSourceAnalytics(),
     getPendingFollowUps(teamUser.id),
+    getUnassignedLeads(),
+    getTeamMembersForAssignment(),
   ]);
 
   return (
@@ -49,6 +53,8 @@ const Page = async () => {
         revenue={revenue}
         leadSources={leadSources}
         followUps={followUps}
+        unassignedLeads={unassignedLeads}
+        teamMembersForAssign={teamMembersForAssign}
       />
     </MasterLayout>
   );

@@ -102,6 +102,8 @@ body,
 .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1) !important; background: rgba(255,255,255,0.03); }
 .ql-container.ql-snow { border-color: rgba(255,255,255,0.1) !important; min-height: 150px; }
 .ql-editor { color: #e2e8f0; }
+.ql-editor p, .ql-editor span, .ql-editor div, .ql-editor li { color: #e2e8f0 !important; }
+.ql-editor strong { color: #ffffff !important; }
 .ql-editor.ql-blank::before { color: rgba(255,255,255,0.3); }
 .ql-snow .ql-stroke { stroke: rgba(255,255,255,0.5); }
 .ql-snow .ql-fill { fill: rgba(255,255,255,0.5); }

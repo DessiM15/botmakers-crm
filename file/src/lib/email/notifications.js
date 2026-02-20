@@ -2,6 +2,7 @@ import { db } from '@/lib/db/client';
 import { notifications, teamUsers } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { sendEmail } from './client';
+import { wrapInBrandedTemplate } from './branded-template';
 
 /**
  * Get all active team member emails.
@@ -290,23 +291,22 @@ export async function staleLeadAlert(staleLeads) {
  * Milestone completed — email to client.
  */
 export async function milestoneCompletedEmail(clientEmail, clientName, projectName, milestoneName) {
-  const firstName = clientName.split(' ')[0];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-  const html = brandedEmail(
-    'Progress Update',
-    `Milestone Completed!`,
-    `<p style="margin:0 0 16px;color:#94a3b8;font-size:15px;line-height:1.6;">
-      Hi ${firstName}, great news! A milestone has been completed on your project:
-    </p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr><td style="padding:16px;background-color:rgba(255,255,255,0.03);border-radius:8px;">
-        <p style="margin:0 0 8px;color:#ffffff;font-size:16px;font-weight:600;">${milestoneName}</p>
-        <p style="margin:0;color:#94a3b8;font-size:14px;">Project: ${projectName}</p>
-      </td></tr>
-    </table>
-    ${actionButton('View Progress', `${siteUrl}/portal`)}`
-  );
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">Great news! A milestone has been completed on your project:</p>
+    <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+      <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">${milestoneName}</h3>
+      <p style="margin:0; color:#333;">Project: ${projectName}</p>
+    </div>`;
+
+  const html = wrapInBrandedTemplate({
+    recipientName: clientName,
+    bodyHtml,
+    senderName: 'The BotMakers Team',
+    senderTitle: null,
+    ctaUrl: `${siteUrl}/portal`,
+    ctaText: 'View Progress',
+  });
 
   await sendNotification('milestone_completed', {
     recipients: [clientEmail],
@@ -319,20 +319,19 @@ export async function milestoneCompletedEmail(clientEmail, clientName, projectNa
  * Project completed — email to client.
  */
 export async function projectCompletedEmail(clientEmail, clientName, projectName) {
-  const firstName = clientName.split(' ')[0];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-  const html = brandedEmail(
-    'Project Complete',
-    'Your Project is Complete!',
-    `<p style="margin:0 0 16px;color:#94a3b8;font-size:15px;line-height:1.6;">
-      Hi ${firstName}, your project <strong style="color:#ffffff;">${projectName}</strong> has been completed!
-    </p>
-    <p style="margin:0 0 24px;color:#94a3b8;font-size:15px;line-height:1.6;">
-      View the final deliverables in your portal.
-    </p>
-    ${actionButton('View in Portal', `${siteUrl}/portal`)}`
-  );
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">Your project <strong style="color:#033457;">${projectName}</strong> has been completed!</p>
+    <p style="margin:0 0 16px; color:#333;">View the final deliverables in your portal.</p>`;
+
+  const html = wrapInBrandedTemplate({
+    recipientName: clientName,
+    bodyHtml,
+    senderName: 'The BotMakers Team',
+    senderTitle: null,
+    ctaUrl: `${siteUrl}/portal`,
+    ctaText: 'View in Portal',
+  });
 
   await sendNotification('milestone_completed', {
     recipients: [clientEmail],
@@ -345,23 +344,20 @@ export async function projectCompletedEmail(clientEmail, clientName, projectName
  * Demo approved — email to client.
  */
 export async function demoApprovedEmail(clientEmail, clientName, demoTitle, demoUrl, projectName) {
-  const firstName = clientName.split(' ')[0];
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">A new demo is ready for your review on <strong style="color:#033457;">${projectName}</strong>:</p>
+    <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+      <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">${demoTitle}</h3>
+      <a href="${demoUrl}" style="color:#033457; font-size:14px;">${demoUrl}</a>
+    </div>`;
 
-  const html = brandedEmail(
-    'Demo Ready',
-    'A New Demo is Ready for Review',
-    `<p style="margin:0 0 16px;color:#94a3b8;font-size:15px;line-height:1.6;">
-      Hi ${firstName}, a new demo is ready for your review on
-      <strong style="color:#ffffff;">${projectName}</strong>:
-    </p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr><td style="padding:16px;background-color:rgba(255,255,255,0.03);border-radius:8px;">
-        <p style="margin:0 0 8px;color:#ffffff;font-size:16px;font-weight:600;">${demoTitle}</p>
-        <a href="${demoUrl}" style="color:#03FF00;font-size:14px;">${demoUrl}</a>
-      </td></tr>
-    </table>
-    ${actionButton('View Demo', demoUrl)}`
-  );
+  const html = wrapInBrandedTemplate({
+    recipientName: clientName,
+    bodyHtml,
+    senderName: 'The BotMakers Team',
+    senderTitle: null,
+    ctaUrl: demoUrl,
+    ctaText: 'View Demo',
+  });
 
   await sendNotification('demo_shared', {
     recipients: [clientEmail],
@@ -374,22 +370,21 @@ export async function demoApprovedEmail(clientEmail, clientName, demoTitle, demo
  * Question replied — email to client.
  */
 export async function questionRepliedEmail(clientEmail, clientName, projectName, replyText) {
-  const firstName = clientName.split(' ')[0];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-  const html = brandedEmail(
-    'Reply',
-    'Your Question Has Been Answered',
-    `<p style="margin:0 0 16px;color:#94a3b8;font-size:15px;line-height:1.6;">
-      Hi ${firstName}, the team has responded to your question about <strong style="color:#ffffff;">${projectName}</strong>:
-    </p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr><td style="padding:16px;background-color:rgba(255,255,255,0.03);border-radius:8px;">
-        <p style="margin:0;color:#ffffff;font-size:14px;line-height:1.6;">${replyText}</p>
-      </td></tr>
-    </table>
-    ${actionButton('View in Portal', `${siteUrl}/portal`)}`
-  );
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">The team has responded to your question about <strong style="color:#033457;">${projectName}</strong>:</p>
+    <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+      <p style="margin:0; color:#333; line-height:1.6;">${replyText}</p>
+    </div>`;
+
+  const html = wrapInBrandedTemplate({
+    recipientName: clientName,
+    bodyHtml,
+    senderName: 'The BotMakers Team',
+    senderTitle: null,
+    ctaUrl: `${siteUrl}/portal`,
+    ctaText: 'View in Portal',
+  });
 
   await sendEmail({ to: clientEmail, subject: `Reply: Your question about ${projectName}`, html });
 }

@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { followUpReminders, leads, activityLog } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { sendEmail } from '@/lib/email/client';
+import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
 import { revalidatePath } from 'next/cache';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
@@ -37,11 +38,18 @@ export async function approveAndSendFollowUp(reminderId) {
 
     if (!lead) return { error: 'Lead not found (CB-DB-002)' };
 
-    // Send email
+    // Wrap AI draft in branded template and send
+    const brandedHtml = wrapInBrandedTemplate({
+      recipientName: lead.fullName,
+      bodyHtml: reminder.aiDraftBodyHtml,
+      senderName: 'The BotMakers Team',
+      senderTitle: null,
+    });
+
     const result = await sendEmail({
       to: lead.email,
       subject: reminder.aiDraftSubject,
-      html: reminder.aiDraftBodyHtml,
+      html: brandedHtml,
     });
 
     if (!result.success) {

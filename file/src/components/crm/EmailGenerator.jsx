@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-toastify';
 import { getRecipients, sendEmailFromCRM, saveDraft, getDrafts, loadDraft, deleteDraft, markDraftSent } from '@/lib/actions/emails';
+import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
@@ -59,6 +60,7 @@ export default function EmailGenerator({ teamUser }) {
   const [bodyHtml, setBodyHtml] = useState('');
   const [bodyText, setBodyText] = useState('');
   const [showHtmlPreview, setShowHtmlPreview] = useState(false);
+  const [showFullPreview, setShowFullPreview] = useState(false);
 
   // UI state
   const [generating, setGenerating] = useState(false);
@@ -142,6 +144,15 @@ export default function EmailGenerator({ teamUser }) {
     return '';
   };
 
+  const getFullBrandedHtml = useCallback(() => {
+    return wrapInBrandedTemplate({
+      recipientName: getRecipientName(),
+      bodyHtml: bodyHtml,
+      senderName: teamUser.fullName || 'The BotMakers Team',
+      senderTitle: 'Co-Founder',
+    });
+  }, [bodyHtml, teamUser.fullName]);
+
   const handleGenerate = async () => {
     const email = getRecipientEmail();
     const name = getRecipientName();
@@ -207,8 +218,9 @@ export default function EmailGenerator({ teamUser }) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(bodyHtml);
-      toast.success('HTML copied! Paste into your email client.');
+      const fullHtml = getFullBrandedHtml();
+      await navigator.clipboard.writeText(fullHtml);
+      toast.success('Full branded HTML copied! Paste into your email client.');
     } catch {
       toast.error('Failed to copy to clipboard');
     }
@@ -243,6 +255,7 @@ export default function EmailGenerator({ teamUser }) {
         html: bodyHtml,
         recipientLeadId: selectedRecipient?.type === 'lead' ? selectedRecipient.id : undefined,
         recipientClientId: selectedRecipient?.type === 'client' ? selectedRecipient.id : undefined,
+        recipientName: getRecipientName(),
       });
 
       if (result.error) {
@@ -365,6 +378,7 @@ export default function EmailGenerator({ teamUser }) {
     setCcField('');
     setCurrentDraftId(null);
     setShowHtmlPreview(false);
+    setShowFullPreview(false);
     setShowManual(false);
   };
 
@@ -668,24 +682,26 @@ export default function EmailGenerator({ teamUser }) {
                 )}
               </div>
 
-              {/* Email Preview */}
+              {/* Full Email Preview */}
               <div className="mb-16">
                 <button
-                  className="btn btn-sm btn-outline-neutral-600 text-secondary-light mb-8"
+                  className={`btn btn-sm ${showFullPreview ? 'btn-primary-600' : 'btn-outline-neutral-600 text-secondary-light'} mb-8`}
                   type="button"
-                  data-bs-toggle="collapse"
-                  data-bs-target="#emailPreview"
+                  onClick={() => setShowFullPreview(!showFullPreview)}
                 >
                   <Icon icon="mdi:eye-outline" className="me-1" />
-                  Preview Email
+                  {showFullPreview ? 'Hide Full Preview' : 'Preview Full Email'}
                 </button>
-                <div className="collapse" id="emailPreview">
+                {showFullPreview && (
                   <div
-                    className="border border-neutral-600 rounded-8 p-16"
-                    style={{ background: '#ffffff' }}
-                    dangerouslySetInnerHTML={{ __html: bodyHtml }}
-                  />
-                </div>
+                    className="border border-neutral-600 rounded-8 overflow-hidden"
+                    style={{ background: '#f0f0f0' }}
+                  >
+                    <div
+                      dangerouslySetInnerHTML={{ __html: getFullBrandedHtml() }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

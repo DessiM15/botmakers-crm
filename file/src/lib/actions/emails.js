@@ -7,6 +7,7 @@ import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { sendEmail } from '@/lib/email/client';
+import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
 import { saveDraftSchema } from '@/lib/utils/validators';
 
 /**
@@ -89,7 +90,7 @@ export async function getRecipients(search) {
 /**
  * Send email from CRM via Resend + log to activity_log and contacts.
  */
-export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId, recipientClientId }) {
+export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId, recipientClientId, recipientName }) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
@@ -100,10 +101,18 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
 
     const recipients = cc ? [to, ...cc.split(',').map((e) => e.trim()).filter(Boolean)] : [to];
 
+    // Wrap body content in branded template
+    const fullHtml = wrapInBrandedTemplate({
+      recipientName: recipientName || '',
+      bodyHtml: html,
+      senderName: teamUser.fullName || 'The BotMakers Team',
+      senderTitle: 'Co-Founder',
+    });
+
     const result = await sendEmail({
       to: recipients,
       subject,
-      html,
+      html: fullHtml,
       from: 'BotMakers <info@botmakers.ai>',
     });
 
@@ -115,7 +124,7 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
     const contactData = {
       type: 'email',
       subject,
-      body: html,
+      body: fullHtml,
       direction: 'outbound',
       createdBy: teamUser.id,
     };

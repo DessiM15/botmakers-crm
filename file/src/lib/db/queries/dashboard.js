@@ -300,6 +300,54 @@ export async function getRevenueMetrics() {
 /**
  * Lead source analytics — last 90 days.
  */
+/**
+ * Unassigned leads — for the dashboard quick-assign widget.
+ */
+export async function getUnassignedLeads(limit = 10) {
+  try {
+    return await db
+      .select({
+        id: leads.id,
+        fullName: leads.fullName,
+        email: leads.email,
+        companyName: leads.companyName,
+        source: leads.source,
+        createdAt: leads.createdAt,
+        pipelineStage: leads.pipelineStage,
+        score: leads.score,
+      })
+      .from(leads)
+      .where(
+        and(
+          isNull(leads.assignedTo),
+          notInArray(leads.pipelineStage, ['lost'])
+        )
+      )
+      .orderBy(desc(leads.createdAt))
+      .limit(limit);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Active team members for assignment dropdowns.
+ */
+export async function getTeamMembersForAssignment() {
+  try {
+    return await db
+      .select({
+        id: teamUsers.id,
+        fullName: teamUsers.fullName,
+        email: teamUsers.email,
+      })
+      .from(teamUsers)
+      .where(eq(teamUsers.isActive, true));
+  } catch {
+    return [];
+  }
+}
+
 export async function getLeadSourceAnalytics() {
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);

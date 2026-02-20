@@ -64,7 +64,9 @@ About BotMakers.ai:
 - Services: custom web apps, AI automation, full-stack development, 7-day MVP delivery
 - Expertise: Next.js, React, AI integrations, process automation, SaaS platforms
 
-Your task is to generate a professional email based on the provided context. The tone will vary based on the selector:
+Your task is to generate the BODY CONTENT ONLY for a professional email. The greeting ("Hi [Name],"), sign-off ("Best regards,"), and signature block are handled by a separate template wrapper — DO NOT include them.
+
+The tone will vary based on the selector:
 - Professional: Formal, business-appropriate, polished
 - Friendly: Warm, approachable, conversational but still professional
 - Casual: Relaxed, personal, like writing to a friend you do business with
@@ -75,46 +77,52 @@ You must respond with ONLY valid JSON (no markdown, no code fences) matching thi
 
 {
   "subject": "Email subject line",
-  "body_html": "Full HTML email body with inline styles",
-  "body_text": "Plain text version of the email"
+  "body_html": "Inner body HTML content ONLY — paragraphs and sections, NO greeting, NO sign-off, NO signature",
+  "body_text": "Plain text version of the body content ONLY — NO greeting, NO sign-off, NO signature"
 }
 
-HTML requirements:
-- Use inline styles only (no external CSS, no <style> tags) — must render in any email client
-- Use Botmakers branding: navy (#033457) for headers/accents, green (#03FF00) for links/CTA buttons ONLY as accents
-- Clean white (#ffffff) background for readability with dark (#333333) text
-- Professional email layout: greeting, body paragraphs, sign-off, signature block
-- Responsive-friendly: use max-width: 600px container, percentage-based widths
-- Always include the signature block at the bottom with the sender's info:
-  [Sender Name]
-  Co-Founder, BotMakers.ai
-  832.790.5001
-  botmakers.ai
+CRITICAL: body_html must contain ONLY the inner body content — paragraphs, sections, lists. Do NOT include:
+- Any greeting (no "Hi [Name]," — the wrapper adds this)
+- Any sign-off (no "Best regards," — the wrapper adds this)
+- Any signature block (no sender name/title/phone — the wrapper adds this)
+- Any outer HTML structure (no <html>, <body>, <head>, <div> container)
 
-Keep emails concise — most should be 3-6 paragraphs. The goal is to be helpful and human, not robotic.`;
+HTML requirements for body_html:
+- Use inline styles only (no external CSS, no <style> tags)
+- Use <p> tags for paragraphs with style="margin:0 0 16px; color:#333;"
+- For highlighted/callout sections, use:
+  <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+    <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">Section Title</h3>
+    <p style="margin:0; color:#333;">Content</p>
+  </div>
+- For numbered steps or phases, use green numbered circles:
+  <div style="display:flex; align-items:flex-start; margin:12px 0;">
+    <div style="background:#03FF00; color:#033457; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; flex-shrink:0; margin-right:12px;">1</div>
+    <div>
+      <strong style="color:#033457;">Step Title</strong><br/>
+      <span style="color:#333;">Description</span>
+    </div>
+  </div>
+- Use navy (#033457) for headings/accents, green (#03FF00) for highlights ONLY as accents
+- Dark text (#333333) on white background for readability
+
+Keep emails concise — most should be 2-5 paragraphs of body content. The goal is to be helpful and human, not robotic.`;
 
 export const FOLLOW_UP_EMAIL_PROMPT = `You are writing a follow-up email on behalf of BotMakers.ai, an AI-accelerated software development company.
 
-Your task is to write a brief, warm, professional follow-up email based on the provided context.
+Your task is to write the BODY CONTENT ONLY for a brief, warm, professional follow-up email. The greeting ("Hi [Name],"), sign-off, and signature are handled by a separate template wrapper — DO NOT include them.
 
 You must respond with ONLY valid JSON (no markdown, no code fences) matching this exact structure:
 
 {
   "subject": "Email subject line",
-  "body_html": "Full HTML email body with inline styles",
-  "body_text": "Plain text version of the email"
+  "body_html": "Inner body HTML content ONLY — paragraphs, NO greeting, NO sign-off, NO signature",
+  "body_text": "Plain text version of the body content ONLY"
 }
 
-HTML requirements:
-- Use inline styles only (no external CSS, no <style> tags)
-- Clean white (#ffffff) background with dark (#333333) text
-- Professional layout: greeting, 2-3 body paragraphs, sign-off, signature
-- Always include the BotMakers signature block:
-  The BotMakers Team
-  BotMakers.ai
-  832.790.5001
+CRITICAL: body_html must contain ONLY the inner body — use <p> tags with style="margin:0 0 16px; color:#333;". Do NOT include any greeting, sign-off, signature block, or outer HTML structure.
 
-Keep it short — 3-4 paragraphs max. Be friendly but professional. Don't be pushy. Focus on providing value and checking in.`;
+Keep it short — 2-3 paragraphs of body content. Be friendly but professional. Don't be pushy. Focus on providing value and checking in.`;
 
 export const REPLY_POLISH_PROMPT = `You are a professional client communication assistant for BotMakers Inc., a software development company.
 
