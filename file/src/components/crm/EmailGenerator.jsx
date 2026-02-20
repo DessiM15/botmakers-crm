@@ -479,23 +479,25 @@ export default function EmailGenerator({ teamUser }) {
                 </div>
                 {showDropdown && recipients.length > 0 && (
                   <div
-                    className="position-absolute w-100 bg-neutral-700 border border-neutral-600 rounded-8 mt-4 shadow-lg"
-                    style={{ zIndex: 1050, maxHeight: 240, overflowY: 'auto' }}
+                    className="position-absolute w-100 border rounded-8 mt-4 shadow-lg"
+                    style={{ zIndex: 1050, maxHeight: 240, overflowY: 'auto', background: '#1a2332', borderColor: 'rgba(255,255,255,0.15)' }}
                   >
                     {recipients.map((r) => (
                       <button
                         key={`${r.type}-${r.id}`}
-                        className="d-flex align-items-center gap-2 w-100 px-12 py-8 border-0 bg-transparent text-white hover-bg-neutral-600"
+                        className="d-flex align-items-center gap-2 w-100 px-12 py-8 border-0 bg-transparent text-white"
                         style={{ cursor: 'pointer' }}
                         onClick={() => selectRecipient(r)}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <span className={`badge ${r.type === 'client' ? 'bg-success-600' : 'bg-info-600'} text-xs`}>
                           {r.type === 'client' ? 'Client' : 'Lead'}
                         </span>
-                        <span className="fw-medium">{r.name}</span>
-                        <span className="text-secondary-light text-sm">{r.email}</span>
+                        <span className="fw-medium text-white">{r.name}</span>
+                        <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{r.email}</span>
                         {r.company && (
-                          <span className="text-secondary-light text-sm ms-auto">{r.company}</span>
+                          <span className="text-sm ms-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>{r.company}</span>
                         )}
                       </button>
                     ))}
