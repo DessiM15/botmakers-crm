@@ -6,6 +6,45 @@ import Link from 'next/link';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { PROPOSAL_STATUSES } from '@/lib/utils/constants';
 
+function TrackingBadge({ proposal }) {
+  if (proposal.signedAt) {
+    return (
+      <span
+        className="badge fw-medium d-inline-flex align-items-center gap-1"
+        style={{ background: 'rgba(25,135,84,0.15)', color: '#198754' }}
+      >
+        <Icon icon="mdi:check-circle" style={{ fontSize: '13px' }} />
+        Signed
+      </span>
+    );
+  }
+  if (proposal.viewedAt) {
+    const viewCount = proposal.viewedCount || 1;
+    return (
+      <span
+        className="badge fw-medium d-inline-flex align-items-center gap-1"
+        style={{ background: 'rgba(13,110,253,0.15)', color: '#0d6efd' }}
+        title={`Viewed ${viewCount} time${viewCount !== 1 ? 's' : ''}`}
+      >
+        <Icon icon="mdi:eye-outline" style={{ fontSize: '13px' }} />
+        Viewed {viewCount > 1 ? `(${viewCount})` : ''}
+      </span>
+    );
+  }
+  // Not yet viewed — only show for sent proposals
+  if (proposal.status === 'sent') {
+    return (
+      <span
+        className="badge fw-medium"
+        style={{ background: 'rgba(108,117,125,0.15)', color: '#6c757d' }}
+      >
+        Pending
+      </span>
+    );
+  }
+  return <span className="text-secondary-light text-xs">—</span>;
+}
+
 const ProposalList = ({
   proposals,
   total,
@@ -145,6 +184,7 @@ const ProposalList = ({
                     <th>Client / Lead</th>
                     <th>Amount</th>
                     <th>Status</th>
+                    <th>Tracking</th>
                     <th>Sent</th>
                     <th>Created</th>
                   </tr>
@@ -183,6 +223,9 @@ const ProposalList = ({
                           >
                             {statusObj.label}
                           </span>
+                        </td>
+                        <td>
+                          <TrackingBadge proposal={p} />
                         </td>
                         <td>
                           <span className="text-secondary-light text-sm">

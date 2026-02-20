@@ -349,12 +349,6 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
                     <span className="text-white text-sm">{formatDate(proposal.declinedAt)}</span>
                   </div>
                 )}
-                {proposal.clientSignature && (
-                  <div>
-                    <label className="text-secondary-light text-xs d-block mb-1">Signature</label>
-                    <span className="text-white text-sm fst-italic">{proposal.clientSignature}</span>
-                  </div>
-                )}
                 {proposal.createdByName && (
                   <div>
                     <label className="text-secondary-light text-xs d-block mb-1">Created By</label>
@@ -364,6 +358,63 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
               </div>
             </div>
           </div>
+
+          {/* Signature Details */}
+          {proposal.signedAt && (
+            <div className="card mb-4">
+              <div className="card-header">
+                <h6 className="text-white fw-semibold mb-0 d-flex align-items-center gap-2">
+                  <Icon icon="mdi:check-decagram" style={{ fontSize: '18px', color: '#03FF00' }} />
+                  E-Signature
+                </h6>
+              </div>
+              <div className="card-body">
+                <div className="d-flex flex-column gap-3">
+                  <div>
+                    <label className="text-secondary-light text-xs d-block mb-1">Signed by</label>
+                    <span className="text-white text-sm fst-italic">{proposal.signerName || proposal.clientSignature}</span>
+                  </div>
+                  <div>
+                    <label className="text-secondary-light text-xs d-block mb-1">Date</label>
+                    <span className="text-white text-sm">{formatDate(proposal.signedAt)}</span>
+                  </div>
+                  {proposal.signerIp && (
+                    <div>
+                      <label className="text-secondary-light text-xs d-block mb-1">IP Address</label>
+                      <span className="text-white text-sm font-monospace">{proposal.signerIp}</span>
+                    </div>
+                  )}
+                  <div className="text-secondary-light text-xs mt-1">
+                    Electronically signed via BotMakers CRM
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* View Count */}
+          {(proposal.viewedAt || proposal.viewedCount > 0) && (
+            <div className="card mb-4">
+              <div className="card-header">
+                <h6 className="text-white fw-semibold mb-0 d-flex align-items-center gap-2">
+                  <Icon icon="mdi:eye-outline" style={{ fontSize: '18px', color: '#0d6efd' }} />
+                  View Tracking
+                </h6>
+              </div>
+              <div className="card-body">
+                <div className="d-flex flex-column gap-2">
+                  <div>
+                    <label className="text-secondary-light text-xs d-block mb-1">First viewed</label>
+                    <span className="text-white text-sm">{formatDate(proposal.viewedAt)}</span>
+                  </div>
+                  <div>
+                    <label className="text-secondary-light text-xs d-block mb-1">Total views</label>
+                    <span className="text-white text-sm">{proposal.viewedCount || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -52,6 +52,10 @@ export async function getProposals({
         leadName: sql`(SELECT leads.full_name FROM leads WHERE leads.id = ${proposals.leadId})`.as('lead_name'),
         clientName: sql`(SELECT clients.full_name FROM clients WHERE clients.id = ${proposals.clientId})`.as('client_name'),
         clientCompany: sql`(SELECT clients.company FROM clients WHERE clients.id = ${proposals.clientId})`.as('client_company'),
+        viewedAt: proposals.viewedAt,
+        viewedCount: proposals.viewedCount,
+        signedAt: proposals.signedAt,
+        signerName: proposals.signerName,
         createdByName: teamUsers.fullName,
       })
       .from(proposals)
@@ -97,6 +101,11 @@ export async function getProposalById(id) {
       acceptedAt: proposals.acceptedAt,
       declinedAt: proposals.declinedAt,
       expiresAt: proposals.expiresAt,
+      viewedCount: proposals.viewedCount,
+      signedAt: proposals.signedAt,
+      signerName: proposals.signerName,
+      signerIp: proposals.signerIp,
+      signedPdfUrl: proposals.signedPdfUrl,
       clientSignature: proposals.clientSignature,
       aiGenerated: proposals.aiGenerated,
       aiPromptContext: proposals.aiPromptContext,

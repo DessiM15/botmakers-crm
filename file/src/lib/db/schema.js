@@ -214,6 +214,11 @@ export const proposals = pgTable('proposals', {
   acceptedAt: timestamp('accepted_at', { withTimezone: true }),
   declinedAt: timestamp('declined_at', { withTimezone: true }),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
+  viewedCount: integer('viewed_count').notNull().default(0),
+  signedAt: timestamp('signed_at', { withTimezone: true }),
+  signerName: text('signer_name'),
+  signerIp: text('signer_ip'),
+  signedPdfUrl: text('signed_pdf_url'),
   clientSignature: text('client_signature'),
   aiGenerated: boolean('ai_generated').notNull().default(false),
   aiPromptContext: text('ai_prompt_context'),
@@ -401,6 +406,17 @@ export const emailDrafts = pgTable('email_drafts', {
   createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const inAppNotifications = pgTable('in_app_notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => teamUsers.id),
+  type: text('type').notNull(),
+  title: text('title').notNull(),
+  body: text('body'),
+  link: text('link'),
+  isRead: boolean('is_read').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const systemSettings = pgTable('system_settings', {
@@ -618,6 +634,13 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   invoice: one(invoices, {
     fields: [notifications.relatedInvoiceId],
     references: [invoices.id],
+  }),
+}));
+
+export const inAppNotificationsRelations = relations(inAppNotifications, ({ one }) => ({
+  user: one(teamUsers, {
+    fields: [inAppNotifications.userId],
+    references: [teamUsers.id],
   }),
 }));
 

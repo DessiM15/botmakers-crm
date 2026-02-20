@@ -8,6 +8,8 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { contactLogSchema } from '@/lib/utils/validators';
 import { leadStageChange } from '@/lib/email/notifications';
+import { advanceLead } from '@/lib/pipeline/transitions';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 /**
  * Update a lead's pipeline stage.
@@ -69,6 +71,13 @@ export async function updateLeadStage(leadId, newStage) {
       .limit(1);
     if (lead) {
       leadStageChange(lead, oldStage, newStage).catch(() => {});
+      sendTeamNotification({
+        type: 'pipeline_move',
+        title: `${lead.fullName} moved to ${newStage.replace(/_/g, ' ')}`,
+        body: `Pipeline: ${oldStage.replace(/_/g, ' ')} → ${newStage.replace(/_/g, ' ')}`,
+        link: `/leads/${leadId}`,
+        excludeUserId: teamUser.id,
+      }).catch(() => {});
     }
 
     return { success: true };
@@ -156,6 +165,11 @@ export async function updateLeadAssignment(leadId, teamUserId) {
       metadata: { from: current.assignedTo, to: assignTo },
     });
 
+    // Auto-transition: first assignment → contacted
+    if (!current.assignedTo && assignTo) {
+      await advanceLead(leadId, 'contacted', 'lead_assigned');
+    }
+
     revalidatePath('/pipeline');
     revalidatePath('/leads');
     revalidatePath(`/leads/${leadId}`);
@@ -227,6 +241,17 @@ export async function createContact(formData) {
       });
 
       revalidatePath(`/leads/${data.leadId}`);
+
+      // Auto-transition: first contact/note → discovery_scheduled
+      // Only if currently new_lead or contacted
+      const [currentLead] = await db
+        .select({ pipelineStage: leads.pipelineStage })
+        .from(leads)
+        .where(eq(leads.id, data.leadId))
+        .limit(1);
+      if (currentLead && (currentLead.pipelineStage === 'new_lead' || currentLead.pipelineStage === 'contacted')) {
+        await advanceLead(data.leadId, 'discovery_scheduled', 'first_contact_logged');
+      }
     }
 
     revalidatePath('/leads');

@@ -40,6 +40,12 @@ const PortalProposalDetail = ({ proposal, clientName }) => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : null;
 
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
   // Status banner
   if (isExpired && !accepted) {
     return (
@@ -112,7 +118,7 @@ const PortalProposalDetail = ({ proposal, clientName }) => {
         </div>
       )}
 
-      {/* Accept Modal */}
+      {/* Accept & Sign Modal */}
       {showModal && (
         <div
           className='modal d-block'
@@ -121,9 +127,9 @@ const PortalProposalDetail = ({ proposal, clientName }) => {
         >
           <div className='modal-dialog modal-dialog-centered'>
             <div className='modal-content border-0 shadow'>
-              <div className='modal-header border-0'>
+              <div className='modal-header border-0 pb-0'>
                 <h5 className='modal-title fw-bold' style={{ color: '#033457' }}>
-                  Accept Proposal
+                  Accept & Sign Proposal
                 </h5>
                 <button
                   type='button'
@@ -132,23 +138,14 @@ const PortalProposalDetail = ({ proposal, clientName }) => {
                 />
               </div>
               <div className='modal-body'>
-                <div className='mb-3'>
-                  <div className='form-check'>
-                    <input
-                      type='checkbox'
-                      className='form-check-input'
-                      id='agree'
-                      checked={agreed}
-                      onChange={(e) => setAgreed(e.target.checked)}
-                    />
-                    <label className='form-check-label small' htmlFor='agree'>
-                      I agree to the terms and conditions outlined in this proposal.
-                    </label>
-                  </div>
-                </div>
+                <p className='text-muted small mb-3'>
+                  By signing below, you agree to the terms and scope outlined in this proposal.
+                </p>
+
+                {/* Full Legal Name */}
                 <div className='mb-3'>
                   <label className='form-label small fw-medium'>
-                    Type your full name as signature
+                    Full Legal Name
                   </label>
                   <input
                     type='text'
@@ -163,6 +160,31 @@ const PortalProposalDetail = ({ proposal, clientName }) => {
                     }}
                   />
                 </div>
+
+                {/* Agreement checkbox */}
+                <div className='mb-3'>
+                  <div className='form-check'>
+                    <input
+                      type='checkbox'
+                      className='form-check-input'
+                      id='agree'
+                      checked={agreed}
+                      onChange={(e) => setAgreed(e.target.checked)}
+                    />
+                    <label className='form-check-label small' htmlFor='agree'>
+                      I agree to the terms and conditions outlined in this proposal and authorize
+                      BotMakers Inc. to proceed with the described scope of work.
+                    </label>
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div className='mb-3'>
+                  <span className='text-muted small'>
+                    Date: {todayFormatted}
+                  </span>
+                </div>
+
                 {error && (
                   <div className='text-danger small mb-2'>{error}</div>
                 )}
@@ -181,7 +203,7 @@ const PortalProposalDetail = ({ proposal, clientName }) => {
                   onClick={handleAccept}
                 >
                   {loading && <span className='spinner-border spinner-border-sm me-2' />}
-                  Accept & Sign
+                  Sign & Accept
                 </button>
               </div>
             </div>

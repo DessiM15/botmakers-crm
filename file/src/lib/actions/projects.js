@@ -15,6 +15,8 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { projectCreateSchema, milestoneUpdateSchema } from '@/lib/utils/validators';
 import { milestoneCompletedEmail, projectCompletedEmail } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
+import { advanceLead } from '@/lib/pipeline/transitions';
 
 /**
  * Create a new project with phases and milestones.
@@ -365,6 +367,18 @@ export async function updateMilestone(milestoneId, data) {
       .set(updateData)
       .where(eq(projectMilestones.id, milestoneId));
 
+    // Auto-transition: first milestone in-progress → active_client
+    if (data.status === 'in_progress' && milestone.status !== 'in_progress') {
+      const [proj] = await db
+        .select({ leadId: projects.leadId })
+        .from(projects)
+        .where(eq(projects.id, milestone.projectId))
+        .limit(1);
+      if (proj?.leadId) {
+        await advanceLead(proj.leadId, 'active_client', 'first_milestone_started');
+      }
+    }
+
     // Log milestone completion and auto-create invoice if triggers_invoice
     if (data.status === 'completed' && milestone.status !== 'completed') {
       await db.insert(activityLog).values({
@@ -392,6 +406,15 @@ export async function updateMilestone(milestoneId, data) {
         if (client) {
           milestoneCompletedEmail(client.email, client.fullName, proj.name, milestone.title).catch(() => {});
         }
+
+        // In-app notification to team
+        sendTeamNotification({
+          type: 'milestone_completed',
+          title: `Milestone completed: ${milestone.title}`,
+          body: `"${milestone.title}" in project "${proj.name}" has been completed.`,
+          link: `/projects/${milestone.projectId}`,
+          excludeUserId: teamUser.id,
+        }).catch(() => {});
 
         // Auto-create invoice if milestone triggers one (WF-7)
         if (milestone.triggersInvoice) {

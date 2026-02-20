@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { signOutAction } from "@/lib/actions/auth";
+import NotificationBell from "@/components/crm/NotificationBell";
 
 const sidebarItems = [
   { label: "Dashboard", icon: "solar:home-smile-angle-outline", href: "/" },
@@ -171,6 +172,8 @@ const MasterLayout = ({ children }) => {
             </div>
             <div className='col-auto'>
               <div className='d-flex flex-wrap align-items-center gap-3'>
+                {/* Notification Bell */}
+                <NotificationBell />
                 {/* User profile dropdown */}
                 <div className='dropdown'>
                   <button
