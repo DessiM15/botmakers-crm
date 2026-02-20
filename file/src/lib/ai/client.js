@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT } from './prompts';
+import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT } from './prompts';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -131,6 +131,35 @@ ${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}`;
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 2048,
     system: EMAIL_GENERATION_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const text = response.content[0].text;
+  return JSON.parse(text);
+}
+
+/**
+ * Generate a follow-up email draft for a lead.
+ * @param {Object} params
+ * @param {string} params.leadName
+ * @param {string} params.company
+ * @param {string} params.pipelineStage
+ * @param {string} params.triggerReason
+ * @param {string} params.lastInteraction
+ * @returns {Object} - { subject, body_html, body_text }
+ */
+export async function generateFollowUpEmail({ leadName, company, pipelineStage, triggerReason, lastInteraction }) {
+  const userMessage = `Lead: ${leadName} at ${company || 'their company'}
+Current stage: ${pipelineStage.replace(/_/g, ' ')}
+Reason for follow-up: ${triggerReason}
+Last interaction: ${lastInteraction || 'No recent interaction recorded'}
+
+Write a brief, warm, professional follow-up email.`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 1024,
+    system: FOLLOW_UP_EMAIL_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
   });
 

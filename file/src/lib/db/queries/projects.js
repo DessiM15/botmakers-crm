@@ -6,6 +6,8 @@ import {
   projectRepos,
   projectDemos,
   clients,
+  leads,
+  proposals,
   teamUsers,
   activityLog,
 } from '@/lib/db/schema';
@@ -99,8 +101,13 @@ export async function getProjectById(id) {
       clientId: projects.clientId,
       clientName: clients.fullName,
       clientCompany: clients.company,
+      clientEmail: clients.email,
       proposalId: projects.proposalId,
+      proposalTitle: proposals.title,
       leadId: projects.leadId,
+      leadName: leads.fullName,
+      leadEmail: leads.email,
+      leadStage: leads.pipelineStage,
       projectType: projects.projectType,
       description: projects.description,
       status: projects.status,
@@ -116,6 +123,8 @@ export async function getProjectById(id) {
     })
     .from(projects)
     .leftJoin(clients, eq(projects.clientId, clients.id))
+    .leftJoin(leads, eq(projects.leadId, leads.id))
+    .leftJoin(proposals, eq(projects.proposalId, proposals.id))
     .leftJoin(teamUsers, eq(projects.createdBy, teamUsers.id))
     .where(eq(projects.id, id))
     .limit(1);

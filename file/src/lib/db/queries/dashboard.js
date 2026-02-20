@@ -3,11 +3,13 @@ import {
   leads,
   proposals,
   projects,
+  invoices,
   payments,
   projectMilestones,
   projectQuestions,
   activityLog,
   teamUsers,
+  clients,
 } from '@/lib/db/schema';
 import {
   eq,
@@ -229,5 +231,115 @@ export async function getRecentActivity(limit = 15) {
       a.actorType === 'system'
         ? 'System'
         : actorMap[a.actorId] || 'Unknown',
+  }));
+}
+
+/**
+ * Revenue dashboard metrics.
+ */
+export async function getRevenueMetrics() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+  const [
+    [invoicedThisMonth],
+    [paidThisMonth],
+    [outstanding],
+    [paidLastMonth],
+  ] = await Promise.all([
+    // Total invoiced this month
+    db
+      .select({ value: sum(invoices.amount) })
+      .from(invoices)
+      .where(
+        and(
+          gte(invoices.createdAt, monthStart),
+          ne(invoices.status, 'draft')
+        )
+      ),
+    // Total paid this month
+    db
+      .select({ value: sum(payments.amount) })
+      .from(payments)
+      .where(gte(payments.paidAt, monthStart)),
+    // Outstanding (sent but not paid)
+    db
+      .select({ value: sum(invoices.amount) })
+      .from(invoices)
+      .where(
+        inArray(invoices.status, ['sent', 'viewed', 'overdue'])
+      ),
+    // Total paid last month (for MoM)
+    db
+      .select({ value: sum(payments.amount) })
+      .from(payments)
+      .where(
+        and(
+          gte(payments.paidAt, lastMonthStart),
+          lte(payments.paidAt, lastMonthEnd)
+        )
+      ),
+  ]);
+
+  const paidThisVal = parseFloat(paidThisMonth?.value ?? '0');
+  const paidLastVal = parseFloat(paidLastMonth?.value ?? '0');
+  const momChange = paidLastVal > 0
+    ? Math.round(((paidThisVal - paidLastVal) / paidLastVal) * 100)
+    : paidThisVal > 0 ? 100 : 0;
+
+  return {
+    invoicedThisMonth: parseFloat(invoicedThisMonth?.value ?? '0'),
+    paidThisMonth: paidThisVal,
+    outstanding: parseFloat(outstanding?.value ?? '0'),
+    momChange,
+  };
+}
+
+/**
+ * Lead source analytics — last 90 days.
+ */
+export async function getLeadSourceAnalytics() {
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  // Count leads by source in last 90 days
+  const sourceLeads = await db
+    .select({
+      source: leads.source,
+      total: count(),
+    })
+    .from(leads)
+    .where(gte(leads.createdAt, ninetyDaysAgo))
+    .groupBy(leads.source);
+
+  // Count converted leads by source in last 90 days
+  const sourceConverted = await db
+    .select({
+      source: leads.source,
+      converted: count(),
+    })
+    .from(leads)
+    .where(
+      and(
+        gte(leads.createdAt, ninetyDaysAgo),
+        sql`${leads.convertedToClientId} IS NOT NULL`
+      )
+    )
+    .groupBy(leads.source);
+
+  const convertedMap = Object.fromEntries(
+    sourceConverted.map((s) => [s.source, Number(s.converted)])
+  );
+
+  return sourceLeads.map((s) => ({
+    source: s.source,
+    total: Number(s.total),
+    converted: convertedMap[s.source] || 0,
+    conversionRate:
+      Number(s.total) > 0
+        ? Math.round((( convertedMap[s.source] || 0) / Number(s.total)) * 100)
+        : 0,
   }));
 }

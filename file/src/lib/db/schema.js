@@ -419,6 +419,20 @@ export const inAppNotifications = pgTable('in_app_notifications', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const followUpReminders = pgTable('follow_up_reminders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  leadId: uuid('lead_id').notNull().references(() => leads.id),
+  assignedTo: uuid('assigned_to').references(() => teamUsers.id),
+  remindAt: timestamp('remind_at', { withTimezone: true }).notNull(),
+  status: text('status').notNull().default('pending'),
+  triggerReason: text('trigger_reason'),
+  aiDraftSubject: text('ai_draft_subject'),
+  aiDraftBodyHtml: text('ai_draft_body_html'),
+  aiDraftBodyText: text('ai_draft_body_text'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const systemSettings = pgTable('system_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   key: text('key').notNull().unique(),
@@ -634,6 +648,17 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   invoice: one(invoices, {
     fields: [notifications.relatedInvoiceId],
     references: [invoices.id],
+  }),
+}));
+
+export const followUpRemindersRelations = relations(followUpReminders, ({ one }) => ({
+  lead: one(leads, {
+    fields: [followUpReminders.leadId],
+    references: [leads.id],
+  }),
+  assignedUser: one(teamUsers, {
+    fields: [followUpReminders.assignedTo],
+    references: [teamUsers.id],
   }),
 }));
 

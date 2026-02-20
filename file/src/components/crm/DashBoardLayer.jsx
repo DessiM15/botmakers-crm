@@ -4,6 +4,9 @@ import MetricCards from './MetricCards';
 import AlertsPanel from './AlertsPanel';
 import UpcomingTasks from './UpcomingTasks';
 import ActivityFeed from './ActivityFeed';
+import RevenueWidget from './RevenueWidget';
+import LeadSourceAnalytics from './LeadSourceAnalytics';
+import FollowUpQueue from './FollowUpQueue';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -27,7 +30,16 @@ const quickActions = [
   { label: 'Projects', href: '/projects', icon: 'solar:code-bold' },
 ];
 
-const DashBoardLayer = ({ teamUser, metrics, alerts, activity, upcomingMilestones = [] }) => {
+const DashBoardLayer = ({
+  teamUser,
+  metrics,
+  alerts,
+  activity,
+  upcomingMilestones = [],
+  revenue,
+  leadSources = [],
+  followUps = [],
+}) => {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -49,13 +61,25 @@ const DashBoardLayer = ({ teamUser, metrics, alerts, activity, upcomingMilestone
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <MetricCards metrics={metrics} />
+      {/* Revenue + Lead Sources */}
+      <section className="row gy-4">
+        <div className="col-xxl-7 col-lg-6">
+          <RevenueWidget revenue={revenue} />
+        </div>
+        <div className="col-xxl-5 col-lg-6">
+          <LeadSourceAnalytics sources={leadSources} />
+        </div>
+      </section>
 
-      {/* Alerts + Upcoming Tasks + Quick Actions */}
+      {/* Metric Cards */}
+      <div className="mt-4">
+        <MetricCards metrics={metrics} />
+      </div>
+
+      {/* Follow-Up Queue + Upcoming Tasks + Alerts */}
       <section className="row gy-4 mt-1">
         <div className="col-xxl-4 col-lg-6">
-          <AlertsPanel alerts={alerts} />
+          <FollowUpQueue followUps={followUps} />
         </div>
 
         <div className="col-xxl-4 col-lg-6">
@@ -63,23 +87,7 @@ const DashBoardLayer = ({ teamUser, metrics, alerts, activity, upcomingMilestone
         </div>
 
         <div className="col-xxl-4 col-lg-12">
-          <div className="card h-100">
-            <div className="card-header border-bottom">
-              <h6 className="text-lg fw-semibold mb-0">Quick Actions</h6>
-            </div>
-            <div className="card-body d-flex flex-column gap-12">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="btn btn-outline-primary-600 text-white d-flex align-items-center gap-8 text-start"
-                >
-                  <Icon icon={action.icon} className="text-xl" />
-                  {action.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+          <AlertsPanel alerts={alerts} />
         </div>
       </section>
 

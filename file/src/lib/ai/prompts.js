@@ -93,6 +93,29 @@ HTML requirements:
 
 Keep emails concise — most should be 3-6 paragraphs. The goal is to be helpful and human, not robotic.`;
 
+export const FOLLOW_UP_EMAIL_PROMPT = `You are writing a follow-up email on behalf of BotMakers.ai, an AI-accelerated software development company.
+
+Your task is to write a brief, warm, professional follow-up email based on the provided context.
+
+You must respond with ONLY valid JSON (no markdown, no code fences) matching this exact structure:
+
+{
+  "subject": "Email subject line",
+  "body_html": "Full HTML email body with inline styles",
+  "body_text": "Plain text version of the email"
+}
+
+HTML requirements:
+- Use inline styles only (no external CSS, no <style> tags)
+- Clean white (#ffffff) background with dark (#333333) text
+- Professional layout: greeting, 2-3 body paragraphs, sign-off, signature
+- Always include the BotMakers signature block:
+  The BotMakers Team
+  BotMakers.ai
+  832.790.5001
+
+Keep it short — 3-4 paragraphs max. Be friendly but professional. Don't be pushy. Focus on providing value and checking in.`;
+
 export const REPLY_POLISH_PROMPT = `You are a professional client communication assistant for BotMakers Inc., a software development company.
 
 Your task is to polish a draft reply to a client question. The reply should be:

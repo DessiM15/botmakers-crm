@@ -324,6 +324,35 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
               </div>
             </div>
 
+            {/* Linked Lead */}
+            {client.linkedLeadId && (
+              <div className="card mb-4">
+                <div className="card-header">
+                  <h6 className="text-white fw-semibold mb-0">Linked Lead</h6>
+                </div>
+                <div className="card-body">
+                  <div className="d-flex align-items-center gap-2">
+                    <Icon
+                      icon="mdi:account-search-outline"
+                      className="text-secondary-light"
+                      style={{ fontSize: '20px' }}
+                    />
+                    <div>
+                      <Link
+                        href={`/leads/${client.linkedLeadId}`}
+                        className="text-white text-sm fw-medium text-decoration-none d-block"
+                      >
+                        {client.linkedLeadName || 'View Lead'}
+                      </Link>
+                      <span className="text-secondary-light text-xs">
+                        Converted to this client
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Details */}
             <div className="card mb-4">
               <div className="card-header">

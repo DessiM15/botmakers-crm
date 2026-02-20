@@ -11,6 +11,7 @@ import {
   createContact,
 } from '@/lib/actions/leads';
 import { convertLeadToClient } from '@/lib/actions/clients';
+import { approveAndSendFollowUp, dismissFollowUp } from '@/lib/actions/follow-ups';
 import {
   PIPELINE_STAGES,
   LEAD_SOURCES,
@@ -30,7 +31,7 @@ const CONTACT_TYPES = [
   { value: 'note', label: 'Note', icon: 'mdi:note-text-outline' },
 ];
 
-const LeadDetail = ({ lead: initialLead, contacts: initialContacts, teamMembers }) => {
+const LeadDetail = ({ lead: initialLead, contacts: initialContacts, teamMembers, followUps: initialFollowUps = [] }) => {
   const router = useRouter();
   const [lead, setLead] = useState(initialLead);
   const [contactList, setContactList] = useState(initialContacts);
@@ -42,6 +43,8 @@ const LeadDetail = ({ lead: initialLead, contacts: initialContacts, teamMembers 
   const notesRef = useRef(null);
   const [convertLoading, setConvertLoading] = useState(false);
   const [showConvertConfirm, setShowConvertConfirm] = useState(false);
+  const [leadFollowUps, setLeadFollowUps] = useState(initialFollowUps);
+  const [followUpLoading, setFollowUpLoading] = useState(null);
 
   // ── Stage Change ────────────────────────────────────────────────────────
   const handleStageChange = (newStage) => {
@@ -735,6 +738,78 @@ const LeadDetail = ({ lead: initialLead, contacts: initialContacts, teamMembers 
               </button>
             </div>
           </div>
+
+          {/* Follow-Up Reminders */}
+          {leadFollowUps.length > 0 && (
+            <div className="card mb-4">
+              <div className="card-header d-flex align-items-center gap-2">
+                <Icon icon="mdi:bell-ring-outline" className="text-warning" style={{ fontSize: '18px' }} />
+                <h6 className="text-white fw-semibold mb-0">Follow-Ups</h6>
+              </div>
+              <div className="card-body d-flex flex-column gap-3">
+                {leadFollowUps.map((fu) => {
+                  const isPending = fu.status === 'pending';
+                  const isSent = fu.status === 'sent';
+                  const statusColor = isPending ? '#ffc107' : isSent ? '#198754' : '#6c757d';
+                  return (
+                    <div key={fu.id} className="border rounded p-2" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                      <div className="d-flex align-items-center justify-content-between mb-1">
+                        <span className="badge text-xs" style={{ background: `${statusColor}22`, color: statusColor }}>
+                          {fu.status}
+                        </span>
+                        <span className="text-secondary-light text-xs">
+                          {formatRelativeTime(fu.remindAt)}
+                        </span>
+                      </div>
+                      <p className="text-secondary-light text-xs mb-2">{fu.triggerReason}</p>
+                      {fu.aiDraftSubject && (
+                        <p className="text-white text-xs mb-2">
+                          <Icon icon="mdi:email-outline" className="me-1" style={{ fontSize: '12px' }} />
+                          {fu.aiDraftSubject}
+                        </p>
+                      )}
+                      {isPending && (
+                        <div className="d-flex gap-1">
+                          <button
+                            className="btn btn-sm btn-success flex-fill"
+                            disabled={!fu.aiDraftSubject || followUpLoading === fu.id}
+                            onClick={async () => {
+                              setFollowUpLoading(fu.id);
+                              const res = await approveAndSendFollowUp(fu.id);
+                              setFollowUpLoading(null);
+                              if (res?.error) { toast.error(res.error); }
+                              else {
+                                toast.success('Follow-up sent!');
+                                setLeadFollowUps((prev) => prev.map((f) => f.id === fu.id ? { ...f, status: 'sent', sentAt: new Date().toISOString() } : f));
+                              }
+                            }}
+                          >
+                            {followUpLoading === fu.id ? <span className="spinner-border spinner-border-sm" /> : 'Send'}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-secondary flex-fill"
+                            disabled={followUpLoading === fu.id}
+                            onClick={async () => {
+                              setFollowUpLoading(fu.id);
+                              const res = await dismissFollowUp(fu.id);
+                              setFollowUpLoading(null);
+                              if (res?.error) { toast.error(res.error); }
+                              else {
+                                toast.success('Dismissed');
+                                setLeadFollowUps((prev) => prev.map((f) => f.id === fu.id ? { ...f, status: 'dismissed' } : f));
+                              }
+                            }}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Quick Info */}
           <div className="card mb-4">

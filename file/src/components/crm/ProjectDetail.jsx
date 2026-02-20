@@ -431,53 +431,86 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
               </div>
             </div>
 
-            {/* Links */}
+            {/* Linked Records */}
+            <div className="card mb-4">
+              <div className="card-header">
+                <h6 className="text-white fw-semibold mb-0">Linked Records</h6>
+              </div>
+              <div className="card-body">
+                <div className="d-flex flex-column gap-3">
+                  <div className="d-flex align-items-start gap-2">
+                    <Icon icon="mdi:account-outline" className="text-secondary-light mt-1" style={{ fontSize: '18px' }} />
+                    <div>
+                      <label className="text-secondary-light text-xs d-block mb-1">
+                        Client
+                      </label>
+                      <Link
+                        href={`/clients/${project.clientId}`}
+                        className="text-white text-sm text-decoration-none d-block"
+                      >
+                        {project.clientName}
+                        {project.clientCompany
+                          ? ` (${project.clientCompany})`
+                          : ''}
+                      </Link>
+                      {project.clientEmail && (
+                        <span className="text-secondary-light text-xs">{project.clientEmail}</span>
+                      )}
+                    </div>
+                  </div>
+                  {project.leadId && (
+                    <div className="d-flex align-items-start gap-2">
+                      <Icon icon="mdi:account-search-outline" className="text-secondary-light mt-1" style={{ fontSize: '18px' }} />
+                      <div>
+                        <label className="text-secondary-light text-xs d-block mb-1">
+                          Lead
+                        </label>
+                        <Link
+                          href={`/leads/${project.leadId}`}
+                          className="text-white text-sm text-decoration-none d-block"
+                        >
+                          {project.leadName || 'View Lead'}
+                        </Link>
+                        {project.leadStage && (
+                          <span className="text-secondary-light text-xs">
+                            Stage: {project.leadStage.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {project.proposalId && (
+                    <div className="d-flex align-items-start gap-2">
+                      <Icon icon="mdi:file-document-outline" className="text-secondary-light mt-1" style={{ fontSize: '18px' }} />
+                      <div>
+                        <label className="text-secondary-light text-xs d-block mb-1">
+                          Proposal
+                        </label>
+                        <Link
+                          href={`/proposals/${project.proposalId}`}
+                          className="text-white text-sm text-decoration-none d-block"
+                        >
+                          {project.proposalTitle || 'View Proposal'}
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                  {!project.leadId && !project.proposalId && (
+                    <p className="text-secondary-light text-xs mb-0">
+                      No lead or proposal linked to this project.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Details */}
             <div className="card mb-4">
               <div className="card-header">
                 <h6 className="text-white fw-semibold mb-0">Details</h6>
               </div>
               <div className="card-body">
                 <div className="d-flex flex-column gap-3">
-                  <div>
-                    <label className="text-secondary-light text-xs d-block mb-1">
-                      Client
-                    </label>
-                    <Link
-                      href={`/clients/${project.clientId}`}
-                      className="text-white text-sm text-decoration-none"
-                    >
-                      {project.clientName}
-                      {project.clientCompany
-                        ? ` (${project.clientCompany})`
-                        : ''}
-                    </Link>
-                  </div>
-                  {project.proposalId && (
-                    <div>
-                      <label className="text-secondary-light text-xs d-block mb-1">
-                        Linked Proposal
-                      </label>
-                      <Link
-                        href={`/proposals/${project.proposalId}`}
-                        className="text-white text-sm text-decoration-none"
-                      >
-                        View Proposal
-                      </Link>
-                    </div>
-                  )}
-                  {project.leadId && (
-                    <div>
-                      <label className="text-secondary-light text-xs d-block mb-1">
-                        Linked Lead
-                      </label>
-                      <Link
-                        href={`/leads/${project.leadId}`}
-                        className="text-white text-sm text-decoration-none"
-                      >
-                        View Lead
-                      </Link>
-                    </div>
-                  )}
                   <div>
                     <label className="text-secondary-light text-xs d-block mb-1">
                       Created

@@ -10,6 +10,7 @@ import { proposalCreateSchema } from '@/lib/utils/validators';
 import { sendEmail } from '@/lib/email/client';
 import { proposalSent } from '@/lib/email/templates';
 import { sanitizeHtml } from '@/lib/utils/sanitize';
+import { advanceLead } from '@/lib/pipeline/transitions';
 
 /**
  * Create a new proposal with line items.
@@ -67,6 +68,11 @@ export async function createProposal(formData) {
       entityId: proposal.id,
       metadata: { title: proposal.title },
     });
+
+    // Auto-transition: proposal created → proposal_sent stage
+    if (data.leadId) {
+      await advanceLead(data.leadId, 'proposal_sent', 'proposal_created');
+    }
 
     revalidatePath('/proposals');
     if (data.clientId) revalidatePath(`/clients/${data.clientId}`);

@@ -8,6 +8,7 @@ import {
   getLeadContacts,
   getTeamMembers,
 } from '@/lib/db/queries/leads';
+import { getLeadFollowUps } from '@/lib/db/queries/follow-ups';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -30,10 +31,11 @@ const Page = async ({ params }) => {
 
   const { id } = await params;
 
-  const [lead, contactLog, teamMembers] = await Promise.all([
+  const [lead, contactLog, teamMembers, followUps] = await Promise.all([
     getLeadById(id),
     getLeadContacts(id),
     getTeamMembers(),
+    getLeadFollowUps(id),
   ]);
 
   if (!lead) {
@@ -42,7 +44,7 @@ const Page = async ({ params }) => {
 
   return (
     <MasterLayout>
-      <LeadDetail lead={lead} contacts={contactLog} teamMembers={teamMembers} />
+      <LeadDetail lead={lead} contacts={contactLog} teamMembers={teamMembers} followUps={followUps} />
     </MasterLayout>
   );
 };

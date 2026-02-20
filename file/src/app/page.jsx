@@ -8,7 +8,10 @@ import {
   getAlerts,
   getRecentActivity,
   getUpcomingMilestones,
+  getRevenueMetrics,
+  getLeadSourceAnalytics,
 } from '@/lib/db/queries/dashboard';
+import { getPendingFollowUps } from '@/lib/db/queries/follow-ups';
 
 export const metadata = {
   title: 'Dashboard — Botmakers CRM',
@@ -25,11 +28,14 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  const [metrics, alerts, activity, upcomingMilestones] = await Promise.all([
+  const [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps] = await Promise.all([
     getMetrics(),
     getAlerts(),
     getRecentActivity(),
     getUpcomingMilestones(),
+    getRevenueMetrics(),
+    getLeadSourceAnalytics(),
+    getPendingFollowUps(teamUser.id),
   ]);
 
   return (
@@ -40,6 +46,9 @@ const Page = async () => {
         alerts={alerts}
         activity={activity}
         upcomingMilestones={upcomingMilestones}
+        revenue={revenue}
+        leadSources={leadSources}
+        followUps={followUps}
       />
     </MasterLayout>
   );

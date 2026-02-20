@@ -88,6 +88,8 @@ export async function getClientById(id) {
       proposalCount: sql`(SELECT COUNT(*) FROM proposals WHERE proposals.client_id = ${clients.id})`.as('proposal_count'),
       invoiceCount: sql`(SELECT COUNT(*) FROM invoices WHERE invoices.client_id = ${clients.id})`.as('invoice_count'),
       openInvoiceTotal: sql`COALESCE((SELECT SUM(invoices.amount::numeric) FROM invoices WHERE invoices.client_id = ${clients.id} AND invoices.status IN ('sent', 'viewed', 'overdue')), 0)`.as('open_invoice_total'),
+      linkedLeadId: sql`(SELECT id FROM leads WHERE leads.converted_to_client_id = ${clients.id} LIMIT 1)`.as('linked_lead_id'),
+      linkedLeadName: sql`(SELECT full_name FROM leads WHERE leads.converted_to_client_id = ${clients.id} LIMIT 1)`.as('linked_lead_name'),
     })
     .from(clients)
     .leftJoin(teamUsers, eq(clients.createdBy, teamUsers.id))
