@@ -30,13 +30,13 @@ const LeadSourceAnalytics = ({ sources }) => {
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="table table-hover mb-0">
+            <table className="table table-hover mb-0 lead-sources-table">
               <thead>
                 <tr>
-                  <th className="text-xs fw-medium ps-3" style={{ color: '#666' }}>Source</th>
-                  <th className="text-xs fw-medium text-center" style={{ color: '#666' }}>Leads</th>
-                  <th className="text-xs fw-medium text-center" style={{ color: '#666' }}>Converted</th>
-                  <th className="text-xs fw-medium text-end pe-3" style={{ color: '#666' }}>Conv. Rate</th>
+                  <th className="text-xs fw-medium ps-3">Source</th>
+                  <th className="text-xs fw-medium text-center">Leads</th>
+                  <th className="text-xs fw-medium text-center">Converted</th>
+                  <th className="text-xs fw-medium text-end pe-3">Conv. Rate</th>
                 </tr>
               </thead>
               <tbody>
@@ -53,15 +53,15 @@ const LeadSourceAnalytics = ({ sources }) => {
                               icon={config.icon}
                               style={{ fontSize: '16px', color: config.color }}
                             />
-                            <span className="text-sm" style={{ color: '#333' }}>{config.label}</span>
-                            <span className="text-xs" style={{ color: '#888' }}>({pct}%)</span>
+                            <span className="text-sm">{config.label}</span>
+                            <span className="text-xs text-muted-force">({pct}%)</span>
                           </div>
                         </td>
                         <td className="text-center">
-                          <span className="text-sm fw-medium" style={{ color: '#333' }}>{row.total}</span>
+                          <span className="text-sm fw-medium">{row.total}</span>
                         </td>
                         <td className="text-center">
-                          <span className="text-sm" style={{ color: '#333' }}>{row.converted}</span>
+                          <span className="text-sm">{row.converted}</span>
                         </td>
                         <td className="text-end pe-3">
                           <span

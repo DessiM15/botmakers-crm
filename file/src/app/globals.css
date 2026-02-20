@@ -93,6 +93,11 @@ body,
 .proposal-content li { margin-bottom: 4px; line-height: 1.5; }
 .proposal-content strong { color: #fff; }
 
+/* Lead Sources table — force dark text on white table background */
+.lead-sources-table th { color: #666 !important; }
+.lead-sources-table td { color: #333 !important; }
+.lead-sources-table td .text-muted-force { color: #888 !important; }
+
 /* Quill editor dark theme overrides */
 .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1) !important; background: rgba(255,255,255,0.03); }
 .ql-container.ql-snow { border-color: rgba(255,255,255,0.1) !important; min-height: 150px; }
