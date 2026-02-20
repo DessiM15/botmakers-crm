@@ -22,6 +22,13 @@ export async function POST(request) {
       );
     }
 
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json(
+        { error: 'ANTHROPIC_API_KEY is not configured. Add it to Vercel environment variables.' },
+        { status: 500 }
+      );
+    }
+
     const {
       recipientName,
       recipientEmail,
@@ -109,12 +116,13 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, email: result });
   } catch (error) {
-    console.error('AI generate-email error:', error?.message || error);
+    console.error('AI generate-email error:', error);
     if (error.message?.startsWith('CB-')) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
+    const detail = process.env.NODE_ENV === 'development' ? error?.message : undefined;
     return NextResponse.json(
-      { error: 'CB-INT-002: AI email generation failed' },
+      { error: 'CB-INT-002: AI email generation failed', detail },
       { status: 500 }
     );
   }

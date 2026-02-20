@@ -6,6 +6,19 @@ const anthropic = new Anthropic({
 });
 
 /**
+ * Safely parse JSON from Claude responses.
+ * Handles markdown code fences that Claude sometimes adds.
+ */
+function safeParseJSON(text) {
+  let cleaned = text.trim();
+  // Strip markdown code fences
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  }
+  return JSON.parse(cleaned);
+}
+
+/**
  * Analyze a lead using Claude and return structured assessment.
  * @param {Object} leadData - Lead record from database
  * @returns {Object} - { score, prospect_summary, project_summary, complexity, estimated_effort, key_questions, red_flags, recommended_next_step }
@@ -34,7 +47,7 @@ Created: ${leadData.createdAt}`;
   });
 
   const text = response.content[0].text;
-  const analysis = JSON.parse(text);
+  const analysis = safeParseJSON(text);
 
   return analysis;
 }
@@ -74,7 +87,7 @@ ${leadData.aiInternalAnalysis?.estimated_effort ? `Estimated Effort: ${leadData.
   });
 
   const text = response.content[0].text;
-  const proposal = JSON.parse(text);
+  const proposal = safeParseJSON(text);
 
   return proposal;
 }
@@ -135,7 +148,7 @@ ${customInstructions ? `Additional Instructions: ${customInstructions}` : ''}`;
   });
 
   const text = response.content[0].text;
-  return JSON.parse(text);
+  return safeParseJSON(text);
 }
 
 /**
@@ -164,7 +177,7 @@ Write a brief, warm, professional follow-up email.`;
   });
 
   const text = response.content[0].text;
-  return JSON.parse(text);
+  return safeParseJSON(text);
 }
 
 /**
