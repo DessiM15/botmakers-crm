@@ -10,7 +10,7 @@ const PortalProgressBar = ({ progress, completed, total }) => {
             className='fw-bold'
             style={{
               fontSize: '28px',
-              color: progress === 100 ? '#198754' : '#03FF00',
+              color: progress === 100 ? '#198754' : '#033457',
               lineHeight: 1,
             }}
           >

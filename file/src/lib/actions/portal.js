@@ -3,12 +3,14 @@
 import { db } from '@/lib/db/client';
 import { createAdminClient } from '@/lib/db/client';
 import { clients, proposals, projects, projectQuestions, activityLog } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { requireClient } from '@/lib/auth/helpers';
 import { proposalAccepted as proposalAcceptedNotif, clientQuestion as clientQuestionNotif } from '@/lib/email/notifications';
 import { advanceLead } from '@/lib/pipeline/transitions';
 import { sendTeamNotification } from '@/lib/notifications/notify';
+import { sendEmail } from '@/lib/email/client';
+import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -47,7 +49,7 @@ export async function sendMagicLink(email) {
 
     // Validate email exists in clients table
     const [client] = await db
-      .select({ id: clients.id })
+      .select({ id: clients.id, fullName: clients.fullName })
       .from(clients)
       .where(eq(clients.email, normalizedEmail))
       .limit(1);
@@ -56,18 +58,46 @@ export async function sendMagicLink(email) {
       return { error: 'No account found — contact info@botmakers.ai' };
     }
 
-    // Send magic link via Supabase Auth
+    // Generate magic link via admin API (instead of relying on Supabase email)
     const supabase = createAdminClient();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
       email: normalizedEmail,
       options: {
-        emailRedirectTo: `${siteUrl}/portal`,
+        redirectTo: `${siteUrl}/auth/callback?next=/portal`,
       },
     });
 
-    if (error) {
+    if (linkError) {
+      return { error: 'Failed to generate login link. Please try again.' };
+    }
+
+    // Build the actual magic link URL from the token hash
+    const tokenHash = linkData?.properties?.hashed_token;
+    const magicLinkUrl = `${siteUrl}/auth/callback?token_hash=${tokenHash}&type=magiclink&next=/portal`;
+
+    // Send branded email via Resend
+    const bodyHtml = `<p style="margin:0 0 16px; color:#333;">Click the button below to securely log in to your BotMakers client portal. This link expires in 1 hour.</p>
+    <p style="margin:0 0 16px; color:#333;">No password needed — just click and you're in.</p>`;
+
+    const html = wrapInBrandedTemplate({
+      recipientName: client.fullName,
+      bodyHtml,
+      senderName: 'The BotMakers Team',
+      senderTitle: null,
+      ctaUrl: magicLinkUrl,
+      ctaText: 'Log In to Your Portal',
+    });
+
+    const emailResult = await sendEmail({
+      to: normalizedEmail,
+      subject: 'Your Portal Login Link',
+      html,
+    });
+
+    if (!emailResult.success) {
       return { error: 'Failed to send login link. Please try again.' };
     }
 
@@ -98,15 +128,15 @@ export async function submitQuestion(projectId, questionText) {
       })
       .returning();
 
-    // Log activity
-    await db.insert(activityLog).values({
+    // Log activity (non-blocking — RLS may block client-initiated inserts)
+    db.insert(activityLog).values({
       actorId: client.id,
       actorType: 'client',
       action: 'question.created',
       entityType: 'project',
       entityId: projectId,
       metadata: { questionId: question.id },
-    });
+    }).catch(() => {});
 
     // Notify team (non-blocking)
     const [project] = await db
@@ -125,7 +155,8 @@ export async function submitQuestion(projectId, questionText) {
     }
 
     return { success: true, question };
-  } catch {
+  } catch (err) {
+    console.error('submitQuestion error:', err);
     return { error: 'Failed to submit question. Please try again.' };
   }
 }
@@ -168,14 +199,14 @@ export async function trackProposalView(proposalId) {
 
     // First view: send team notification + log activity
     if (isFirstView) {
-      await db.insert(activityLog).values({
+      db.insert(activityLog).values({
         actorId: client.id,
         actorType: 'client',
         action: 'proposal.viewed',
         entityType: 'proposal',
         entityId: proposalId,
         metadata: { clientName: client.fullName, proposalTitle: proposal.title },
-      });
+      }).catch(() => {});
 
       sendTeamNotification({
         type: 'proposal_viewed',
@@ -251,8 +282,8 @@ export async function acceptProposal(proposalId, signature) {
       })
       .where(eq(proposals.id, proposalId));
 
-    // Log activity
-    await db.insert(activityLog).values({
+    // Log activity (non-blocking — RLS may block client-initiated inserts)
+    db.insert(activityLog).values({
       actorId: client.id,
       actorType: 'client',
       action: 'proposal.signed',
@@ -264,7 +295,7 @@ export async function acceptProposal(proposalId, signature) {
         signerName: signature.trim(),
         signerIp,
       },
-    });
+    }).catch(() => {});
 
     // Auto-transition: proposal accepted → contract_signed
     if (proposal.leadId) {
@@ -285,8 +316,76 @@ export async function acceptProposal(proposalId, signature) {
       link: `/proposals/${proposalId}`,
     }).catch(() => {});
 
+    // Auto-send portal invite if not yet invited
+    const [clientRecord] = await db
+      .select({ portalInvitedAt: clients.portalInvitedAt })
+      .from(clients)
+      .where(eq(clients.id, client.id))
+      .limit(1);
+
+    if (clientRecord && !clientRecord.portalInvitedAt) {
+      try {
+        const { sendPortalInvite } = await import('@/lib/actions/clients');
+        await sendPortalInvite(client.id);
+      } catch {
+        // Non-blocking — invite can be sent manually later
+      }
+    }
+
     return { success: true };
   } catch {
     return { error: 'Failed to accept proposal. Please try again.' };
+  }
+}
+
+/**
+ * Track when a client logs into the portal.
+ * Sets portalFirstLoginAt on first visit, always updates portalLastLoginAt.
+ */
+export async function trackPortalLogin(clientId, existingFirstLogin) {
+  try {
+    const now = new Date();
+    const updateData = {
+      portalLastLoginAt: now,
+      updatedAt: now,
+    };
+
+    if (!existingFirstLogin) {
+      updateData.portalFirstLoginAt = now;
+    }
+
+    await db.update(clients).set(updateData).where(eq(clients.id, clientId));
+
+    // Log first login only (non-blocking — RLS may block)
+    if (!existingFirstLogin) {
+      db.insert(activityLog).values({
+        actorId: clientId,
+        actorType: 'client',
+        action: 'portal.first_login',
+        entityType: 'client',
+        entityId: clientId,
+      }).catch(() => {});
+    }
+  } catch {
+    // Non-critical
+  }
+}
+
+/**
+ * Mark portal onboarding as complete for a client.
+ */
+export async function markOnboardingComplete() {
+  try {
+    const cookieStore = await cookies();
+    const { client } = await requireClient(cookieStore);
+
+    await db
+      .update(clients)
+      .set({ portalOnboardingComplete: true, updatedAt: new Date() })
+      .where(eq(clients.id, client.id));
+
+    return { success: true };
+  } catch {
+    return { error: 'Failed to complete onboarding.' };
   }
 }

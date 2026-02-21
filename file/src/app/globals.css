@@ -69,20 +69,87 @@ body,
   color: #03FF00 !important;
 }
 
-/* Portal layout styles */
+/* Portal layout styles — force light theme on all portal pages */
 .portal-layout {
   min-height: 100vh;
-  background: #f8f9fa;
+  background: #f8f9fa !important;
+  color: #333 !important;
 }
 .portal-layout .portal-header {
-  background: #033457;
-  color: #ffffff;
+  background: #033457 !important;
+  color: #ffffff !important;
   padding: 16px 24px;
 }
 .portal-layout .portal-content {
   max-width: 960px;
   margin: 0 auto;
   padding: 24px;
+}
+/* Force light cards, text, and backgrounds inside portal */
+.portal-layout .card {
+  background: #ffffff !important;
+  border: 1px solid #e9ecef !important;
+  color: #333 !important;
+}
+.portal-layout .card-body {
+  background: transparent !important;
+  color: #333 !important;
+}
+.portal-layout .card-header {
+  background: transparent !important;
+  border-bottom: 1px solid #e9ecef !important;
+}
+.portal-layout .text-muted {
+  color: #6c757d !important;
+}
+.portal-layout p,
+.portal-layout span,
+.portal-layout li,
+.portal-layout label,
+.portal-layout .small,
+.portal-layout .text-sm {
+  color: inherit;
+}
+.portal-layout h1, .portal-layout h2, .portal-layout h3,
+.portal-layout h4, .portal-layout h5, .portal-layout h6 {
+  color: #033457 !important;
+}
+.portal-layout .form-control {
+  background: #ffffff !important;
+  color: #333 !important;
+  border-color: #dee2e6 !important;
+}
+.portal-layout .form-control::placeholder {
+  color: #adb5bd !important;
+}
+.portal-layout .form-control:focus {
+  border-color: #033457 !important;
+  box-shadow: 0 0 0 0.2rem rgba(3,52,87,0.15) !important;
+}
+.portal-layout .btn-primary,
+.portal-layout .btn-success {
+  background: #033457 !important;
+  border-color: #033457 !important;
+  color: #fff !important;
+}
+.portal-layout .btn-outline-secondary {
+  color: #6c757d !important;
+  border-color: #dee2e6 !important;
+}
+.portal-layout .progress {
+  background: #e9ecef !important;
+}
+.portal-layout .badge {
+  color: inherit;
+}
+.portal-layout .alert {
+  color: #333 !important;
+}
+.portal-layout footer {
+  color: #6c757d !important;
+}
+.portal-layout footer a {
+  color: #033457 !important;
 }
 
 /* Proposal content rendered HTML */

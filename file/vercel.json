@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/stale-leads",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/overdue-milestones",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/retention-check",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/portal-welcome-sequence",
+      "schedule": "0 14 * * *"
+    }
+  ]
+}

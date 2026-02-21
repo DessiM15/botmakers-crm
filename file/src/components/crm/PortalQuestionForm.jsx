@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { submitQuestion } from '@/lib/actions/portal';
 
-const PortalQuestionForm = ({ projectId, questions }) => {
+const PortalQuestionForm = ({ projectId, questions, isPreview = false }) => {
   const router = useRouter();
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,10 +55,10 @@ const PortalQuestionForm = ({ projectId, questions }) => {
           <textarea
             className='form-control mb-2'
             rows={3}
-            placeholder='Ask a question about your project (min 10 characters)...'
+            placeholder={isPreview ? 'Preview mode — questions disabled' : 'Ask a question about your project (min 10 characters)...'}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            disabled={loading}
+            disabled={loading || isPreview}
             style={{ resize: 'vertical' }}
           />
           {error && (
@@ -72,11 +72,13 @@ const PortalQuestionForm = ({ projectId, questions }) => {
           <button
             type='submit'
             className='btn btn-sm fw-medium'
-            disabled={loading || text.trim().length < 10}
+            disabled={loading || text.trim().length < 10 || isPreview}
+            title={isPreview ? 'Preview mode — questions disabled' : undefined}
             style={{
-              background: '#033457',
-              color: '#fff',
+              background: isPreview ? '#e9ecef' : '#033457',
+              color: isPreview ? '#6c757d' : '#fff',
               border: 'none',
+              cursor: isPreview ? 'not-allowed' : undefined,
             }}
           >
             {loading ? (

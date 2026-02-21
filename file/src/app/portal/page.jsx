@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { requireClient } from '@/lib/auth/helpers';
 import { getClientProjects } from '@/lib/db/queries/portal';
+import { trackPortalLogin } from '@/lib/actions/portal';
 import PortalLayout from '@/components/crm/PortalLayout';
 import Link from 'next/link';
 
@@ -12,6 +13,23 @@ export const metadata = {
 export default async function PortalHomePage() {
   const cookieStore = await cookies();
   const { client } = await requireClient(cookieStore);
+
+  // Check if access is revoked
+  if (client.portalAccessRevoked) {
+    const { createServerSupabaseClient } = await import('@/lib/db/client');
+    const supabase = createServerSupabaseClient(cookieStore);
+    await supabase.auth.signOut();
+    redirect('/portal/login?error=access_revoked');
+  }
+
+  // Track login (non-blocking)
+  trackPortalLogin(client.id, client.portalFirstLoginAt).catch(() => {});
+
+  // Redirect to onboarding if not completed
+  if (!client.portalOnboardingComplete) {
+    redirect('/portal/welcome');
+  }
+
   const projects = await getClientProjects(client.id);
 
   // Auto-redirect if exactly 1 project

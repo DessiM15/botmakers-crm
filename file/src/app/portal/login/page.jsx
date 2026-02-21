@@ -7,7 +7,15 @@ export default function PortalLoginPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('error') === 'access_revoked') {
+        return 'Your portal access has been revoked. Please contact info@botmakers.ai.';
+      }
+    }
+    return '';
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();

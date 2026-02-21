@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
-import { updateClient } from '@/lib/actions/clients';
+import { updateClient, sendPortalInvite, revokePortalAccess, restorePortalAccess, generatePortalPreviewToken } from '@/lib/actions/clients';
 import { formatDate, formatCurrency, formatPhoneNumber } from '@/lib/utils/formatters';
 import { PROJECT_STATUSES, PROPOSAL_STATUSES, INVOICE_STATUSES } from '@/lib/utils/constants';
 
@@ -17,6 +17,266 @@ const TABS = [
   { key: 'questions', label: 'Questions', icon: 'mdi:help-circle-outline' },
   { key: 'activity', label: 'Activity', icon: 'mdi:timeline-outline' },
 ];
+
+const PortalAccessCard = ({ client, setClient }) => {
+  const [inviting, setInviting] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+
+  const handlePreview = async () => {
+    setPreviewing(true);
+    const res = await generatePortalPreviewToken(client.id);
+    setPreviewing(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else if (res.token) {
+      window.open(`/portal/preview?token=${res.token}`, '_blank');
+    }
+  };
+
+  const handleInvite = async () => {
+    setInviting(true);
+    const res = await sendPortalInvite(client.id);
+    setInviting(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Portal invite sent!');
+      if (res.warning) {
+        toast.warn(res.warning);
+      }
+      setClient((prev) => ({
+        ...prev,
+        portalInvitedAt: res.sentAt,
+        portalInviteCount: (prev.portalInviteCount || 0) + 1,
+        portalAccessRevoked: false,
+        authUserId: res.authUserId || prev.authUserId,
+      }));
+    }
+  };
+
+  const handleRevoke = async () => {
+    setRevoking(true);
+    const res = await revokePortalAccess(client.id);
+    setRevoking(false);
+    setShowRevokeConfirm(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Portal access revoked');
+      setClient((prev) => ({ ...prev, portalAccessRevoked: true }));
+    }
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    const res = await restorePortalAccess(client.id);
+    setRestoring(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Portal access restored');
+      setClient((prev) => ({ ...prev, portalAccessRevoked: false }));
+    }
+  };
+
+  // State: Revoked
+  if (client.portalAccessRevoked) {
+    return (
+      <div className="card mb-4">
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <h6 className="text-white fw-semibold mb-0">Portal Access</h6>
+          <span className="badge fw-medium" style={{ background: 'rgba(220,53,69,0.2)', color: '#dc3545' }}>
+            Access Revoked
+          </span>
+        </div>
+        <div className="card-body">
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <Icon icon="mdi:shield-off-outline" style={{ fontSize: '20px', color: '#dc3545' }} />
+            <p className="text-secondary-light text-sm mb-0">
+              This client&apos;s portal access has been revoked.
+            </p>
+          </div>
+          <button
+            className="btn btn-outline-success btn-sm w-100"
+            onClick={handleRestore}
+            disabled={restoring}
+          >
+            {restoring ? (
+              <><span className="spinner-border spinner-border-sm me-1" /> Restoring...</>
+            ) : (
+              <><Icon icon="mdi:shield-check-outline" className="me-1" style={{ fontSize: '16px' }} /> Restore Access</>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // State: Not invited
+  if (!client.portalInvitedAt) {
+    return (
+      <div className="card mb-4">
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <h6 className="text-white fw-semibold mb-0">Portal Access</h6>
+          <span className="badge fw-medium" style={{ background: 'rgba(108,117,125,0.2)', color: '#6c757d' }}>
+            Not Invited
+          </span>
+        </div>
+        <div className="card-body">
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <Icon icon="mdi:email-outline" className="text-secondary-light" style={{ fontSize: '20px' }} />
+            <p className="text-secondary-light text-sm mb-0">
+              Client has not been invited to the portal yet.
+            </p>
+          </div>
+          <button
+            className="btn btn-sm w-100 fw-semibold"
+            style={{ background: '#03FF00', color: '#033457', border: 'none' }}
+            onClick={handleInvite}
+            disabled={inviting}
+          >
+            {inviting ? (
+              <><span className="spinner-border spinner-border-sm me-1" /> Sending...</>
+            ) : (
+              <><Icon icon="mdi:send" className="me-1" style={{ fontSize: '16px' }} /> Send Portal Invite</>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // State: Invited but awaiting first login
+  if (!client.portalFirstLoginAt) {
+    return (
+      <div className="card mb-4">
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <h6 className="text-white fw-semibold mb-0">Portal Access</h6>
+          <span className="badge fw-medium" style={{ background: 'rgba(255,193,7,0.2)', color: '#ffc107' }}>
+            Awaiting First Login
+          </span>
+        </div>
+        <div className="card-body">
+          <div className="d-flex align-items-center gap-2 mb-2">
+            <Icon icon="mdi:clock-outline" style={{ fontSize: '20px', color: '#ffc107' }} />
+            <p className="text-secondary-light text-sm mb-0">
+              Invite sent — waiting for client to log in
+            </p>
+          </div>
+          <div className="d-flex flex-column gap-1 mb-3">
+            <span className="text-secondary-light text-xs">
+              Invited: {formatDate(client.portalInvitedAt)}
+            </span>
+            <span className="text-secondary-light text-xs">
+              Invites sent: {client.portalInviteCount}
+            </span>
+          </div>
+          <div className="d-flex gap-2">
+            <button
+              className="btn btn-outline-primary btn-sm flex-fill"
+              onClick={handleInvite}
+              disabled={inviting}
+            >
+              {inviting ? (
+                <><span className="spinner-border spinner-border-sm me-1" /> Sending...</>
+              ) : (
+                <><Icon icon="mdi:refresh" className="me-1" style={{ fontSize: '14px' }} /> Resend Invite</>
+              )}
+            </button>
+            <button
+              className="btn btn-outline-danger btn-sm"
+              onClick={() => setShowRevokeConfirm(true)}
+            >
+              <Icon icon="mdi:shield-off-outline" style={{ fontSize: '14px' }} />
+            </button>
+          </div>
+          {showRevokeConfirm && (
+            <div className="mt-3 p-3 rounded" style={{ background: 'rgba(220,53,69,0.1)', border: '1px solid rgba(220,53,69,0.3)' }}>
+              <p className="text-white text-sm mb-2">Revoke portal access for this client?</p>
+              <div className="d-flex gap-2">
+                <button className="btn btn-danger btn-sm flex-fill" onClick={handleRevoke} disabled={revoking}>
+                  {revoking ? <span className="spinner-border spinner-border-sm" /> : 'Confirm Revoke'}
+                </button>
+                <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowRevokeConfirm(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // State: Active — client has logged in
+  return (
+    <div className="card mb-4">
+      <div className="card-header d-flex align-items-center justify-content-between">
+        <h6 className="text-white fw-semibold mb-0">Portal Access</h6>
+        <span className="badge fw-medium" style={{ background: 'rgba(25,135,84,0.2)', color: '#198754' }}>
+          Active
+        </span>
+      </div>
+      <div className="card-body">
+        <div className="d-flex align-items-center gap-2 mb-2">
+          <Icon icon="mdi:check-circle" className="text-success" style={{ fontSize: '20px' }} />
+          <p className="text-white text-sm mb-0 fw-medium">Portal account active</p>
+        </div>
+        <div className="d-flex flex-column gap-1 mb-3">
+          <span className="text-secondary-light text-xs">
+            First login: {formatDate(client.portalFirstLoginAt)}
+          </span>
+          <span className="text-secondary-light text-xs">
+            Last login: {formatDate(client.portalLastLoginAt)}
+          </span>
+        </div>
+        <button
+          className="btn btn-sm w-100 fw-medium mb-2"
+          style={{ background: 'rgba(3,52,87,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}
+          onClick={handlePreview}
+          disabled={previewing}
+        >
+          {previewing ? (
+            <><span className="spinner-border spinner-border-sm me-1" /> Opening...</>
+          ) : (
+            <><Icon icon="mdi:eye-outline" className="me-1" style={{ fontSize: '16px' }} /> View as Client</>
+          )}
+        </button>
+        <div className="d-flex gap-2">
+          <button
+            className="btn btn-outline-primary btn-sm flex-fill"
+            onClick={handleInvite}
+            disabled={inviting}
+          >
+            {inviting ? (
+              <><span className="spinner-border spinner-border-sm me-1" /> Sending...</>
+            ) : (
+              <><Icon icon="mdi:refresh" className="me-1" style={{ fontSize: '14px' }} /> Resend Invite</>
+            )}
+          </button>
+          <button
+            className="btn btn-outline-danger btn-sm"
+            onClick={() => setShowRevokeConfirm(true)}
+          >
+            <Icon icon="mdi:shield-off-outline" style={{ fontSize: '14px' }} />
+          </button>
+        </div>
+        {showRevokeConfirm && (
+          <div className="mt-3 p-3 rounded" style={{ background: 'rgba(220,53,69,0.1)', border: '1px solid rgba(220,53,69,0.3)' }}>
+            <p className="text-white text-sm mb-2">Revoke portal access for this client?</p>
+            <div className="d-flex gap-2">
+              <button className="btn btn-danger btn-sm flex-fill" onClick={handleRevoke} disabled={revoking}>
+                {revoking ? <span className="spinner-border spinner-border-sm" /> : 'Confirm Revoke'}
+              </button>
+              <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowRevokeConfirm(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const ClientDetail = ({ client: initialClient, clientProjects = [], clientProposals = [], clientInvoices = [] }) => {
   const router = useRouter();
@@ -71,18 +331,20 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
         {client.company && (
           <span className="text-secondary-light text-md">{client.company}</span>
         )}
-        {client.authUserId ? (
-          <span
-            className="badge fw-medium"
-            style={{ background: 'rgba(25,135,84,0.2)', color: '#198754' }}
-          >
-            Portal Access
+        {client.portalAccessRevoked ? (
+          <span className="badge fw-medium" style={{ background: 'rgba(220,53,69,0.2)', color: '#dc3545' }}>
+            Portal Revoked
+          </span>
+        ) : client.portalFirstLoginAt ? (
+          <span className="badge fw-medium" style={{ background: 'rgba(25,135,84,0.2)', color: '#198754' }}>
+            Portal Active
+          </span>
+        ) : client.portalInvitedAt ? (
+          <span className="badge fw-medium" style={{ background: 'rgba(255,193,7,0.2)', color: '#ffc107' }}>
+            Portal Invited
           </span>
         ) : (
-          <span
-            className="badge fw-medium"
-            style={{ background: 'rgba(108,117,125,0.2)', color: '#6c757d' }}
-          >
+          <span className="badge fw-medium" style={{ background: 'rgba(108,117,125,0.2)', color: '#6c757d' }}>
             No Portal Access
           </span>
         )}
@@ -282,47 +544,8 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
           </div>
 
           <div className="col-xxl-4 col-xl-5">
-            {/* Portal Access */}
-            <div className="card mb-4">
-              <div className="card-header">
-                <h6 className="text-white fw-semibold mb-0">Portal Access</h6>
-              </div>
-              <div className="card-body">
-                {client.authUserId ? (
-                  <div className="d-flex align-items-center gap-2">
-                    <Icon
-                      icon="mdi:check-circle"
-                      className="text-success"
-                      style={{ fontSize: '20px' }}
-                    />
-                    <div>
-                      <p className="text-white text-sm mb-0 fw-medium">
-                        Portal account active
-                      </p>
-                      <p className="text-secondary-light text-xs mb-0">
-                        Client can log in via magic link
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="d-flex align-items-center gap-2">
-                    <Icon
-                      icon="mdi:close-circle-outline"
-                      className="text-secondary-light"
-                      style={{ fontSize: '20px' }}
-                    />
-                    <div>
-                      <p className="text-white text-sm mb-0 fw-medium">
-                        No portal account
-                      </p>
-                      <p className="text-secondary-light text-xs mb-0">
-                        Portal access will be created during conversion or manually
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Portal Access — Interactive 4-state card */}
+            <PortalAccessCard client={client} setClient={setClient} />
 
             {/* Linked Lead */}
             {client.linkedLeadId && (

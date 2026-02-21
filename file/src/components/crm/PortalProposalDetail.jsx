@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { acceptProposal } from '@/lib/actions/portal';
 import { sanitizeHtml } from '@/lib/utils/sanitize';
 
-const PortalProposalDetail = ({ proposal, clientName }) => {
+const PortalProposalDetail = ({ proposal, clientName, isPreview = false }) => {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [agreed, setAgreed] = useState(false);
@@ -102,13 +102,24 @@ const PortalProposalDetail = ({ proposal, clientName }) => {
       {/* Accept button */}
       {!isDeclined && !isExpired && (
         <div className='text-center mt-4'>
-          <button
-            className='btn btn-lg fw-semibold px-5'
-            style={{ background: '#03FF00', color: '#033457', border: 'none' }}
-            onClick={() => setShowModal(true)}
-          >
-            Accept & Sign
-          </button>
+          {isPreview ? (
+            <button
+              className='btn btn-lg fw-semibold px-5 disabled'
+              style={{ background: '#e9ecef', color: '#6c757d', border: 'none', cursor: 'not-allowed' }}
+              title='Preview mode — signing disabled'
+              disabled
+            >
+              Accept & Sign
+            </button>
+          ) : (
+            <button
+              className='btn btn-lg fw-semibold px-5'
+              style={{ background: '#03FF00', color: '#033457', border: 'none' }}
+              onClick={() => setShowModal(true)}
+            >
+              Accept & Sign
+            </button>
+          )}
         </div>
       )}
 
