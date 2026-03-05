@@ -18,6 +18,7 @@ const sidebarItems = [
   { label: "Invoices", icon: "mdi:receipt-text-outline", href: "/invoices" },
   { label: "Services", icon: "mdi:server-network", href: "/services" },
   { label: "Email Generator", icon: "solar:letter-outline", href: "/email-generator" },
+  { label: "Docs", icon: "mdi:notebook-edit-outline", href: "/docs" },
   "separator",
   { label: "Settings", icon: "solar:settings-outline", href: "/settings" },
   { label: "Activity Log", icon: "mdi:history", href: "/activity" },

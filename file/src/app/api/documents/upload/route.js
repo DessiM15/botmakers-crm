@@ -22,10 +22,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'CB-API-001: File is required' }, { status: 400 });
     }
 
-    if (!clientId && !projectId) {
-      return NextResponse.json({ error: 'CB-API-001: Client or project is required' }, { status: 400 });
-    }
-
     // Validate file type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json({ error: 'CB-API-001: File type not allowed' }, { status: 400 });
@@ -39,7 +35,7 @@ export async function POST(request) {
     // Sanitize filename
     const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const timestamp = Date.now();
-    const prefix = projectId ? `projects/${projectId}` : `clients/${clientId}`;
+    const prefix = projectId ? `projects/${projectId}` : clientId ? `clients/${clientId}` : 'global';
     const storagePath = `${prefix}/${timestamp}_${sanitized}`;
 
     // Upload to Supabase Storage
@@ -83,8 +79,8 @@ export async function POST(request) {
       actorId: teamUser.id,
       actorType: 'team',
       action: 'document.uploaded',
-      entityType: projectId ? 'project' : 'client',
-      entityId: projectId || clientId,
+      entityType: projectId ? 'project' : clientId ? 'client' : 'document',
+      entityId: projectId || clientId || doc.id,
       metadata: { documentId: doc.id, fileName: file.name },
     });
 

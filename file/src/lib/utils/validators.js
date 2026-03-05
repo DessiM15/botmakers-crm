@@ -191,6 +191,22 @@ export const serviceUpdateSchema = z.object({
   projectId: z.string().uuid().optional().nullable(),
 });
 
+export const editableDocCreateSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  content: z.string().default(''),
+  entityType: z.enum(['global', 'project', 'client']).default('global'),
+  entityId: z.string().uuid().optional().nullable(),
+  category: z.enum(['spec', 'meeting_notes', 'sop', 'internal', 'other']).default('other'),
+  isPortalVisible: z.boolean().default(false),
+});
+
+export const editableDocUpdateSchema = z.object({
+  title: z.string().min(1, 'Title is required').optional(),
+  content: z.string().optional(),
+  category: z.enum(['spec', 'meeting_notes', 'sop', 'internal', 'other']).optional(),
+  isPortalVisible: z.boolean().optional(),
+});
+
 export const documentUploadSchema = z.object({
   clientId: z.string().uuid().optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),

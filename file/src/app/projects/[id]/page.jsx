@@ -8,6 +8,7 @@ import { getInvoicesByProjectId } from '@/lib/db/queries/invoices';
 import { getProjectQuestions } from '@/lib/db/queries/portal';
 import { getServicesByProjectId } from '@/lib/db/queries/services';
 import { getDocumentsByProjectId } from '@/lib/db/queries/documents';
+import { getEditableDocsByProjectId } from '@/lib/db/queries/editable-docs';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -29,12 +30,13 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  const [project, projectInvoices, projectQuestions, projectServices, projectDocuments] = await Promise.all([
+  const [project, projectInvoices, projectQuestions, projectServices, projectDocuments, projectEditableDocs] = await Promise.all([
     getProjectById(id),
     getInvoicesByProjectId(id),
     getProjectQuestions(id),
     getServicesByProjectId(id).catch(() => []),
     getDocumentsByProjectId(id).catch(() => []),
+    getEditableDocsByProjectId(id).catch(() => []),
   ]);
 
   if (!project) {
@@ -43,7 +45,7 @@ const Page = async ({ params }) => {
 
   return (
     <MasterLayout>
-      <ProjectDetail project={project} projectInvoices={projectInvoices} projectQuestions={projectQuestions} projectServices={projectServices} projectDocuments={projectDocuments} />
+      <ProjectDetail project={project} projectInvoices={projectInvoices} projectQuestions={projectQuestions} projectServices={projectServices} projectDocuments={projectDocuments} projectEditableDocs={projectEditableDocs} />
     </MasterLayout>
   );
 };

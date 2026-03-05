@@ -9,6 +9,7 @@ import { getProposalsByClientId } from '@/lib/db/queries/proposals';
 import { getInvoicesByClientId } from '@/lib/db/queries/invoices';
 import { getServicesByClientId } from '@/lib/db/queries/services';
 import { getDocumentsByClientId } from '@/lib/db/queries/documents';
+import { getEditableDocsByClientId } from '@/lib/db/queries/editable-docs';
 
 export async function generateMetadata({ params }) {
   try {
@@ -35,15 +36,16 @@ const Page = async ({ params }) => {
 
   const { id } = await params;
 
-  let client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments;
+  let client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments, clientEditableDocs;
   try {
-    [client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments] = await Promise.all([
+    [client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments, clientEditableDocs] = await Promise.all([
       getClientById(id),
       getProjectsByClientId(id).catch(() => []),
       getProposalsByClientId(id).catch(() => []),
       getInvoicesByClientId(id).catch(() => []),
       getServicesByClientId(id).catch(() => []),
       getDocumentsByClientId(id).catch(() => []),
+      getEditableDocsByClientId(id).catch(() => []),
     ]);
   } catch {
     client = await getClientById(id).catch(() => null);
@@ -52,6 +54,7 @@ const Page = async ({ params }) => {
     clientInvoices = [];
     clientServices = [];
     clientDocuments = [];
+    clientEditableDocs = [];
   }
 
   if (!client) {
@@ -60,7 +63,7 @@ const Page = async ({ params }) => {
 
   return (
     <MasterLayout>
-      <ClientDetail client={client} clientProjects={clientProjects} clientProposals={clientProposals} clientInvoices={clientInvoices} clientServices={clientServices} clientDocuments={clientDocuments} />
+      <ClientDetail client={client} clientProjects={clientProjects} clientProposals={clientProposals} clientInvoices={clientInvoices} clientServices={clientServices} clientDocuments={clientDocuments} clientEditableDocs={clientEditableDocs} />
     </MasterLayout>
   );
 };

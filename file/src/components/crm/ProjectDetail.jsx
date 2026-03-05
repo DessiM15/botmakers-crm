@@ -12,6 +12,7 @@ import MilestoneEditor from './MilestoneEditor';
 import ReposDemosTab from './ReposDemosTab';
 import QuestionReply from './QuestionReply';
 import DocumentVault from './DocumentVault';
+import EditableDocsList from './EditableDocsList';
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: 'mdi:information-outline' },
@@ -23,7 +24,7 @@ const TABS = [
   { key: 'documents', label: 'Documents', icon: 'mdi:folder-file-outline' },
 ];
 
-const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQuestions = [], projectServices = [], projectDocuments = [] }) => {
+const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQuestions = [], projectServices = [], projectDocuments = [], projectEditableDocs = [] }) => {
   const router = useRouter();
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState('overview');
@@ -731,7 +732,11 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
 
       {/* Documents Tab */}
       {activeTab === 'documents' && (
-        <DocumentVault projectId={project.id} documents={projectDocuments} mode="crm" />
+        <>
+          <DocumentVault projectId={project.id} documents={projectDocuments} mode="crm" />
+          <hr className="my-4" />
+          <EditableDocsList docs={projectEditableDocs} entityType="project" entityId={project.id} compact />
+        </>
       )}
 
       {/* Complete Project Confirmation Modal */}

@@ -11,6 +11,7 @@ import { PROJECT_STATUSES, PROPOSAL_STATUSES, INVOICE_STATUSES, SERVICE_STATUSES
 import { deleteService } from '@/lib/actions/services';
 import { deleteDocument, toggleDocumentPortalVisibility } from '@/lib/actions/documents';
 import DocumentVault from './DocumentVault';
+import EditableDocsList from './EditableDocsList';
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: 'mdi:account-outline' },
@@ -283,7 +284,7 @@ const PortalAccessCard = ({ client, setClient }) => {
   );
 };
 
-const ClientDetail = ({ client: initialClient, clientProjects = [], clientProposals = [], clientInvoices = [], clientServices = [], clientDocuments = [] }) => {
+const ClientDetail = ({ client: initialClient, clientProjects = [], clientProposals = [], clientInvoices = [], clientServices = [], clientDocuments = [], clientEditableDocs = [] }) => {
   const router = useRouter();
   const [client, setClient] = useState(initialClient);
   const [activeTab, setActiveTab] = useState('overview');
@@ -952,7 +953,11 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
       )}
 
       {activeTab === 'documents' && (
-        <DocumentVault clientId={client.id} documents={clientDocuments} mode="crm" />
+        <>
+          <DocumentVault clientId={client.id} documents={clientDocuments} mode="crm" />
+          <hr className="my-4" />
+          <EditableDocsList docs={clientEditableDocs} entityType="client" entityId={client.id} compact />
+        </>
       )}
 
       {activeTab === 'questions' && (

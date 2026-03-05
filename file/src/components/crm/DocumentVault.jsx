@@ -28,7 +28,7 @@ function getFileIcon(mimeType) {
   return 'mdi:file-outline';
 }
 
-const DocumentVault = ({ clientId, projectId, documents: initialDocs = [], mode = 'crm' }) => {
+const DocumentVault = ({ clientId, projectId, documents: initialDocs = [], mode = 'crm', showContext = false }) => {
   const router = useRouter();
   const fileInputRef = useRef(null);
   const [docs, setDocs] = useState(initialDocs);
@@ -239,6 +239,7 @@ const DocumentVault = ({ clientId, projectId, documents: initialDocs = [], mode 
                   <tr className="text-secondary-light text-xs">
                     <th>File</th>
                     <th>Category</th>
+                    {showContext && <th>Client / Project</th>}
                     <th>Size</th>
                     {!isPortalMode && <th>Uploader</th>}
                     <th>Date</th>
@@ -269,6 +270,20 @@ const DocumentVault = ({ clientId, projectId, documents: initialDocs = [], mode 
                             {catObj?.label || doc.category}
                           </span>
                         </td>
+                        {showContext && (
+                          <td>
+                            <span className="text-secondary-light text-sm">
+                              {doc.clientName && (
+                                <a href={`/clients/${doc.clientId}`} className="hover-text-primary">{doc.clientName}</a>
+                              )}
+                              {doc.clientName && doc.projectName && ' / '}
+                              {doc.projectName && (
+                                <a href={`/projects/${doc.projectId}`} className="hover-text-primary">{doc.projectName}</a>
+                              )}
+                              {!doc.clientName && !doc.projectName && '—'}
+                            </span>
+                          </td>
+                        )}
                         <td><span className="text-secondary-light text-sm">{formatFileSize(doc.fileSize)}</span></td>
                         {!isPortalMode && (
                           <td><span className="text-secondary-light text-sm">{doc.uploaderName || '—'}</span></td>

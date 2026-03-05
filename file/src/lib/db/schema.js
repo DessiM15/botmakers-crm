@@ -142,6 +142,14 @@ export const documentCategoryEnum = pgEnum('document_category', [
   'other',
 ]);
 
+export const editableDocCategoryEnum = pgEnum('editable_doc_category', [
+  'spec',
+  'meeting_notes',
+  'sop',
+  'internal',
+  'other',
+]);
+
 // ── Tables ─────────────────────────────────────────────────────────────────────
 
 export const teamUsers = pgTable('team_users', {
@@ -516,6 +524,21 @@ export const documents = pgTable('documents', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const editableDocs = pgTable('editable_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  content: text('content').notNull().default(''),
+  entityType: text('entity_type').notNull().default('global'),
+  entityId: uuid('entity_id'),
+  category: editableDocCategoryEnum('category').notNull().default('other'),
+  isPortalVisible: boolean('is_portal_visible').notNull().default(false),
+  createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
+  updatedBy: uuid('updated_by').references(() => teamUsers.id),
+  lastEditedAt: timestamp('last_edited_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Relations ──────────────────────────────────────────────────────────────────
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -782,5 +805,18 @@ export const emailDraftsRelations = relations(emailDrafts, ({ one }) => ({
   createdByUser: one(teamUsers, {
     fields: [emailDrafts.createdBy],
     references: [teamUsers.id],
+  }),
+}));
+
+export const editableDocsRelations = relations(editableDocs, ({ one }) => ({
+  createdByUser: one(teamUsers, {
+    fields: [editableDocs.createdBy],
+    references: [teamUsers.id],
+    relationName: 'editableDocCreator',
+  }),
+  updatedByUser: one(teamUsers, {
+    fields: [editableDocs.updatedBy],
+    references: [teamUsers.id],
+    relationName: 'editableDocUpdater',
   }),
 }));
