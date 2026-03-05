@@ -125,6 +125,17 @@ const ReposSection = ({ projectId, repos, setRepos }) => {
   const [commits, setCommits] = useState({});
   const [syncing, setSyncing] = useState({});
 
+  // Auto-parse GitHub URL pasted into either field
+  const handlePaste = (e) => {
+    const text = e.clipboardData?.getData('text') || '';
+    const match = text.match(/github\.com\/([^\/\s]+)\/([^\/\s.]+)/);
+    if (match) {
+      e.preventDefault();
+      setOwner(match[1]);
+      setRepoName(match[2]);
+    }
+  };
+
   const handleLink = async (e) => {
     e.preventDefault();
     if (!owner.trim() || !repoName.trim()) return;
@@ -202,9 +213,10 @@ const ReposSection = ({ projectId, repos, setRepos }) => {
           <input
             type="text"
             className="form-control bg-base text-white"
-            placeholder="Owner"
+            placeholder="DessiM15"
             value={owner}
             onChange={(e) => setOwner(e.target.value)}
+            onPaste={handlePaste}
             disabled={linking}
             style={{ maxWidth: '140px' }}
           />
@@ -212,9 +224,10 @@ const ReposSection = ({ projectId, repos, setRepos }) => {
           <input
             type="text"
             className="form-control bg-base text-white"
-            placeholder="Repository"
+            placeholder="repo-name"
             value={repoName}
             onChange={(e) => setRepoName(e.target.value)}
+            onPaste={handlePaste}
             disabled={linking}
           />
           <button
