@@ -10,6 +10,7 @@ const CRM_ROUTES = [
   '/projects',
   '/proposals',
   '/invoices',
+  '/services',
   '/email-generator',
   '/settings',
   '/activity',

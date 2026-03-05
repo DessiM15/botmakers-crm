@@ -2,11 +2,13 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { requireClient } from '@/lib/auth/helpers';
 import { getPortalProject } from '@/lib/db/queries/portal';
+import { getPortalDocumentsByProjectId } from '@/lib/db/queries/documents';
 import PortalLayout from '@/components/crm/PortalLayout';
 import PortalProgressBar from '@/components/crm/PortalProgressBar';
 import PortalMilestones from '@/components/crm/PortalMilestones';
 import PortalDemoGallery from '@/components/crm/PortalDemoGallery';
 import PortalQuestionForm from '@/components/crm/PortalQuestionForm';
+import DocumentVault from '@/components/crm/DocumentVault';
 
 export async function generateMetadata({ params }) {
   return { title: 'Project — Botmakers Portal' };
@@ -16,7 +18,10 @@ export default async function PortalProjectPage({ params }) {
   const { id } = await params;
   const cookieStore = await cookies();
   const { client } = await requireClient(cookieStore);
-  const project = await getPortalProject(id, client.id);
+  const [project, portalDocuments] = await Promise.all([
+    getPortalProject(id, client.id),
+    getPortalDocumentsByProjectId(id).catch(() => []),
+  ]);
 
   if (!project) notFound();
 
@@ -89,6 +94,13 @@ export default async function PortalProjectPage({ params }) {
       {/* Demo Gallery */}
       {project.demos.length > 0 && (
         <PortalDemoGallery demos={project.demos} />
+      )}
+
+      {/* Documents */}
+      {portalDocuments.length > 0 && (
+        <div className='mb-4'>
+          <DocumentVault projectId={id} documents={portalDocuments} mode="portal" />
+        </div>
       )}
 
       {/* Q&A */}

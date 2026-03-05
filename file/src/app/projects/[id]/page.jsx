@@ -6,6 +6,8 @@ import { requireTeam } from '@/lib/auth/helpers';
 import { getProjectById } from '@/lib/db/queries/projects';
 import { getInvoicesByProjectId } from '@/lib/db/queries/invoices';
 import { getProjectQuestions } from '@/lib/db/queries/portal';
+import { getServicesByProjectId } from '@/lib/db/queries/services';
+import { getDocumentsByProjectId } from '@/lib/db/queries/documents';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -27,10 +29,12 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  const [project, projectInvoices, projectQuestions] = await Promise.all([
+  const [project, projectInvoices, projectQuestions, projectServices, projectDocuments] = await Promise.all([
     getProjectById(id),
     getInvoicesByProjectId(id),
     getProjectQuestions(id),
+    getServicesByProjectId(id).catch(() => []),
+    getDocumentsByProjectId(id).catch(() => []),
   ]);
 
   if (!project) {
@@ -39,7 +43,7 @@ const Page = async ({ params }) => {
 
   return (
     <MasterLayout>
-      <ProjectDetail project={project} projectInvoices={projectInvoices} projectQuestions={projectQuestions} />
+      <ProjectDetail project={project} projectInvoices={projectInvoices} projectQuestions={projectQuestions} projectServices={projectServices} projectDocuments={projectDocuments} />
     </MasterLayout>
   );
 };

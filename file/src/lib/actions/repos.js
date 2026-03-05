@@ -7,6 +7,8 @@ import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { validateRepo, getRepoCommits } from '@/lib/integrations/github';
+import { projectPhases, projectMilestones } from '@/lib/db/schema';
+import { asc } from 'drizzle-orm';
 import { demoApprovedEmail } from '@/lib/email/notifications';
 
 /**
@@ -221,6 +223,55 @@ export async function deleteDemo(demoId, projectId) {
       return { error: error.message };
     }
     return { error: 'CB-DB-001: Failed to delete demo' };
+  }
+}
+
+/**
+ * Generate BOTMAKERS-CRM.md sync file content for a project.
+ */
+export async function generateSyncFile(projectId) {
+  try {
+    const [project] = await db
+      .select({ id: projects.id, name: projects.name })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) return { error: 'CB-DB-002: Project not found' };
+
+    const phases = await db
+      .select()
+      .from(projectPhases)
+      .where(eq(projectPhases.projectId, projectId))
+      .orderBy(asc(projectPhases.sortOrder));
+
+    const milestones = await db
+      .select()
+      .from(projectMilestones)
+      .where(eq(projectMilestones.projectId, projectId))
+      .orderBy(asc(projectMilestones.sortOrder));
+
+    let md = `# BOTMAKERS-CRM.md\n`;
+    md += `# Project: ${project.name}\n`;
+    md += `# Auto-generated sync file — do not delete this file\n\n`;
+    md += `## Milestones\n\n`;
+
+    for (const phase of phases) {
+      md += `### ${phase.name}\n\n`;
+      const phaseMs = milestones.filter((m) => m.phaseId === phase.id);
+      for (const ms of phaseMs) {
+        const checked = ms.status === 'completed' ? 'x' : ' ';
+        md += `- [${checked}] ${ms.title}\n`;
+      }
+      md += '\n';
+    }
+
+    md += `---\n`;
+    md += `Commit tags: Use \`[milestone: Milestone Name]\` in commit messages to auto-complete milestones.\n`;
+
+    return { success: true, content: md };
+  } catch (error) {
+    return { error: 'CB-DB-001: Failed to generate sync file' };
   }
 }
 

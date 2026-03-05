@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT } from './prompts';
+import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT, VOICE_COMMAND_PROMPT } from './prompts';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -178,6 +178,27 @@ Write a brief, warm, professional follow-up email.`;
 
   const text = response.content[0].text;
   return safeParseJSON(text);
+}
+
+/**
+ * Interpret a voice command using Claude.
+ * @param {string} text - The natural language command
+ * @param {Object} context - Optional page context
+ * @returns {Object} - { understood, action, params, confirmMessage, requiresConfirmation }
+ */
+export async function interpretVoiceCommand(text, context = {}) {
+  const userMessage = `Command: "${text}"
+${context.currentPage ? `Current page: ${context.currentPage}` : ''}`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 512,
+    system: VOICE_COMMAND_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const result = response.content[0].text;
+  return safeParseJSON(result);
 }
 
 /**

@@ -90,3 +90,51 @@ export const INVOICE_STATUSES = [
   { value: 'overdue', label: 'Overdue', color: '#dc3545' },
   { value: 'cancelled', label: 'Cancelled', color: '#6c757d' },
 ];
+
+export const SERVICE_CATEGORIES = [
+  { value: 'hosting', label: 'Hosting', icon: 'mdi:server' },
+  { value: 'domain', label: 'Domain', icon: 'mdi:web' },
+  { value: 'api', label: 'API / SaaS', icon: 'mdi:api' },
+  { value: 'analytics', label: 'Analytics', icon: 'mdi:chart-line' },
+  { value: 'email', label: 'Email', icon: 'mdi:email-outline' },
+  { value: 'storage', label: 'Storage', icon: 'mdi:cloud-outline' },
+  { value: 'other', label: 'Other', icon: 'mdi:dots-horizontal-circle-outline' },
+];
+
+export const BILLING_CYCLES = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'annual', label: 'Annual' },
+  { value: 'one_time', label: 'One-Time' },
+];
+
+export const SERVICE_STATUSES = [
+  { value: 'active', label: 'Active', color: '#198754' },
+  { value: 'expiring_soon', label: 'Expiring Soon', color: '#ffc107' },
+  { value: 'expired', label: 'Expired', color: '#dc3545' },
+  { value: 'cancelled', label: 'Cancelled', color: '#6c757d' },
+];
+
+export const DOCUMENT_CATEGORIES = [
+  { value: 'contract', label: 'Contract', icon: 'mdi:file-sign' },
+  { value: 'design', label: 'Design', icon: 'mdi:palette-outline' },
+  { value: 'brief', label: 'Brief', icon: 'mdi:text-box-outline' },
+  { value: 'credentials', label: 'Credentials', icon: 'mdi:key-outline' },
+  { value: 'deliverable', label: 'Deliverable', icon: 'mdi:package-variant-closed' },
+  { value: 'other', label: 'Other', icon: 'mdi:file-outline' },
+];
+
+export const ALLOWED_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'application/pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain', 'text/csv', 'text/markdown',
+  'application/json',
+  'application/zip', 'application/x-tar', 'application/gzip',
+  'video/mp4', 'video/webm',
+  'audio/mpeg', 'audio/wav',
+];
+
+export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB

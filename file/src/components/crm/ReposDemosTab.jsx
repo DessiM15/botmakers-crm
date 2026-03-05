@@ -14,9 +14,102 @@ const ReposDemosTab = ({ projectId, repos: initialRepos, demos: initialDemos, ph
     <div className="row g-4">
       <div className="col-xl-6">
         <ReposSection projectId={projectId} repos={repos} setRepos={setRepos} />
+        <SyncFileSection projectId={projectId} />
       </div>
       <div className="col-xl-6">
         <DemosSection projectId={projectId} demos={demos} setDemos={setDemos} phases={phases} />
+      </div>
+    </div>
+  );
+};
+
+// ── Sync File Section ─────────────────────────────────────────────────────────
+
+const SyncFileSection = ({ projectId }) => {
+  const [downloading, setDownloading] = useState(false);
+  const [copying, setCopying] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/sync-file`);
+      if (!res.ok) {
+        toast.error('Failed to generate sync file');
+        return;
+      }
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'BOTMAKERS-CRM.md';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Sync file downloaded');
+    } catch {
+      toast.error('Download failed');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    setCopying(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/sync-file`);
+      if (!res.ok) {
+        toast.error('Failed to generate sync file');
+        return;
+      }
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      toast.success('Sync file copied to clipboard');
+    } catch {
+      toast.error('Copy failed');
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  return (
+    <div className="card mt-4">
+      <div className="card-header">
+        <h6 className="text-white fw-semibold mb-0 d-flex align-items-center gap-2">
+          <Icon icon="mdi:sync" style={{ fontSize: '20px' }} />
+          Project Sync
+        </h6>
+      </div>
+      <div className="card-body">
+        <p className="text-secondary-light text-xs mb-3">
+          Place <code>BOTMAKERS-CRM.md</code> in your repo root. Edit checkboxes or use{' '}
+          <code>[milestone: Name]</code> in commit messages to auto-update milestones.
+        </p>
+        <div className="d-flex gap-2">
+          <button
+            className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+            onClick={handleDownload}
+            disabled={downloading}
+          >
+            {downloading ? (
+              <span className="spinner-border spinner-border-sm" />
+            ) : (
+              <Icon icon="mdi:download" style={{ fontSize: '16px' }} />
+            )}
+            Download
+          </button>
+          <button
+            className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+            onClick={handleCopy}
+            disabled={copying}
+          >
+            {copying ? (
+              <span className="spinner-border spinner-border-sm" />
+            ) : (
+              <Icon icon="mdi:content-copy" style={{ fontSize: '16px' }} />
+            )}
+            Copy
+          </button>
+        </div>
       </div>
     </div>
   );

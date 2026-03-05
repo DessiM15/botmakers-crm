@@ -7,6 +7,8 @@ import { getClientById } from '@/lib/db/queries/clients';
 import { getProjectsByClientId } from '@/lib/db/queries/projects';
 import { getProposalsByClientId } from '@/lib/db/queries/proposals';
 import { getInvoicesByClientId } from '@/lib/db/queries/invoices';
+import { getServicesByClientId } from '@/lib/db/queries/services';
+import { getDocumentsByClientId } from '@/lib/db/queries/documents';
 
 export async function generateMetadata({ params }) {
   try {
@@ -33,19 +35,23 @@ const Page = async ({ params }) => {
 
   const { id } = await params;
 
-  let client, clientProjects, clientProposals, clientInvoices;
+  let client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments;
   try {
-    [client, clientProjects, clientProposals, clientInvoices] = await Promise.all([
+    [client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments] = await Promise.all([
       getClientById(id),
       getProjectsByClientId(id).catch(() => []),
       getProposalsByClientId(id).catch(() => []),
       getInvoicesByClientId(id).catch(() => []),
+      getServicesByClientId(id).catch(() => []),
+      getDocumentsByClientId(id).catch(() => []),
     ]);
   } catch {
     client = await getClientById(id).catch(() => null);
     clientProjects = [];
     clientProposals = [];
     clientInvoices = [];
+    clientServices = [];
+    clientDocuments = [];
   }
 
   if (!client) {
@@ -54,7 +60,7 @@ const Page = async ({ params }) => {
 
   return (
     <MasterLayout>
-      <ClientDetail client={client} clientProjects={clientProjects} clientProposals={clientProposals} clientInvoices={clientInvoices} />
+      <ClientDetail client={client} clientProjects={clientProjects} clientProposals={clientProposals} clientInvoices={clientInvoices} clientServices={clientServices} clientDocuments={clientDocuments} />
     </MasterLayout>
   );
 };

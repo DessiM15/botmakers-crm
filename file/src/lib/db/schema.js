@@ -109,6 +109,39 @@ export const questionStatusEnum = pgEnum('question_status', [
   'replied',
 ]);
 
+export const serviceCategoryEnum = pgEnum('service_category', [
+  'hosting',
+  'domain',
+  'api',
+  'analytics',
+  'email',
+  'storage',
+  'other',
+]);
+
+export const billingCycleEnum = pgEnum('billing_cycle', [
+  'monthly',
+  'quarterly',
+  'annual',
+  'one_time',
+]);
+
+export const serviceStatusEnum = pgEnum('service_status', [
+  'active',
+  'expiring_soon',
+  'expired',
+  'cancelled',
+]);
+
+export const documentCategoryEnum = pgEnum('document_category', [
+  'contract',
+  'design',
+  'brief',
+  'credentials',
+  'deliverable',
+  'other',
+]);
+
 // ── Tables ─────────────────────────────────────────────────────────────────────
 
 export const teamUsers = pgTable('team_users', {
@@ -259,6 +292,7 @@ export const projects = pgTable('projects', {
   startDate: date('start_date'),
   targetEndDate: date('target_end_date'),
   actualEndDate: date('actual_end_date'),
+  syncApiKey: text('sync_api_key'),
   createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -444,6 +478,41 @@ export const systemSettings = pgTable('system_settings', {
   key: text('key').notNull().unique(),
   value: jsonb('value').notNull(),
   updatedBy: uuid('updated_by').references(() => teamUsers.id),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const clientServices = pgTable('client_services', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clientId: uuid('client_id').notNull().references(() => clients.id),
+  projectId: uuid('project_id').references(() => projects.id),
+  serviceName: text('service_name').notNull(),
+  provider: text('provider').notNull(),
+  category: serviceCategoryEnum('category').notNull().default('other'),
+  monthlyCost: decimal('monthly_cost', { precision: 10, scale: 2 }).notNull().default('0'),
+  billingCycle: billingCycleEnum('billing_cycle').notNull().default('monthly'),
+  renewalDate: date('renewal_date'),
+  status: serviceStatusEnum('status').notNull().default('active'),
+  loginUrl: text('login_url'),
+  credentialsVaultUrl: text('credentials_vault_url'),
+  accountIdentifier: text('account_identifier'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const documents = pgTable('documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clientId: uuid('client_id').references(() => clients.id),
+  projectId: uuid('project_id').references(() => projects.id),
+  fileName: text('file_name').notNull(),
+  fileSize: integer('file_size').notNull().default(0),
+  mimeType: text('mime_type').notNull(),
+  storagePath: text('storage_path').notNull(),
+  category: documentCategoryEnum('category').notNull().default('other'),
+  description: text('description'),
+  isPortalVisible: boolean('is_portal_visible').notNull().default(false),
+  uploadedBy: uuid('uploaded_by').references(() => teamUsers.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -671,6 +740,32 @@ export const followUpRemindersRelations = relations(followUpReminders, ({ one })
 export const inAppNotificationsRelations = relations(inAppNotifications, ({ one }) => ({
   user: one(teamUsers, {
     fields: [inAppNotifications.userId],
+    references: [teamUsers.id],
+  }),
+}));
+
+export const clientServicesRelations = relations(clientServices, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientServices.clientId],
+    references: [clients.id],
+  }),
+  project: one(projects, {
+    fields: [clientServices.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const documentsRelations = relations(documents, ({ one }) => ({
+  client: one(clients, {
+    fields: [documents.clientId],
+    references: [clients.id],
+  }),
+  project: one(projects, {
+    fields: [documents.projectId],
+    references: [projects.id],
+  }),
+  uploader: one(teamUsers, {
+    fields: [documents.uploadedBy],
     references: [teamUsers.id],
   }),
 }));

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { signOutAction } from "@/lib/actions/auth";
 import NotificationBell from "@/components/crm/NotificationBell";
+import VoiceCommand from "@/components/crm/VoiceCommand";
 
 const sidebarItems = [
   { label: "Dashboard", icon: "solar:home-smile-angle-outline", href: "/" },
@@ -15,6 +16,7 @@ const sidebarItems = [
   { label: "Projects", icon: "solar:folder-with-files-outline", href: "/projects" },
   { label: "Proposals", icon: "mdi:file-document-edit-outline", href: "/proposals" },
   { label: "Invoices", icon: "mdi:receipt-text-outline", href: "/invoices" },
+  { label: "Services", icon: "mdi:server-network", href: "/services" },
   { label: "Email Generator", icon: "solar:letter-outline", href: "/email-generator" },
   "separator",
   { label: "Settings", icon: "solar:settings-outline", href: "/settings" },
@@ -236,6 +238,9 @@ const MasterLayout = ({ children }) => {
 
         {/* dashboard-main-body */}
         <div className='dashboard-main-body'>{children}</div>
+
+        {/* Voice Command */}
+        <VoiceCommand />
 
         {/* Footer section */}
         <footer className='d-footer'>

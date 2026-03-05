@@ -85,6 +85,29 @@ export async function getRepoCommits(owner, repo, branch = 'main', limit = 10) {
 }
 
 /**
+ * Fetch a file's content from a GitHub repo.
+ * Returns decoded string content or null.
+ */
+export async function getRepoFileContent(owner, repo, path, branch = 'main') {
+  try {
+    const octokit = getOctokit();
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path,
+      ref: branch,
+    });
+    if (data.type !== 'file' || !data.content) {
+      return null;
+    }
+    return Buffer.from(data.content, 'base64').toString('utf-8');
+  } catch (err) {
+    if (err.status === 404) return null;
+    return null;
+  }
+}
+
+/**
  * Fetch branches for a repo.
  */
 export async function getRepoBranches(owner, repo) {

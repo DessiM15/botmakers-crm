@@ -42,6 +42,7 @@ const DashBoardLayer = ({
   followUps = [],
   unassignedLeads = [],
   teamMembersForAssign = [],
+  upcomingRenewals = [],
 }) => {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -99,6 +100,56 @@ const DashBoardLayer = ({
           <AlertsPanel alerts={alerts} />
         </div>
       </section>
+
+      {/* Upcoming Renewals */}
+      {upcomingRenewals.length > 0 && (
+        <section className="row gy-4 mt-1">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header d-flex align-items-center justify-content-between">
+                <h6 className="card-title mb-0">
+                  <Icon icon="mdi:server-network" className="me-2" style={{ fontSize: '18px' }} />
+                  Upcoming Renewals
+                </h6>
+                <Link href="/services" className="btn btn-outline-secondary btn-sm">
+                  View All
+                </Link>
+              </div>
+              <div className="card-body p-0">
+                <div className="table-responsive">
+                  <table className="table table-dark table-hover mb-0">
+                    <thead>
+                      <tr className="text-secondary-light text-xs">
+                        <th>Service</th>
+                        <th>Client</th>
+                        <th>Renewal Date</th>
+                        <th>Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {upcomingRenewals.slice(0, 5).map((svc) => (
+                        <tr key={svc.id}>
+                          <td>
+                            <span className="text-white text-sm fw-medium">{svc.serviceName}</span>
+                            <span className="text-secondary-light text-xs d-block">{svc.provider}</span>
+                          </td>
+                          <td><span className="text-white text-sm">{svc.clientName}</span></td>
+                          <td>
+                            <span className="text-sm" style={{ color: '#ffc107' }}>
+                              {svc.renewalDate ? new Date(svc.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                            </span>
+                          </td>
+                          <td><span className="text-white text-sm">${Number(svc.monthlyCost).toFixed(2)}/mo</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Activity Feed */}
       <section className="row gy-4 mt-1">

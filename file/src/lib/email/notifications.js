@@ -367,6 +367,49 @@ export async function demoApprovedEmail(clientEmail, clientName, demoTitle, demo
 }
 
 /**
+ * Service renewal alert — sent to team.
+ */
+export async function serviceRenewalAlert(services) {
+  if (services.length === 0) return;
+
+  const teamEmails = await getTeamEmails();
+  const itemsHtml = services.map((s) =>
+    `<tr>
+      <td style="padding:8px 12px;color:#ffffff;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.05);">${s.serviceName}</td>
+      <td style="padding:8px 12px;color:#94a3b8;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.05);">${s.clientName}</td>
+      <td style="padding:8px 12px;color:#94a3b8;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.05);">${s.renewalDate ? new Date(s.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
+      <td style="padding:8px 12px;color:#03FF00;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.05);">$${Number(s.monthlyCost).toFixed(2)}</td>
+    </tr>`
+  ).join('');
+
+  const html = brandedEmail(
+    'Service Renewals',
+    `${services.length} Service${services.length > 1 ? 's' : ''} Renewing Soon`,
+    `<p style="margin:0 0 16px;color:#94a3b8;font-size:15px;line-height:1.6;">
+      The following services are due for renewal within 7 days:
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <thead>
+        <tr>
+          <th style="padding:8px 12px;color:#475569;font-size:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Service</th>
+          <th style="padding:8px 12px;color:#475569;font-size:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Client</th>
+          <th style="padding:8px 12px;color:#475569;font-size:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Renewal</th>
+          <th style="padding:8px 12px;color:#475569;font-size:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">Cost</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    ${actionButton('View Services', crmLink('/services'))}`
+  );
+
+  await sendNotification('lead_stale', {
+    recipients: teamEmails,
+    subject: `${services.length} Service${services.length > 1 ? 's' : ''} Renewing Soon`,
+    html,
+  });
+}
+
+/**
  * Question replied — email to client.
  */
 export async function questionRepliedEmail(clientEmail, clientName, projectName, replyText) {

@@ -159,3 +159,42 @@ export const contactLogSchema = z.object({
   body: z.string().optional(),
   direction: z.enum(['inbound', 'outbound']).default('outbound'),
 });
+
+export const serviceCreateSchema = z.object({
+  clientId: z.string().uuid('Valid client is required'),
+  projectId: z.string().uuid().optional().nullable(),
+  serviceName: z.string().min(1, 'Service name is required'),
+  provider: z.string().min(1, 'Provider is required'),
+  category: z.enum(['hosting', 'domain', 'api', 'analytics', 'email', 'storage', 'other']).default('other'),
+  monthlyCost: z.coerce.number().min(0).default(0),
+  billingCycle: z.enum(['monthly', 'quarterly', 'annual', 'one_time']).default('monthly'),
+  renewalDate: z.string().optional().nullable(),
+  status: z.enum(['active', 'expiring_soon', 'expired', 'cancelled']).default('active'),
+  loginUrl: z.string().url().optional().or(z.literal('')).nullable(),
+  credentialsVaultUrl: z.string().url().optional().or(z.literal('')).nullable(),
+  accountIdentifier: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const serviceUpdateSchema = z.object({
+  serviceName: z.string().min(1).optional(),
+  provider: z.string().min(1).optional(),
+  category: z.enum(['hosting', 'domain', 'api', 'analytics', 'email', 'storage', 'other']).optional(),
+  monthlyCost: z.coerce.number().min(0).optional(),
+  billingCycle: z.enum(['monthly', 'quarterly', 'annual', 'one_time']).optional(),
+  renewalDate: z.string().optional().nullable(),
+  status: z.enum(['active', 'expiring_soon', 'expired', 'cancelled']).optional(),
+  loginUrl: z.string().url().optional().or(z.literal('')).nullable(),
+  credentialsVaultUrl: z.string().url().optional().or(z.literal('')).nullable(),
+  accountIdentifier: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  projectId: z.string().uuid().optional().nullable(),
+});
+
+export const documentUploadSchema = z.object({
+  clientId: z.string().uuid().optional().nullable(),
+  projectId: z.string().uuid().optional().nullable(),
+  category: z.enum(['contract', 'design', 'brief', 'credentials', 'deliverable', 'other']).default('other'),
+  description: z.string().optional().nullable(),
+  isPortalVisible: z.boolean().default(false),
+});

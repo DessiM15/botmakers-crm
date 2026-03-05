@@ -7,13 +7,18 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { updateClient, sendPortalInvite, revokePortalAccess, restorePortalAccess, generatePortalPreviewToken } from '@/lib/actions/clients';
 import { formatDate, formatCurrency, formatPhoneNumber } from '@/lib/utils/formatters';
-import { PROJECT_STATUSES, PROPOSAL_STATUSES, INVOICE_STATUSES } from '@/lib/utils/constants';
+import { PROJECT_STATUSES, PROPOSAL_STATUSES, INVOICE_STATUSES, SERVICE_STATUSES, SERVICE_CATEGORIES, DOCUMENT_CATEGORIES } from '@/lib/utils/constants';
+import { deleteService } from '@/lib/actions/services';
+import { deleteDocument, toggleDocumentPortalVisibility } from '@/lib/actions/documents';
+import DocumentVault from './DocumentVault';
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: 'mdi:account-outline' },
   { key: 'projects', label: 'Projects', icon: 'mdi:folder-outline' },
   { key: 'proposals', label: 'Proposals', icon: 'mdi:file-document-outline' },
   { key: 'invoices', label: 'Invoices', icon: 'mdi:receipt-text-outline' },
+  { key: 'services', label: 'Services', icon: 'mdi:server-network' },
+  { key: 'documents', label: 'Documents', icon: 'mdi:folder-file-outline' },
   { key: 'questions', label: 'Questions', icon: 'mdi:help-circle-outline' },
   { key: 'activity', label: 'Activity', icon: 'mdi:timeline-outline' },
 ];
@@ -278,7 +283,7 @@ const PortalAccessCard = ({ client, setClient }) => {
   );
 };
 
-const ClientDetail = ({ client: initialClient, clientProjects = [], clientProposals = [], clientInvoices = [] }) => {
+const ClientDetail = ({ client: initialClient, clientProjects = [], clientProposals = [], clientInvoices = [], clientServices = [], clientDocuments = [] }) => {
   const router = useRouter();
   const [client, setClient] = useState(initialClient);
   const [activeTab, setActiveTab] = useState('overview');
@@ -876,6 +881,78 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
             </div>
           )}
         </>
+      )}
+
+      {activeTab === 'services' && (
+        <>
+          {clientServices.length === 0 ? (
+            <div className="card">
+              <div className="card-body d-flex flex-column justify-content-center align-items-center py-5">
+                <Icon icon="mdi:server-network" className="text-secondary-light mb-2" style={{ fontSize: '36px' }} />
+                <p className="text-secondary-light text-sm mb-2">No services tracked for this client.</p>
+                <Link href={`/services`} className="btn btn-primary btn-sm">
+                  <Icon icon="mdi:plus" className="me-1" style={{ fontSize: '16px' }} />
+                  Add Service
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="card">
+              <div className="card-body p-0">
+                <div className="table-responsive">
+                  <table className="table table-dark table-hover mb-0">
+                    <thead>
+                      <tr className="text-secondary-light text-xs">
+                        <th>Service</th>
+                        <th>Category</th>
+                        <th>Cost</th>
+                        <th>Renewal</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientServices.map((svc) => {
+                        const statusObj = SERVICE_STATUSES.find((s) => s.value === svc.status) || SERVICE_STATUSES[0];
+                        const catObj = SERVICE_CATEGORIES.find((c) => c.value === svc.category);
+                        return (
+                          <tr key={svc.id}>
+                            <td>
+                              <span className="text-white text-sm fw-medium d-block">{svc.serviceName}</span>
+                              <span className="text-secondary-light text-xs">{svc.provider}</span>
+                            </td>
+                            <td>
+                              <span className="d-flex align-items-center gap-1 text-secondary-light text-sm">
+                                {catObj && <Icon icon={catObj.icon} style={{ fontSize: '14px' }} />}
+                                {catObj?.label || svc.category}
+                              </span>
+                            </td>
+                            <td><span className="text-white text-sm">{formatCurrency(svc.monthlyCost)}</span></td>
+                            <td><span className="text-secondary-light text-sm">{svc.renewalDate ? formatDate(svc.renewalDate) : '—'}</span></td>
+                            <td>
+                              <span className="badge fw-medium" style={{ background: `${statusObj.color}22`, color: statusObj.color }}>
+                                {statusObj.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="card-footer">
+                <Link href="/services" className="btn btn-outline-secondary btn-sm">
+                  <Icon icon="mdi:plus" className="me-1" style={{ fontSize: '16px' }} />
+                  Manage Services
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'documents' && (
+        <DocumentVault clientId={client.id} documents={clientDocuments} mode="crm" />
       )}
 
       {activeTab === 'questions' && (

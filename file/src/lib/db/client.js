@@ -56,6 +56,12 @@ function getDb() {
   return _db;
 }
 
+// Storage client — for file uploads to Supabase Storage
+export function getStorageClient() {
+  const admin = createAdminClient();
+  return admin.storage.from('crm-documents');
+}
+
 // Convenience export — getter disguised as a constant via Proxy
 export const db = new Proxy({}, {
   get(_, prop) {
