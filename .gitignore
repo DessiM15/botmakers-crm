@@ -2,12 +2,15 @@
 
 # dependencies
 /node_modules
+node_modules_old/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # testing
 /coverage
+test-results/
+playwright-report/
 
 # next.js
 /.next/

@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { sendEmail } from '@/lib/email/client';
 import { paymentReceipt } from '@/lib/email/templates';
 import { paymentReceived as paymentReceivedNotif } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 /**
  * Verify Square webhook signature using HMAC-SHA256.
@@ -169,6 +170,14 @@ export async function POST(request) {
       // Notify team about payment (non-blocking)
       paymentReceivedNotif(invoice, { amount: String(amount) }).catch(() => {});
 
+      // Team in-app notification (non-blocking)
+      sendTeamNotification({
+        type: 'payment_received',
+        title: `Payment received: ${invoice.title}`,
+        body: `$${amount.toFixed(2)} via Square`,
+        link: `/invoices/${invoice.id}`,
+      }).catch(() => {});
+
       return NextResponse.json({
         ok: true,
         message: 'Payment recorded',
@@ -217,6 +226,32 @@ export async function POST(request) {
         entityId: invoice.id,
         metadata: { squareInvoiceId, title: invoice.title },
       });
+
+      // Send client receipt email (non-blocking)
+      const [client] = await db
+        .select({ email: clients.email, fullName: clients.fullName })
+        .from(clients)
+        .where(eq(clients.id, invoice.clientId))
+        .limit(1);
+
+      if (client?.email) {
+        sendEmail({
+          to: client.email,
+          subject: `Payment Receipt: ${invoice.title}`,
+          html: paymentReceipt(client.fullName || 'there', invoice.title, Number(invoice.amount)),
+        }).catch(() => {});
+      }
+
+      // Team email notification (non-blocking)
+      paymentReceivedNotif(invoice, { amount: String(invoice.amount) }).catch(() => {});
+
+      // Team in-app notification (non-blocking)
+      sendTeamNotification({
+        type: 'payment_received',
+        title: `Payment received: ${invoice.title}`,
+        body: `$${Number(invoice.amount).toFixed(2)} via Square invoice`,
+        link: `/invoices/${invoice.id}`,
+      }).catch(() => {});
 
       return NextResponse.json({ ok: true, message: 'Invoice marked paid' });
     }

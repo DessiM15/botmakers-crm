@@ -146,3 +146,26 @@ export const ALLOWED_MIME_TYPES = [
 ];
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+export const CALENDAR_CATEGORIES = [
+  { key: 'meeting', label: 'Meetings', icon: 'mdi:calendar-clock-outline' },
+  { key: 'calcom', label: 'Cal.com', icon: 'mdi:calendar-check-outline' },
+  { key: 'website', label: 'Website Bookings', icon: 'mdi:web' },
+  { key: 'milestone', label: 'Milestones', icon: 'mdi:flag-checkered' },
+];
+
+export const DEFAULT_CALENDAR_COLORS = {
+  meeting: '#0d6efd',
+  calcom: '#6f42c1',
+  website: '#e85d04',
+  milestone: '#03FF00',
+  milestone_overdue: '#dc3545',
+  cancelled: '#6c757d',
+};
+
+export const CALENDAR_PRESET_COLORS = [
+  '#0d6efd', '#6f42c1', '#e85d04', '#03FF00',
+  '#dc3545', '#ffc107', '#0dcaf0', '#198754',
+  '#fd7e14', '#d63384', '#20c997', '#6c757d',
+  '#033457', '#1E40AF',
+];

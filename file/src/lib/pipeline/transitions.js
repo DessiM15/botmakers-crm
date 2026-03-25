@@ -2,6 +2,7 @@ import { db } from '@/lib/db/client';
 import { leads, activityLog, followUpReminders } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { leadStageChange } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -95,6 +96,14 @@ export async function advanceLead(leadId, newStage, trigger) {
 
     // Send team notification (non-blocking)
     leadStageChange(lead, currentStage, newStage).catch(() => {});
+
+    // In-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'lead_stage_change',
+      title: `${lead.fullName} auto-advanced to ${newStage.replace(/_/g, ' ')}`,
+      body: `${currentStage.replace(/_/g, ' ')} → ${newStage.replace(/_/g, ' ')} (${trigger})`,
+      link: `/leads/${leadId}`,
+    }).catch(() => {});
 
     // Revalidate relevant paths
     revalidatePath('/pipeline');

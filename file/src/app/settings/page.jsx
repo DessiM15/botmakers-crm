@@ -38,6 +38,7 @@ const Page = async () => {
   let staleDays = 7;
   let defaultProposalTerms = '';
   let defaultProjectPhases = null;
+  let calendarColors = null;
   try {
     const settings = await db
       .select({ key: systemSettings.key, value: systemSettings.value })
@@ -46,6 +47,7 @@ const Page = async () => {
       if (s.key === 'stale_lead_days') staleDays = Number(s.value) || 7;
       if (s.key === 'default_proposal_terms') defaultProposalTerms = s.value || '';
       if (s.key === 'default_project_phases') defaultProjectPhases = s.value || null;
+      if (s.key === 'calendar_colors') calendarColors = s.value || null;
     }
   } catch {}
 
@@ -60,6 +62,7 @@ const Page = async () => {
         staleDays={staleDays}
         defaultProposalTerms={defaultProposalTerms}
         defaultProjectPhases={defaultProjectPhases}
+        calendarColors={calendarColors}
       />
     </MasterLayout>
   );

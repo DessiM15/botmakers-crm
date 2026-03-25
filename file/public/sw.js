@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bm-crm-v1';
+const CACHE_NAME = 'bm-crm-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Pre-cache the offline page and icons on install
@@ -29,22 +29,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Network-first strategy; fall back to offline page for navigation requests
-self.addEventListener('fetch', (event) => {
-  // Skip non-GET, API routes, auth callbacks, and chrome-extension requests
-  if (
-    event.request.method !== 'GET' ||
-    event.request.url.includes('/api/') ||
-    event.request.url.includes('/auth/') ||
-    !event.request.url.startsWith('http')
-  ) {
-    return;
-  }
-
-  // Only intercept navigation requests (HTML pages)
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
-    );
-  }
-});
+// No fetch interception — this CRM requires a live database connection,
+// so offline fallback pages cause more confusion than they solve.
+// The SW exists only to enable PWA install prompts.

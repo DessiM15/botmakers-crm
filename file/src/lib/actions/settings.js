@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/db/client';
 import { teamUsers, systemSettings } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
-import { requireAdmin } from '@/lib/auth/helpers';
+import { requireAdmin, requireTeam } from '@/lib/auth/helpers';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -100,5 +100,30 @@ export async function saveSetting(key, value) {
     return { success: true };
   } catch {
     return { error: 'Failed to save setting.' };
+  }
+}
+
+/**
+ * Save calendar color preferences. Any team member can customize.
+ */
+export async function saveCalendarColors(colors) {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireTeam(cookieStore);
+
+    await db.execute(sql`
+      INSERT INTO system_settings (id, key, value, updated_by, updated_at)
+      VALUES (gen_random_uuid(), 'calendar_colors', ${JSON.stringify(colors)}::jsonb, ${teamUser.id}, NOW())
+      ON CONFLICT (key) DO UPDATE SET
+        value = ${JSON.stringify(colors)}::jsonb,
+        updated_by = ${teamUser.id},
+        updated_at = NOW()
+    `);
+
+    revalidatePath('/calendar');
+    revalidatePath('/settings');
+    return { success: true };
+  } catch {
+    return { error: 'Failed to save calendar colors.' };
   }
 }

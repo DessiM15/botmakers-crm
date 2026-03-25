@@ -118,38 +118,25 @@ const SyncFileSection = ({ projectId }) => {
 // ── Repos Section ──────────────────────────────────────────────────────────────
 
 const ReposSection = ({ projectId, repos, setRepos }) => {
-  const [owner, setOwner] = useState('');
-  const [repoName, setRepoName] = useState('');
+  const [repoInput, setRepoInput] = useState('');
   const [linking, setLinking] = useState(false);
   const [expandedRepo, setExpandedRepo] = useState(null);
   const [commits, setCommits] = useState({});
   const [syncing, setSyncing] = useState({});
 
-  // Auto-parse GitHub URL pasted into either field
-  const handlePaste = (e) => {
-    const text = e.clipboardData?.getData('text') || '';
-    const match = text.match(/github\.com\/([^\/\s]+)\/([^\/\s.]+)/);
-    if (match) {
-      e.preventDefault();
-      setOwner(match[1]);
-      setRepoName(match[2]);
-    }
-  };
-
   const handleLink = async (e) => {
     e.preventDefault();
-    if (!owner.trim() || !repoName.trim()) return;
+    if (!repoInput.trim()) return;
     setLinking(true);
 
-    const res = await linkRepo(projectId, owner, repoName);
+    const res = await linkRepo(projectId, repoInput);
     setLinking(false);
 
     if (res?.error) {
       toast.error(res.error);
     } else if (res?.success) {
       setRepos((prev) => [res.repo, ...prev]);
-      setOwner('');
-      setRepoName('');
+      setRepoInput('');
       toast.success('Repository linked successfully!');
     } else {
       toast.error('Unexpected response from server');
@@ -213,27 +200,15 @@ const ReposSection = ({ projectId, repos, setRepos }) => {
           <input
             type="text"
             className="form-control bg-base text-white"
-            placeholder="DessiM15"
-            value={owner}
-            onChange={(e) => setOwner(e.target.value)}
-            onPaste={handlePaste}
-            disabled={linking}
-            style={{ maxWidth: '140px' }}
-          />
-          <span className="text-secondary-light align-self-center">/</span>
-          <input
-            type="text"
-            className="form-control bg-base text-white"
-            placeholder="repo-name"
-            value={repoName}
-            onChange={(e) => setRepoName(e.target.value)}
-            onPaste={handlePaste}
+            placeholder="Paste GitHub URL or owner/repo"
+            value={repoInput}
+            onChange={(e) => setRepoInput(e.target.value)}
             disabled={linking}
           />
           <button
             type="submit"
             className="btn btn-primary btn-sm text-nowrap"
-            disabled={linking || !owner.trim() || !repoName.trim()}
+            disabled={linking || !repoInput.trim()}
           >
             {linking ? (
               <span className="spinner-border spinner-border-sm" />

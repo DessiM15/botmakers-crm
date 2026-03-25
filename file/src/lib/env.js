@@ -24,6 +24,10 @@ const optionalVars = [
   'VERCEL_WEBHOOK_SECRET',
   'EMAIL_FROM',
   'EMAIL_LEADS_FROM',
+  'CAL_WEBHOOK_SECRET',
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'GOOGLE_REDIRECT_URI',
 ];
 
 function validateEnv() {

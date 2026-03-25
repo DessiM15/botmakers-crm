@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client';
 import { leads, activityLog, systemSettings } from '@/lib/db/schema';
 import { sql } from 'drizzle-orm';
 import { staleLeadAlert } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 export async function GET(request) {
   try {
@@ -62,6 +63,14 @@ export async function GET(request) {
 
     // Send notification
     await staleLeadAlert(staleList);
+
+    // In-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'lead_stale',
+      title: `${staleList.length} stale lead${staleList.length > 1 ? 's' : ''} detected`,
+      body: staleList.map(l => l.fullName || l.email).slice(0, 3).join(', ') + (staleList.length > 3 ? '...' : ''),
+      link: '/leads',
+    }).catch(() => {});
 
     // Log activity
     await db.insert(activityLog).values({

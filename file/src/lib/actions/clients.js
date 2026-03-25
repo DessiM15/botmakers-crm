@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache';
 import { clientCreateSchema, clientUpdateSchema } from '@/lib/utils/validators';
 import { sendEmail } from '@/lib/email/client';
 import { welcomeClient, portalInvite } from '@/lib/email/templates';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 /**
  * Create a new client manually (not from lead conversion).
@@ -56,6 +57,15 @@ export async function createClient(formData) {
       entityId: newClient.id,
       metadata: { name: newClient.fullName },
     });
+
+    // Team in-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'client_created',
+      title: `New client: ${newClient.fullName}`,
+      body: `${data.email}`,
+      link: `/clients/${newClient.id}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
 
     revalidatePath('/clients');
     revalidatePath(`/clients/${newClient.id}`);
@@ -224,13 +234,134 @@ export async function deleteClient(clientId) {
 }
 
 /**
+ * Internal helper: convert a lead to a client.
+ * Shared by the convertLeadToClient server action and the new-lead webhook.
+ *
+ * @param {object} lead - full lead row
+ * @param {string|null} actorId - team user UUID, or null for system
+ * @param {string} actorType - 'team' or 'system'
+ * @returns {{ success: boolean, clientId: string } | { error: string, existingClientId?: string }}
+ */
+export async function convertLeadToClientInternal(lead, actorId, actorType = 'team') {
+  if (lead.convertedToClientId) {
+    return { error: 'This lead has already been converted to a client', existingClientId: lead.convertedToClientId };
+  }
+
+  // Check for existing client with same email
+  const [existingClient] = await db
+    .select({ id: clients.id, fullName: clients.fullName })
+    .from(clients)
+    .where(eq(clients.email, lead.email.toLowerCase()))
+    .limit(1);
+
+  let clientId;
+
+  if (existingClient) {
+    // Link to existing client
+    clientId = existingClient.id;
+  } else {
+    // Create new client
+    const [newClient] = await db
+      .insert(clients)
+      .values({
+        fullName: lead.fullName,
+        email: lead.email.toLowerCase(),
+        company: lead.companyName || null,
+        phone: lead.phone || null,
+        createdBy: actorId,
+      })
+      .returning();
+
+    clientId = newClient.id;
+
+    // Create Supabase Auth account for portal access
+    const adminClient = createAdminClient();
+    const { data: authData, error: authError } =
+      await adminClient.auth.admin.createUser({
+        email: lead.email.toLowerCase(),
+        email_confirm: true,
+        user_metadata: {
+          full_name: lead.fullName,
+          role: 'client',
+        },
+      });
+
+    if (authError) {
+      if (authError.message?.includes('already been registered')) {
+        const { data: listData } = await adminClient.auth.admin.listUsers();
+        const existingAuthUser = listData?.users?.find(
+          (u) => u.email === lead.email.toLowerCase()
+        );
+        if (existingAuthUser) {
+          await db
+            .update(clients)
+            .set({ authUserId: existingAuthUser.id })
+            .where(eq(clients.id, clientId));
+        }
+      }
+    } else if (authData?.user) {
+      await db
+        .update(clients)
+        .set({ authUserId: authData.user.id })
+        .where(eq(clients.id, clientId));
+    }
+
+    // Log client creation
+    await db.insert(activityLog).values({
+      actorId,
+      actorType,
+      action: 'client.created',
+      entityType: 'client',
+      entityId: clientId,
+      metadata: { name: lead.fullName, fromLead: lead.id },
+    });
+  }
+
+  // Update lead
+  const now = new Date();
+  await db
+    .update(leads)
+    .set({
+      convertedToClientId: clientId,
+      pipelineStage: 'contract_signed',
+      pipelineStageChangedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(leads.id, lead.id));
+
+  // Log conversion
+  await db.insert(activityLog).values({
+    actorId,
+    actorType,
+    action: 'lead.converted',
+    entityType: 'lead',
+    entityId: lead.id,
+    metadata: { clientId, clientName: lead.fullName },
+  });
+
+  // Team in-app notification (non-blocking)
+  sendTeamNotification({
+    type: 'client_created',
+    title: `Lead converted: ${lead.fullName}`,
+    body: 'Lead converted to client',
+    link: `/clients/${clientId}`,
+    excludeUserId: actorId || undefined,
+  }).catch(() => {});
+
+  // Send welcome email (don't block on failure)
+  const portalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/portal/login`;
+  sendEmail({
+    to: lead.email,
+    subject: 'Welcome to Your Botmakers Client Portal',
+    html: welcomeClient(lead.fullName, portalUrl),
+  }).catch(() => {});
+
+  return { success: true, clientId };
+}
+
+/**
  * Convert a lead to a client (WF-4).
- * 1. Check if client with same email exists
- * 2. Insert client record from lead data
- * 3. Create Supabase Auth account
- * 4. Update lead: converted_to_client_id, pipeline_stage = 'contract_signed'
- * 5. Send welcome email
- * 6. Log to activity_log
+ * Server action wrapper around convertLeadToClientInternal.
  */
 export async function convertLeadToClient(leadId) {
   try {
@@ -248,113 +379,8 @@ export async function convertLeadToClient(leadId) {
       return { error: 'CB-DB-002: Lead not found' };
     }
 
-    if (lead.convertedToClientId) {
-      return { error: 'This lead has already been converted to a client', existingClientId: lead.convertedToClientId };
-    }
-
-    // Check for existing client with same email
-    const [existingClient] = await db
-      .select({ id: clients.id, fullName: clients.fullName })
-      .from(clients)
-      .where(eq(clients.email, lead.email.toLowerCase()))
-      .limit(1);
-
-    let clientId;
-
-    if (existingClient) {
-      // Link to existing client
-      clientId = existingClient.id;
-    } else {
-      // Create new client
-      const [newClient] = await db
-        .insert(clients)
-        .values({
-          fullName: lead.fullName,
-          email: lead.email.toLowerCase(),
-          company: lead.companyName || null,
-          phone: lead.phone || null,
-          createdBy: teamUser.id,
-        })
-        .returning();
-
-      clientId = newClient.id;
-
-      // Create Supabase Auth account for portal access
-      const adminClient = createAdminClient();
-      const { data: authData, error: authError } =
-        await adminClient.auth.admin.createUser({
-          email: lead.email.toLowerCase(),
-          email_confirm: true,
-          user_metadata: {
-            full_name: lead.fullName,
-            role: 'client',
-          },
-        });
-
-      if (authError) {
-        // If user already exists in auth, try to get them
-        if (authError.message?.includes('already been registered')) {
-          const { data: listData } = await adminClient.auth.admin.listUsers();
-          const existingAuthUser = listData?.users?.find(
-            (u) => u.email === lead.email.toLowerCase()
-          );
-          if (existingAuthUser) {
-            await db
-              .update(clients)
-              .set({ authUserId: existingAuthUser.id })
-              .where(eq(clients.id, clientId));
-          }
-        }
-        // Don't fail the whole conversion if auth fails
-      } else if (authData?.user) {
-        await db
-          .update(clients)
-          .set({ authUserId: authData.user.id })
-          .where(eq(clients.id, clientId));
-      }
-
-      // Log client creation
-      await db.insert(activityLog).values({
-        actorId: teamUser.id,
-        actorType: 'team',
-        action: 'client.created',
-        entityType: 'client',
-        entityId: clientId,
-        metadata: { name: lead.fullName, fromLead: leadId },
-      });
-    }
-
-    // Update lead
-    const now = new Date();
-    await db
-      .update(leads)
-      .set({
-        convertedToClientId: clientId,
-        pipelineStage: 'contract_signed',
-        pipelineStageChangedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(leads.id, leadId));
-
-    // Log conversion
-    await db.insert(activityLog).values({
-      actorId: teamUser.id,
-      actorType: 'team',
-      action: 'lead.converted',
-      entityType: 'lead',
-      entityId: leadId,
-      metadata: { clientId, clientName: lead.fullName },
-    });
-
-    // Send welcome email (don't block on failure)
-    const portalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/portal/login`;
-    sendEmail({
-      to: lead.email,
-      subject: 'Welcome to Your Botmakers Client Portal',
-      html: welcomeClient(lead.fullName, portalUrl),
-    }).catch(() => {
-      // Email failure is non-critical
-    });
+    const result = await convertLeadToClientInternal(lead, teamUser.id, 'team');
+    if (result.error) return result;
 
     revalidatePath('/leads');
     revalidatePath(`/leads/${leadId}`);
@@ -362,7 +388,7 @@ export async function convertLeadToClient(leadId) {
     revalidatePath('/clients');
     revalidatePath('/');
 
-    return { success: true, clientId };
+    return result;
   } catch (error) {
     if (error.message?.startsWith('CB-')) {
       return { error: error.message };

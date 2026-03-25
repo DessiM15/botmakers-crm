@@ -63,6 +63,20 @@ body,
   color: #03FF00 !important;
 }
 
+/* Sidebar collapsed: hide button text (logout) same as link text */
+.sidebar.active .sidebar-menu li button span {
+  display: none;
+}
+.sidebar.active .sidebar-menu li button .menu-icon {
+  margin-inline-end: 0;
+}
+.sidebar.active:hover .sidebar-menu li button span {
+  display: inline-block;
+}
+.sidebar.active:hover .sidebar-menu li button .menu-icon {
+  margin-inline-end: 0.5rem;
+}
+
 /* Sidebar hover: neon green on hover (not active) */
 .sidebar-menu li a:hover span,
 .sidebar-menu li a:hover .menu-icon {

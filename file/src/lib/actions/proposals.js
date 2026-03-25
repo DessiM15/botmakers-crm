@@ -11,6 +11,7 @@ import { sendEmail } from '@/lib/email/client';
 import { proposalSent } from '@/lib/email/templates';
 import { sanitizeHtml } from '@/lib/utils/sanitize';
 import { advanceLead } from '@/lib/pipeline/transitions';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 /**
  * Create a new proposal with line items.
@@ -68,6 +69,15 @@ export async function createProposal(formData) {
       entityId: proposal.id,
       metadata: { title: proposal.title },
     });
+
+    // Team in-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'proposal_created',
+      title: `New proposal: ${proposal.title}`,
+      body: `$${Number(data.totalAmount).toFixed(2)}`,
+      link: `/proposals/${proposal.id}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
 
     // Auto-transition: proposal created → proposal_sent stage
     if (data.leadId) {
@@ -253,6 +263,15 @@ export async function sendProposal(proposalId) {
         recipientName,
       },
     });
+
+    // Team in-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'proposal_sent',
+      title: `Proposal sent: ${proposal.title}`,
+      body: `Sent to ${recipientName || recipientEmail}`,
+      link: `/proposals/${proposalId}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
 
     // Send email (don't block on failure)
     const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/proposals/${proposalId}`;

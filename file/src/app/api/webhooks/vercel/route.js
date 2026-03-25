@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { db } from '@/lib/db/client';
 import { projectRepos, projectDemos, activityLog } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 /**
  * Verify Vercel webhook signature.
@@ -109,6 +110,14 @@ export async function POST(request) {
           repoFullName: `${repoOwner}/${repoName}`,
         },
       });
+
+      // Team in-app notification (non-blocking)
+      sendTeamNotification({
+        type: 'demo_shared',
+        title: `Demo auto-pulled: ${repoOwner}/${repoName}`,
+        body: `Preview: ${previewUrl}`,
+        link: `/projects/${repo.projectId}`,
+      }).catch(() => {});
     }
 
     return NextResponse.json({

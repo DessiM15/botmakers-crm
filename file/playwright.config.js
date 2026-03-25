@@ -1,5 +1,6 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
+require('dotenv').config({ path: '.env.local' });
 
 module.exports = defineConfig({
   testDir: './e2e',

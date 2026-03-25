@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client';
 import { followUpReminders, leads } from '@/lib/db/schema';
 import { eq, and, lte } from 'drizzle-orm';
 import { generateFollowUpEmail } from '@/lib/ai/client';
+import { sendTeamNotification, sendUserNotification } from '@/lib/notifications/notify';
 
 /**
  * GET /api/cron/follow-up-reminders
@@ -29,6 +30,7 @@ export async function GET(request) {
       .select({
         id: followUpReminders.id,
         leadId: followUpReminders.leadId,
+        assignedTo: followUpReminders.assignedTo,
         triggerReason: followUpReminders.triggerReason,
         aiDraftSubject: followUpReminders.aiDraftSubject,
         leadName: leads.fullName,
@@ -76,6 +78,33 @@ export async function GET(request) {
         drafted++;
       } catch {
         // Skip individual failures — don't block other reminders
+      }
+    }
+
+    // Notify team about due follow-ups (non-blocking)
+    if (dueReminders.length > 0) {
+      const assignedReminders = dueReminders.filter(r => r.assignedTo);
+      const unassignedReminders = dueReminders.filter(r => !r.assignedTo);
+
+      // Notify individually assigned team members
+      for (const r of assignedReminders) {
+        sendUserNotification({
+          userId: r.assignedTo,
+          type: 'lead_assigned',
+          title: `Follow-up due: ${r.leadName}`,
+          body: r.triggerReason || '',
+          link: `/leads/${r.leadId}`,
+        }).catch(() => {});
+      }
+
+      // Notify full team about unassigned follow-ups
+      if (unassignedReminders.length > 0) {
+        sendTeamNotification({
+          type: 'lead_stale',
+          title: `${unassignedReminders.length} unassigned follow-up${unassignedReminders.length > 1 ? 's' : ''} due`,
+          body: unassignedReminders.map(r => r.leadName).slice(0, 3).join(', ') + (unassignedReminders.length > 3 ? '...' : ''),
+          link: '/leads',
+        }).catch(() => {});
       }
     }
 

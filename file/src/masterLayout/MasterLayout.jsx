@@ -6,6 +6,7 @@ import Link from "next/link";
 import { signOutAction } from "@/lib/actions/auth";
 import NotificationBell from "@/components/crm/NotificationBell";
 import VoiceCommand from "@/components/crm/VoiceCommand";
+import RealtimeNotificationProvider from "@/components/crm/RealtimeNotificationProvider";
 
 const sidebarItems = [
   { label: "Dashboard", icon: "solar:home-smile-angle-outline", href: "/" },
@@ -19,6 +20,8 @@ const sidebarItems = [
   { label: "Services", icon: "mdi:server-network", href: "/services" },
   { label: "Email Generator", icon: "solar:letter-outline", href: "/email-generator" },
   { label: "Docs", icon: "mdi:notebook-edit-outline", href: "/docs" },
+  { label: "Meetings", icon: "mdi:calendar-check-outline", href: "/meetings" },
+  { label: "Calendar", icon: "mdi:calendar-month-outline", href: "/calendar" },
   "separator",
   { label: "Settings", icon: "solar:settings-outline", href: "/settings" },
   { label: "Activity Log", icon: "mdi:history", href: "/activity" },
@@ -82,10 +85,10 @@ const MasterLayout = ({ children }) => {
               style={{ height: 28 }}
             />
             <img
-              src='/assets/images/botmakers-logo.png'
+              src='/icons/icon-192.png'
               alt='Botmakers CRM'
               className='logo-icon'
-              style={{ height: 24 }}
+              style={{ height: 36, width: 36, borderRadius: 6, objectFit: 'cover' }}
             />
           </Link>
         </div>
@@ -115,28 +118,30 @@ const MasterLayout = ({ children }) => {
           </ul>
 
           {/* Sidebar footer */}
-          <div className='px-20 pb-20 mt-auto'>
-            <div className='d-flex flex-column gap-2'>
+          <ul className='sidebar-menu mt-auto pb-20'>
+            <li>
               <a
                 href='https://botmakers.ai'
                 target='_blank'
                 rel='noopener noreferrer'
-                className='d-flex align-items-center gap-2 text-secondary-light text-sm hover-text-primary'
               >
-                <Icon icon='mdi:open-in-new' className='text-lg' />
+                <Icon icon='mdi:open-in-new' className='menu-icon' />
                 <span>View Website</span>
               </a>
+            </li>
+            <li>
               <form action={signOutAction}>
                 <button
                   type='submit'
-                  className='d-flex align-items-center gap-2 text-secondary-light text-sm hover-text-danger bg-transparent border-0 p-0'
+                  className='bg-transparent border-0 p-0 w-100 text-start d-flex align-items-center'
+                  style={{ color: 'inherit', font: 'inherit' }}
                 >
-                  <Icon icon='lucide:power' className='text-lg' />
+                  <Icon icon='lucide:power' className='menu-icon' />
                   <span>Logout</span>
                 </button>
               </form>
-            </div>
-          </div>
+            </li>
+          </ul>
         </div>
       </aside>
 
@@ -242,6 +247,9 @@ const MasterLayout = ({ children }) => {
 
         {/* Voice Command */}
         <VoiceCommand />
+
+        {/* Real-time Notification Subscription */}
+        <RealtimeNotificationProvider />
 
         {/* Footer section */}
         <footer className='d-footer'>

@@ -431,3 +431,128 @@ export async function questionRepliedEmail(clientEmail, clientName, projectName,
 
   await sendEmail({ to: clientEmail, subject: `Reply: Your question about ${projectName}`, html });
 }
+
+/**
+ * Meeting created alert — sent to team when a manual meeting is created.
+ */
+export async function meetingCreatedAlert({ title, attendeeName, attendeeEmail, startTime, endTime, meetingUrl, creatorName }) {
+  const teamEmails = await getTeamEmails();
+
+  const formattedStart = new Date(startTime).toLocaleString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+  const formattedEnd = new Date(endTime).toLocaleString('en-US', {
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+
+  const attendeeSection = attendeeName
+    ? `<p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#ffffff;">Attendee:</strong> ${attendeeName}${attendeeEmail ? ` (${attendeeEmail})` : ''}</p>`
+    : '';
+
+  const joinButton = meetingUrl
+    ? `<tr><td style="padding:8px 0;">
+        <a href="${meetingUrl}" style="display:inline-block;background-color:#0d6efd;color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:6px;">Join Meeting</a>
+      </td></tr>`
+    : '';
+
+  const html = brandedEmail(
+    'Meeting Created',
+    title,
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <tr><td style="padding:16px;background-color:rgba(255,255,255,0.03);border-radius:8px;">
+        <p style="margin:0 0 8px;color:#ffffff;font-size:16px;font-weight:600;">${title}</p>
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#ffffff;">Created by:</strong> ${creatorName}</p>
+        ${attendeeSection}
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#ffffff;">Start:</strong> ${formattedStart}</p>
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#ffffff;">End:</strong> ${formattedEnd}</p>
+      </td></tr>
+      ${joinButton}
+    </table>
+    ${actionButton('View Calendar', crmLink('/calendar'))}`
+  );
+
+  await sendNotification('meeting_created', {
+    recipients: teamEmails,
+    subject: `Meeting Created: ${title}`,
+    html,
+  });
+}
+
+/**
+ * Meeting cancelled alert — sent to attendee when a meeting is cancelled.
+ */
+export async function meetingCancelledAttendeeEmail(attendeeEmail, attendeeName, meetingTitle, startTime) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+  const formattedStart = new Date(startTime).toLocaleString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">We're reaching out to let you know that the following meeting has been cancelled:</p>
+    <div style="border-left:4px solid #dc3545; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+      <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">${meetingTitle}</h3>
+      <p style="margin:0; color:#333;">Originally scheduled: ${formattedStart}</p>
+    </div>
+    <p style="margin:0 0 16px; color:#333;">If you'd like to reschedule, please don't hesitate to reach out.</p>`;
+
+  const html = wrapInBrandedTemplate({
+    recipientName: attendeeName || 'there',
+    bodyHtml,
+    senderName: 'The BotMakers Team',
+    senderTitle: null,
+    ctaUrl: siteUrl,
+    ctaText: 'Visit BotMakers',
+  });
+
+  await sendEmail({ to: attendeeEmail, subject: `Meeting Cancelled: ${meetingTitle}`, html });
+}
+
+/**
+ * Meeting booked alert — sent to team when a Cal.com meeting is booked.
+ */
+export async function meetingBookedAlert({ attendeeName, attendeeEmail, title, startTime, endTime, meetingUrl, matchedLeadName, matchedLeadId }) {
+  const teamEmails = await getTeamEmails();
+
+  const formattedStart = new Date(startTime).toLocaleString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+  const formattedEnd = new Date(endTime).toLocaleString('en-US', {
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+
+  const leadSection = matchedLeadName
+    ? `<p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#03FF00;">Matched Lead:</strong> ${matchedLeadName}</p>`
+    : `<p style="margin:0 0 4px;color:#475569;font-size:14px;font-style:italic;">No matching lead found</p>`;
+
+  const joinButton = meetingUrl
+    ? `<tr><td style="padding:8px 0;">
+        <a href="${meetingUrl}" style="display:inline-block;background-color:#0d6efd;color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:6px;">Join Meeting</a>
+      </td></tr>`
+    : '';
+
+  const html = brandedEmail(
+    'Meeting Booked',
+    `New Meeting: ${title}`,
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <tr><td style="padding:16px;background-color:rgba(255,255,255,0.03);border-radius:8px;">
+        <p style="margin:0 0 8px;color:#ffffff;font-size:16px;font-weight:600;">${title}</p>
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#ffffff;">Attendee:</strong> ${attendeeName} (${attendeeEmail})</p>
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#ffffff;">Start:</strong> ${formattedStart}</p>
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:14px;"><strong style="color:#ffffff;">End:</strong> ${formattedEnd}</p>
+        ${leadSection}
+      </td></tr>
+      ${joinButton}
+    </table>
+    ${actionButton('View in CRM', crmLink('/meetings'))}`
+  );
+
+  await sendNotification('meeting_booked', {
+    recipients: teamEmails,
+    subject: `Meeting Booked: ${attendeeName} — ${title}`,
+    html,
+    relatedLeadId: matchedLeadId || null,
+  });
+}

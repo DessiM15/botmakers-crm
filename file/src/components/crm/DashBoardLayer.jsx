@@ -8,6 +8,7 @@ import RevenueWidget from './RevenueWidget';
 import LeadSourceAnalytics from './LeadSourceAnalytics';
 import FollowUpQueue from './FollowUpQueue';
 import NewLeadsAssign from './NewLeadsAssign';
+import TodaySchedule from './TodaySchedule';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -43,6 +44,7 @@ const DashBoardLayer = ({
   unassignedLeads = [],
   teamMembersForAssign = [],
   upcomingRenewals = [],
+  todaysMeetings = [],
 }) => {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -90,13 +92,15 @@ const DashBoardLayer = ({
         </div>
       </section>
 
-      {/* Upcoming Tasks + Alerts */}
+      {/* Upcoming Tasks + Today's Schedule + Alerts */}
       <section className="row gy-4 mt-1">
-        <div className="col-xxl-6 col-lg-6">
+        <div className="col-xxl-4 col-lg-6">
           <UpcomingTasks milestones={upcomingMilestones} />
         </div>
-
-        <div className="col-xxl-6 col-lg-12">
+        <div className="col-xxl-4 col-lg-6">
+          <TodaySchedule meetings={todaysMeetings} upcomingMilestones={upcomingMilestones} />
+        </div>
+        <div className="col-xxl-4 col-lg-12">
           <AlertsPanel alerts={alerts} />
         </div>
       </section>

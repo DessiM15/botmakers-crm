@@ -15,6 +15,7 @@ import {
 } from '@/lib/db/queries/dashboard';
 import { getPendingFollowUps } from '@/lib/db/queries/follow-ups';
 import { getUpcomingRenewals } from '@/lib/db/queries/services';
+import { getTodaysMeetings } from '@/lib/db/queries/meetings';
 
 export const metadata = {
   title: 'Dashboard — Botmakers CRM',
@@ -31,9 +32,9 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals;
+  let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings;
   try {
-    [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals] = await Promise.all([
+    [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings] = await Promise.all([
       getMetrics(),
       getAlerts(),
       getRecentActivity(),
@@ -44,6 +45,7 @@ const Page = async () => {
       getUnassignedLeads(),
       getTeamMembersForAssignment(),
       getUpcomingRenewals(7).catch(() => []),
+      getTodaysMeetings().catch(() => []),
     ]);
   } catch (err) {
     console.error('[Dashboard] Data fetch error:', err.message, err.stack);
@@ -58,6 +60,7 @@ const Page = async () => {
     unassignedLeads = [];
     teamMembersForAssign = [];
     upcomingRenewals = [];
+    todaysMeetings = [];
   }
 
   return (
@@ -74,6 +77,7 @@ const Page = async () => {
         unassignedLeads={unassignedLeads}
         teamMembersForAssign={teamMembersForAssign}
         upcomingRenewals={upcomingRenewals}
+        todaysMeetings={todaysMeetings}
       />
     </MasterLayout>
   );

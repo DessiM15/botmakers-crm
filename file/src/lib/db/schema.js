@@ -100,6 +100,21 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'lead_stale',
   'demo_shared',
   'milestone_completed',
+  'meeting_created',
+  'meeting_booked',
+  'meeting_cancelled',
+  'meeting_rescheduled',
+  'meeting_completed',
+  'meeting_reminder',
+  'project_created',
+  'invoice_created',
+  'client_created',
+  'proposal_created',
+  'proposal_sent',
+  'invoice_sent',
+  'lead_assigned',
+  'booking_rescheduled',
+  'booking_cancelled',
 ]);
 
 export const teamRoleEnum = pgEnum('team_role', ['admin', 'member']);
@@ -150,6 +165,19 @@ export const editableDocCategoryEnum = pgEnum('editable_doc_category', [
   'other',
 ]);
 
+export const meetingSourceEnum = pgEnum('meeting_source', [
+  'cal_com',
+  'manual',
+]);
+
+export const meetingStatusEnum = pgEnum('meeting_status', [
+  'scheduled',
+  'rescheduled',
+  'completed',
+  'cancelled',
+  'no_show',
+]);
+
 // ── Tables ─────────────────────────────────────────────────────────────────────
 
 export const teamUsers = pgTable('team_users', {
@@ -159,6 +187,9 @@ export const teamUsers = pgTable('team_users', {
   role: teamRoleEnum('role').notNull().default('member'),
   avatarUrl: text('avatar_url'),
   isActive: boolean('is_active').notNull().default(true),
+  googleRefreshToken: text('google_refresh_token'),
+  googleCalendarConnected: boolean('google_calendar_connected').notNull().default(false),
+  googleCalendarEmail: text('google_calendar_email'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -311,6 +342,7 @@ export const projectPhases = pgTable('project_phases', {
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -535,6 +567,56 @@ export const editableDocs = pgTable('editable_documents', {
   createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
   updatedBy: uuid('updated_by').references(() => teamUsers.id),
   lastEditedAt: timestamp('last_edited_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const meetings = pgTable('meetings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  description: text('description'),
+  startTime: timestamp('start_time', { withTimezone: true }).notNull(),
+  endTime: timestamp('end_time', { withTimezone: true }).notNull(),
+  meetingUrl: text('meeting_url'),
+  attendeeName: text('attendee_name'),
+  attendeeEmail: text('attendee_email'),
+  attendeeTimezone: text('attendee_timezone'),
+  organizerName: text('organizer_name'),
+  organizerEmail: text('organizer_email'),
+  clientId: uuid('client_id').references(() => clients.id),
+  leadId: uuid('lead_id').references(() => leads.id),
+  projectId: uuid('project_id').references(() => projects.id),
+  calcomBookingUid: text('calcom_booking_uid').unique(),
+  source: meetingSourceEnum('source').notNull().default('manual'),
+  status: meetingStatusEnum('status').notNull().default('scheduled'),
+  createdBy: uuid('created_by').references(() => teamUsers.id),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── calendar_events (READ-ONLY) ────────────────────────────────────────────────
+// Owned by the Landing Page codebase. Do NOT insert, update, or delete.
+// Used to surface website bookings in CRM calendar views.
+export const calendarEvents = pgTable('calendar_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  googleEventId: text('google_event_id'),
+  title: text('title').notNull(),
+  description: text('description'),
+  startTime: timestamp('start_time', { withTimezone: true }).notNull(),
+  endTime: timestamp('end_time', { withTimezone: true }).notNull(),
+  location: text('location'),
+  meetingLink: text('meeting_link'),
+  attendees: jsonb('attendees'),
+  eventType: text('event_type').notNull().default('other'),
+  relatedLeadId: uuid('related_lead_id'),
+  relatedClientId: uuid('related_client_id'),
+  relatedProjectId: uuid('related_project_id'),
+  bookedByName: text('booked_by_name'),
+  bookedByEmail: text('booked_by_email'),
+  bookedByPhone: text('booked_by_phone'),
+  bookedByCompany: text('booked_by_company'),
+  googleHtmlLink: text('google_html_link'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -818,5 +900,24 @@ export const editableDocsRelations = relations(editableDocs, ({ one }) => ({
     fields: [editableDocs.updatedBy],
     references: [teamUsers.id],
     relationName: 'editableDocUpdater',
+  }),
+}));
+
+export const meetingsRelations = relations(meetings, ({ one }) => ({
+  client: one(clients, {
+    fields: [meetings.clientId],
+    references: [clients.id],
+  }),
+  lead: one(leads, {
+    fields: [meetings.leadId],
+    references: [leads.id],
+  }),
+  project: one(projects, {
+    fields: [meetings.projectId],
+    references: [projects.id],
+  }),
+  createdByUser: one(teamUsers, {
+    fields: [meetings.createdBy],
+    references: [teamUsers.id],
   }),
 }));

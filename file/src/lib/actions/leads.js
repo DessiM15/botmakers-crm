@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { contactLogSchema } from '@/lib/utils/validators';
 import { leadStageChange } from '@/lib/email/notifications';
 import { advanceLead } from '@/lib/pipeline/transitions';
-import { sendTeamNotification } from '@/lib/notifications/notify';
+import { sendTeamNotification, sendUserNotification } from '@/lib/notifications/notify';
 
 /**
  * Update a lead's pipeline stage.
@@ -164,6 +164,22 @@ export async function updateLeadAssignment(leadId, teamUserId) {
       entityId: leadId,
       metadata: { from: current.assignedTo, to: assignTo },
     });
+
+    // Notify the newly assigned user (non-blocking)
+    if (assignTo && assignTo !== current.assignedTo) {
+      const [lead] = await db
+        .select({ fullName: leads.fullName, email: leads.email })
+        .from(leads)
+        .where(eq(leads.id, leadId))
+        .limit(1);
+      sendUserNotification({
+        userId: assignTo,
+        type: 'lead_assigned',
+        title: `Lead assigned to you: ${lead?.fullName || 'Unknown'}`,
+        body: lead?.email || '',
+        link: `/leads/${leadId}`,
+      }).catch(() => {});
+    }
 
     // Auto-transition: first assignment → contacted
     if (!current.assignedTo && assignTo) {

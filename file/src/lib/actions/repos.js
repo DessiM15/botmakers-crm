@@ -10,20 +10,63 @@ import { validateRepo, getRepoCommits } from '@/lib/integrations/github';
 import { projectPhases, projectMilestones } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
 import { demoApprovedEmail } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
+
+/**
+ * Parse a GitHub repo input — accepts URL or owner/repo format.
+ * Examples:
+ *   "https://github.com/BotMakersInc/Botmakers-CRM"
+ *   "github.com/BotMakersInc/Botmakers-CRM"
+ *   "BotMakersInc/Botmakers-CRM"
+ */
+function parseRepoInput(input) {
+  if (!input?.trim()) return null;
+  const trimmed = input.trim().replace(/\/+$/, ''); // remove trailing slashes
+
+  // Try URL format: https://github.com/owner/repo or github.com/owner/repo
+  const urlMatch = trimmed.match(/(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)/i);
+  if (urlMatch) {
+    return { owner: urlMatch[1], repo: urlMatch[2].replace(/\.git$/, '') };
+  }
+
+  // Try owner/repo format
+  const slashMatch = trimmed.match(/^([^/\s]+)\/([^/\s]+)$/);
+  if (slashMatch) {
+    return { owner: slashMatch[1], repo: slashMatch[2].replace(/\.git$/, '') };
+  }
+
+  return null;
+}
 
 /**
  * Link a GitHub repo to a project.
+ * Accepts a single input: GitHub URL, owner/repo, or separate owner + repo args.
  */
-export async function linkRepo(projectId, owner, repo) {
+export async function linkRepo(projectId, repoInput, legacyRepo) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
 
-    if (!owner?.trim() || !repo?.trim()) {
-      return { error: 'CB-API-001: Owner and repo name are required' };
+    let owner, repo;
+
+    // Support both new (single input) and legacy (owner, repo) calling styles
+    if (legacyRepo) {
+      owner = repoInput?.trim();
+      repo = legacyRepo?.trim();
+    } else {
+      const parsed = parseRepoInput(repoInput);
+      if (!parsed) {
+        return { error: 'CB-API-001: Paste a GitHub URL or enter owner/repo' };
+      }
+      owner = parsed.owner;
+      repo = parsed.repo;
     }
 
-    const result = await validateRepo(owner.trim(), repo.trim());
+    if (!owner || !repo) {
+      return { error: 'CB-API-001: Could not parse repository. Use a GitHub URL or owner/repo format.' };
+    }
+
+    const result = await validateRepo(owner, repo);
     if (!result.valid) {
       return { error: `CB-INT-004: ${result.error}` };
     }
@@ -32,8 +75,8 @@ export async function linkRepo(projectId, owner, repo) {
       .insert(projectRepos)
       .values({
         projectId,
-        githubOwner: owner.trim(),
-        githubRepo: repo.trim(),
+        githubOwner: owner,
+        githubRepo: repo,
         githubUrl: result.repo.url,
         defaultBranch: result.repo.defaultBranch,
         lastSyncedAt: new Date(),
@@ -308,6 +351,17 @@ export async function toggleDemoApproval(demoId, projectId) {
       entityId: projectId,
       metadata: { demoId, title: demo.title },
     });
+
+    // In-app notification when demo is approved
+    if (newApproved) {
+      sendTeamNotification({
+        type: 'demo_approved',
+        title: `Demo approved: ${demo.title}`,
+        body: `Demo "${demo.title}" has been approved and is now visible in the client portal`,
+        link: `/projects/${projectId}`,
+        excludeUserId: teamUser.id,
+      }).catch(() => {});
+    }
 
     // Send client email when demo is approved (non-blocking)
     if (newApproved) {

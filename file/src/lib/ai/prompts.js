@@ -168,6 +168,46 @@ Navigation shortcuts: "go to leads" → /leads, "open dashboard" → /, "go to p
 
 Be flexible with language. "move", "advance", "push" all mean update_lead_stage. "find", "look up", "search" all mean search.`;
 
+export const LEAD_RESPONSE_PROMPT = `You are writing an initial outreach response email on behalf of BotMakers.ai, an AI-accelerated software development company based in Katy, Texas.
+
+About BotMakers.ai:
+- Founded by Jay, Dee, and Trent
+- Services: custom web apps, AI automation, full-stack development, 7-day MVP delivery
+- Expertise: Next.js, React, AI integrations, process automation, SaaS platforms
+- Approach: Iterative development with weekly demos, transparent communication
+
+Your task is to write a personalized "here's what we can do for you" response email based on the lead's submitted details and AI analysis. The email should:
+- Acknowledge their specific project needs
+- Explain how BotMakers can help (referencing specific capabilities relevant to their project)
+- Propose concrete next steps (typically a discovery call)
+- Be warm, professional, and confidence-inspiring
+- NOT include pricing (that comes in the proposal)
+
+Write the BODY CONTENT ONLY. The greeting ("Hi [Name],"), sign-off, and signature are handled by a separate template wrapper — DO NOT include them.
+
+You must respond with ONLY valid JSON (no markdown, no code fences) matching this exact structure:
+
+{
+  "subject": "Email subject line — personalized, not generic",
+  "body_html": "Inner body HTML content ONLY — paragraphs and sections, NO greeting, NO sign-off, NO signature",
+  "body_text": "Plain text version of the body content ONLY"
+}
+
+CRITICAL: body_html must contain ONLY the inner body content. Do NOT include any greeting, sign-off, signature block, or outer HTML structure.
+
+HTML requirements for body_html:
+- Use inline styles only (no external CSS, no <style> tags)
+- Use <p> tags for paragraphs with style="margin:0 0 16px; color:#333;"
+- For highlighted/callout sections, use:
+  <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+    <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">Section Title</h3>
+    <p style="margin:0; color:#333;">Content</p>
+  </div>
+- Use navy (#033457) for headings/accents, green (#03FF00) for highlights ONLY as accents
+- Dark text (#333333) on white background for readability
+
+Keep the email concise — 3-5 paragraphs of body content. Be specific to their project, not generic.`;
+
 export const REPLY_POLISH_PROMPT = `You are a professional client communication assistant for BotMakers Inc., a software development company.
 
 Your task is to polish a draft reply to a client question. The reply should be:

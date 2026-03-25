@@ -9,6 +9,8 @@ import { revalidatePath } from 'next/cache';
 import { invoiceCreateSchema } from '@/lib/utils/validators';
 import { sendEmail } from '@/lib/email/client';
 import { invoiceSent, paymentReceipt } from '@/lib/email/templates';
+import { paymentReceived } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 import {
   createSquareInvoice,
   createSquareCheckoutLink,
@@ -69,6 +71,15 @@ export async function createInvoice(formData) {
       entityId: invoice.id,
       metadata: { title: invoice.title, amount: String(total) },
     });
+
+    // Team in-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'invoice_created',
+      title: `Invoice created: ${invoice.title}`,
+      body: `$${Number(total).toFixed(2)}`,
+      link: `/invoices/${invoice.id}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
 
     revalidatePath('/invoices');
     if (data.clientId) revalidatePath(`/clients/${data.clientId}`);
@@ -164,6 +175,15 @@ export async function sendViaSquare(invoiceId) {
         recipientEmail: client.email,
       },
     });
+
+    // Team in-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'invoice_sent',
+      title: `Invoice sent via Square: ${invoice.title}`,
+      body: `$${Number(invoice.amount).toFixed(2)} to ${client.email}`,
+      link: `/invoices/${invoiceId}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
 
     // Send notification email (non-blocking)
     const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/invoices/${invoiceId}`;
@@ -301,6 +321,33 @@ export async function markPaid(invoiceId) {
         method: 'manual',
       },
     });
+
+    // Send client receipt email (matching Square webhook behavior)
+    const [client] = await db
+      .select({ email: clients.email, fullName: clients.fullName })
+      .from(clients)
+      .where(eq(clients.id, invoice.clientId))
+      .limit(1);
+
+    if (client?.email) {
+      sendEmail({
+        to: client.email,
+        subject: `Payment Receipt: ${invoice.title}`,
+        html: paymentReceipt(client.fullName || 'there', invoice.title, invoice.amount),
+      }).catch(() => {});
+    }
+
+    // Team notification (non-blocking)
+    sendTeamNotification({
+      type: 'payment_received',
+      title: `Payment received: ${invoice.title}`,
+      body: `Manual payment of $${Number(invoice.amount).toFixed(2)} marked for "${invoice.title}".`,
+      link: `/invoices/${invoiceId}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
+
+    // Team email notification (non-blocking)
+    paymentReceived(invoice, { amount: invoice.amount }).catch(() => {});
 
     revalidatePath('/invoices');
     revalidatePath(`/invoices/${invoiceId}`);

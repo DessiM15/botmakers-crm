@@ -6,7 +6,8 @@ import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import SettingsIntegrations from './SettingsIntegrations';
-import { inviteTeamMember, toggleTeamMemberActive, saveSetting } from '@/lib/actions/settings';
+import { inviteTeamMember, toggleTeamMemberActive, saveSetting, saveCalendarColors } from '@/lib/actions/settings';
+import { DEFAULT_CALENDAR_COLORS, CALENDAR_PRESET_COLORS } from '@/lib/utils/constants';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
@@ -14,6 +15,7 @@ const TABS = [
   { key: 'integrations', label: 'Integrations', icon: 'mdi:puzzle-outline' },
   { key: 'team', label: 'Team', icon: 'mdi:account-group-outline' },
   { key: 'notifications', label: 'Notifications', icon: 'mdi:bell-outline' },
+  { key: 'calendar', label: 'Calendar', icon: 'mdi:calendar-outline' },
   { key: 'defaults', label: 'Defaults', icon: 'mdi:cog-outline' },
 ];
 
@@ -26,6 +28,7 @@ const SettingsPage = ({
   staleDays: initialStaleDays,
   defaultProposalTerms: initialProposalTerms,
   defaultProjectPhases: initialProjectPhases,
+  calendarColors: initialCalendarColors,
 }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('integrations');
@@ -72,6 +75,10 @@ const SettingsPage = ({
 
       {activeTab === 'notifications' && (
         <NotificationsTab initialStaleDays={initialStaleDays} />
+      )}
+
+      {activeTab === 'calendar' && (
+        <CalendarTab initialColors={initialCalendarColors} />
       )}
 
       {activeTab === 'defaults' && (
@@ -536,6 +543,140 @@ function DefaultsTab({ initialProposalTerms, initialProjectPhases }) {
             {savingPhases ? <span className="spinner-border spinner-border-sm me-1" /> : null}
             Save Phases
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CALENDAR_COLOR_CATEGORIES = [
+  { key: 'meeting', label: 'Meetings', icon: 'mdi:calendar-clock-outline' },
+  { key: 'calcom', label: 'Cal.com Bookings', icon: 'mdi:calendar-check-outline' },
+  { key: 'website', label: 'Website Bookings', icon: 'mdi:web' },
+  { key: 'milestone', label: 'Milestones', icon: 'mdi:flag-checkered' },
+  { key: 'milestone_overdue', label: 'Overdue Milestones', icon: 'mdi:alert-circle-outline' },
+  { key: 'cancelled', label: 'Cancelled Events', icon: 'mdi:cancel' },
+];
+
+function CalendarTab({ initialColors }) {
+  const [colors, setColors] = useState(() => ({
+    ...DEFAULT_CALENDAR_COLORS,
+    ...(initialColors || {}),
+  }));
+  const [saving, setSaving] = useState(false);
+
+  const handleColorChange = (key, value) => {
+    setColors((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const result = await saveCalendarColors(colors);
+    setSaving(false);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success('Calendar colors saved.');
+    }
+  };
+
+  const handleReset = () => {
+    setColors({ ...DEFAULT_CALENDAR_COLORS });
+  };
+
+  return (
+    <div>
+      <div className="card">
+        <div className="card-header">
+          <h6 className="text-white fw-semibold mb-0">Calendar Event Colors</h6>
+        </div>
+        <div className="card-body">
+          <p className="text-secondary-light text-sm mb-4">
+            Customize the colors used for each event category on the calendar.
+          </p>
+          <div className="d-flex flex-column gap-3">
+            {CALENDAR_COLOR_CATEGORIES.map((cat) => (
+              <div
+                key={cat.key}
+                className="d-flex align-items-center gap-3 p-3 rounded"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <Icon
+                  icon={cat.icon}
+                  className="text-secondary-light flex-shrink-0"
+                  style={{ fontSize: '20px' }}
+                />
+                <span className="text-white text-sm fw-medium flex-grow-1">
+                  {cat.label}
+                </span>
+
+                {/* Color input (native picker) */}
+                <div className="position-relative" style={{ width: 32, height: 32 }}>
+                  <div
+                    className="rounded"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      backgroundColor: colors[cat.key] || DEFAULT_CALENDAR_COLORS[cat.key],
+                      border: '2px solid rgba(255,255,255,0.15)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <input
+                    type="color"
+                    value={colors[cat.key] || DEFAULT_CALENDAR_COLORS[cat.key]}
+                    onChange={(e) => handleColorChange(cat.key, e.target.value)}
+                    className="position-absolute"
+                    style={{
+                      inset: 0,
+                      opacity: 0,
+                      width: '100%',
+                      height: '100%',
+                      cursor: 'pointer',
+                    }}
+                  />
+                </div>
+
+                {/* Preset swatches */}
+                <div className="d-flex gap-1 flex-wrap" style={{ maxWidth: 240 }}>
+                  {CALENDAR_PRESET_COLORS.slice(0, 7).map((c) => (
+                    <button
+                      key={c}
+                      className="btn p-0 border-0"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '3px',
+                        backgroundColor: c,
+                        outline: colors[cat.key] === c ? '2px solid #fff' : '1px solid rgba(255,255,255,0.1)',
+                        outlineOffset: 1,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => handleColorChange(cat.key, c)}
+                      title={c}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="d-flex gap-2 mt-4">
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+              Save Colors
+            </button>
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={handleReset}
+            >
+              Reset to Defaults
+            </button>
+          </div>
         </div>
       </div>
     </div>

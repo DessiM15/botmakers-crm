@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { projectRepos, projectMilestones, projectPhases, activityLog } from '@/lib/db/schema';
 import { eq, and, ilike } from 'drizzle-orm';
 import { getRepoFileContent } from '@/lib/integrations/github';
+import { completeMilestoneInternal } from '@/lib/actions/milestone-internal';
 
 /**
  * Verify GitHub webhook signature (X-Hub-Signature-256).
@@ -145,6 +146,7 @@ export async function POST(request) {
           .limit(1);
 
         if (milestone && milestone.status !== 'completed') {
+          // Update milestone status
           await db
             .update(projectMilestones)
             .set({
@@ -154,18 +156,11 @@ export async function POST(request) {
             })
             .where(eq(projectMilestones.id, milestone.id));
 
-          await db.insert(activityLog).values({
+          // Shared helper: activity log, client email, team notify, invoice, phase/project auto-complete
+          await completeMilestoneInternal(milestone, {
             actorId: null,
             actorType: 'system',
-            action: 'milestone.auto_completed',
-            entityType: 'project',
-            entityId: r.projectId,
-            metadata: {
-              milestoneId: milestone.id,
-              milestoneTitle: milestone.title,
-              commitSha: tag.commitSha,
-              trigger: 'commit_tag',
-            },
+            trigger: 'commit_tag',
           });
 
           milestoneUpdates++;
@@ -199,6 +194,7 @@ export async function POST(request) {
 
             // Only update if state changed
             if (cb.completed && ms.status !== 'completed') {
+              // Update milestone status
               await db
                 .update(projectMilestones)
                 .set({
@@ -208,17 +204,11 @@ export async function POST(request) {
                 })
                 .where(eq(projectMilestones.id, ms.id));
 
-              await db.insert(activityLog).values({
+              // Shared helper: activity log, client email, team notify, invoice, phase/project auto-complete
+              await completeMilestoneInternal(ms, {
                 actorId: null,
                 actorType: 'system',
-                action: 'milestone.auto_completed',
-                entityType: 'project',
-                entityId: r.projectId,
-                metadata: {
-                  milestoneId: ms.id,
-                  milestoneTitle: ms.title,
-                  trigger: 'sync_file',
-                },
+                trigger: 'sync_file',
               });
 
               milestoneUpdates++;

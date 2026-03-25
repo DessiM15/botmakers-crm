@@ -4,6 +4,7 @@ import { clientServices, activityLog } from '@/lib/db/schema';
 import { eq, and, lte, gte, or } from 'drizzle-orm';
 import { getUpcomingRenewals } from '@/lib/db/queries/services';
 import { serviceRenewalAlert } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 export async function GET(request) {
   try {
@@ -45,6 +46,14 @@ export async function GET(request) {
 
     if (renewals.length > 0) {
       await serviceRenewalAlert(renewals);
+
+      // In-app notification (non-blocking)
+      sendTeamNotification({
+        type: 'milestone_overdue',
+        title: `${renewals.length} service${renewals.length > 1 ? 's' : ''} renewing soon`,
+        body: renewals.map(r => r.serviceName || r.service_name).slice(0, 3).join(', ') + (renewals.length > 3 ? '...' : ''),
+        link: '/services',
+      }).catch(() => {});
 
       await db.insert(activityLog).values({
         actorId: null,

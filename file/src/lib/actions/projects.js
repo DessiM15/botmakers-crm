@@ -14,9 +14,10 @@ import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { projectCreateSchema, milestoneUpdateSchema } from '@/lib/utils/validators';
-import { milestoneCompletedEmail, projectCompletedEmail } from '@/lib/email/notifications';
+import { projectCompletedEmail } from '@/lib/email/notifications';
 import { sendTeamNotification } from '@/lib/notifications/notify';
 import { advanceLead } from '@/lib/pipeline/transitions';
+import { completeMilestoneInternal, handleMilestoneStarted } from '@/lib/actions/milestone-internal';
 
 /**
  * Create a new project with phases and milestones.
@@ -84,6 +85,24 @@ export async function createProject(formData, phasesData) {
       entityId: project.id,
       metadata: { name: project.name, clientId: data.clientId },
     });
+
+    // Team in-app notification (non-blocking)
+    let clientName = null;
+    if (data.clientId) {
+      const [c] = await db
+        .select({ fullName: clients.fullName })
+        .from(clients)
+        .where(eq(clients.id, data.clientId))
+        .limit(1);
+      clientName = c?.fullName || null;
+    }
+    sendTeamNotification({
+      type: 'project_created',
+      title: `New project: ${project.name}`,
+      body: clientName ? `Client: ${clientName}` : 'No client assigned',
+      link: `/projects/${project.id}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
 
     revalidatePath('/projects');
     revalidatePath('/clients');
@@ -207,6 +226,15 @@ export async function updateProjectStatus(projectId, status) {
           projectCompletedEmail(client.email, client.fullName, proj.name).catch(() => {});
         }
       }
+
+      // Team in-app notification (non-blocking)
+      sendTeamNotification({
+        type: 'project_created',
+        title: `Project completed: ${proj.name}`,
+        body: 'All milestones done',
+        link: `/projects/${projectId}`,
+        excludeUserId: teamUser.id,
+      }).catch(() => {});
     }
 
     await db.insert(activityLog).values({
@@ -369,59 +397,16 @@ export async function updateMilestone(milestoneId, data) {
 
     // Auto-transition: first milestone in-progress → active_client
     if (data.status === 'in_progress' && milestone.status !== 'in_progress') {
-      const [proj] = await db
-        .select({ leadId: projects.leadId })
-        .from(projects)
-        .where(eq(projects.id, milestone.projectId))
-        .limit(1);
-      if (proj?.leadId) {
-        await advanceLead(proj.leadId, 'active_client', 'first_milestone_started');
-      }
+      await handleMilestoneStarted(milestone);
     }
 
-    // Log milestone completion and auto-create invoice if triggers_invoice
+    // Milestone completed → shared helper handles all downstream effects
     if (data.status === 'completed' && milestone.status !== 'completed') {
-      await db.insert(activityLog).values({
+      await completeMilestoneInternal(milestone, {
         actorId: teamUser.id,
         actorType: 'team',
-        action: 'milestone.completed',
-        entityType: 'project',
-        entityId: milestone.projectId,
-        metadata: { milestoneId, title: milestone.title },
+        trigger: 'manual',
       });
-
-      // Notify client about milestone completion (non-blocking)
-      const [proj] = await db
-        .select({ id: projects.id, clientId: projects.clientId, name: projects.name })
-        .from(projects)
-        .where(eq(projects.id, milestone.projectId))
-        .limit(1);
-
-      if (proj?.clientId) {
-        const [client] = await db
-          .select({ email: clients.email, fullName: clients.fullName })
-          .from(clients)
-          .where(eq(clients.id, proj.clientId))
-          .limit(1);
-        if (client) {
-          milestoneCompletedEmail(client.email, client.fullName, proj.name, milestone.title).catch(() => {});
-        }
-
-        // In-app notification to team
-        sendTeamNotification({
-          type: 'milestone_completed',
-          title: `Milestone completed: ${milestone.title}`,
-          body: `"${milestone.title}" in project "${proj.name}" has been completed.`,
-          link: `/projects/${milestone.projectId}`,
-          excludeUserId: teamUser.id,
-        }).catch(() => {});
-
-        // Auto-create invoice if milestone triggers one (WF-7)
-        if (milestone.triggersInvoice) {
-          const { createInvoiceFromMilestone } = await import('@/lib/actions/invoices');
-          await createInvoiceFromMilestone(milestone, proj, teamUser.id);
-        }
-      }
     }
 
     // Update project updatedAt

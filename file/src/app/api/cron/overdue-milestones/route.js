@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client';
 import { projectMilestones, activityLog } from '@/lib/db/schema';
 import { sql } from 'drizzle-orm';
 import { milestoneOverdue } from '@/lib/email/notifications';
+import { sendTeamNotification } from '@/lib/notifications/notify';
 
 export async function GET(request) {
   try {
@@ -63,6 +64,14 @@ export async function GET(request) {
 
     // Send notification
     await milestoneOverdue(overdueList);
+
+    // In-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'milestone_overdue',
+      title: `${overdueList.length} overdue milestone${overdueList.length > 1 ? 's' : ''}`,
+      body: overdueList.map(m => m.title).slice(0, 3).join(', ') + (overdueList.length > 3 ? '...' : ''),
+      link: '/projects',
+    }).catch(() => {});
 
     // Log activity for each
     for (const m of overdueList.slice(0, 10)) {

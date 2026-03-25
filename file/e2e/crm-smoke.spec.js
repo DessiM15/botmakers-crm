@@ -28,7 +28,9 @@ async function visitAndAudit(page, url, description) {
     consoleErrors.push(`PAGE ERROR: ${error.message}`);
   });
 
-  const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 });
+  const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  // Wait for page to settle (replaces networkidle which can hang on long-polling pages)
+  await page.waitForTimeout(2000);
 
   return {
     status: response?.status(),

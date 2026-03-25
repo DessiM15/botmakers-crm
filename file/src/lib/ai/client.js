@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT, VOICE_COMMAND_PROMPT } from './prompts';
+import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT, VOICE_COMMAND_PROMPT, LEAD_RESPONSE_PROMPT } from './prompts';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -50,6 +50,43 @@ Created: ${leadData.createdAt}`;
   const analysis = safeParseJSON(text);
 
   return analysis;
+}
+
+/**
+ * Generate a personalized lead response email using Claude.
+ * @param {Object} leadData - Lead record from database
+ * @returns {Object} - { subject, body_html, body_text }
+ */
+export async function generateLeadResponseWithAI(leadData) {
+  const analysis = leadData.aiInternalAnalysis;
+
+  const userMessage = `Generate a personalized response email for this lead who contacted BotMakers:
+
+Name: ${leadData.fullName}
+Email: ${leadData.email}
+Company: ${leadData.companyName || 'Not provided'}
+Project Type: ${leadData.projectType || 'Not specified'}
+Project Timeline: ${leadData.projectTimeline || 'Not specified'}
+Existing Systems: ${leadData.existingSystems || 'Not specified'}
+Project Details: ${leadData.projectDetails || 'Not provided'}
+Lead Source: ${leadData.source || 'web_form'}
+
+${analysis ? `AI Analysis:
+- Prospect Summary: ${analysis.prospect_summary || 'N/A'}
+- Project Summary: ${analysis.project_summary || 'N/A'}
+- Complexity: ${analysis.complexity || 'N/A'}
+- Estimated Effort: ${analysis.estimated_effort || 'N/A'}
+- Recommended Next Step: ${analysis.recommended_next_step || 'N/A'}` : 'No AI analysis available yet.'}`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 2048,
+    system: LEAD_RESPONSE_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const text = response.content[0].text;
+  return safeParseJSON(text);
 }
 
 /**

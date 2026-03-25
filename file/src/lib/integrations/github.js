@@ -39,13 +39,13 @@ export async function validateRepo(owner, repo) {
     };
   } catch (err) {
     if (err.status === 404) {
-      return { valid: false, error: 'Repository not found' };
+      return { valid: false, error: `Repository "${owner}/${repo}" not found. Check the name or ensure your GitHub token has access to private repos.` };
     }
     if (err.status === 403) {
       return { valid: false, error: 'Rate limit exceeded or access denied' };
     }
     if (err.message?.startsWith('CB-INT-004')) {
-      return { valid: false, error: 'GitHub token not configured' };
+      return { valid: false, error: 'GitHub token not configured — add GITHUB_TOKEN to .env.local' };
     }
     return { valid: false, error: 'Failed to validate repository' };
   }
