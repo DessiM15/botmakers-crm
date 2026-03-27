@@ -7,6 +7,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { createClient, deleteClient } from '@/lib/actions/clients';
 import { formatRelativeTime, formatCurrency } from '@/lib/utils/formatters';
+import { arrayToCSV, downloadCSV } from '@/lib/utils/csv-export';
 
 const ClientTable = ({ initialData }) => {
   const router = useRouter();
@@ -22,6 +23,7 @@ const ClientTable = ({ initialData }) => {
   );
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Add Client Modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -133,6 +135,26 @@ const ClientTable = ({ initialData }) => {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/clients');
+      const { rows } = await res.json();
+      const csv = arrayToCSV(rows, [
+        { label: 'Name', key: 'fullName' },
+        { label: 'Email', key: 'email' },
+        { label: 'Phone', key: 'phone' },
+        { label: 'Company', key: 'company' },
+        { label: 'Created', accessor: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '' },
+      ]);
+      downloadCSV(csv, `clients-export-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success('Export downloaded');
+    } catch {
+      toast.error('Export failed');
+    }
+    setExporting(false);
+  };
+
   const { clients: rows, total, totalPages } = data;
 
   return (
@@ -156,9 +178,15 @@ const ClientTable = ({ initialData }) => {
             />
           </div>
 
-          <span className="text-secondary-light text-sm ms-auto">
-            {total} client{total !== 1 ? 's' : ''}
-          </span>
+          <div className="d-flex align-items-center gap-2 ms-auto">
+            <button className="btn btn-outline-secondary btn-sm" onClick={handleExport} disabled={exporting}>
+              {exporting ? <span className="spinner-border spinner-border-sm me-1" /> : <Icon icon="mdi:download" className="me-1" style={{ fontSize: '16px' }} />}
+              Export CSV
+            </button>
+            <span className="text-secondary-light text-sm">
+              {total} client{total !== 1 ? 's' : ''}
+            </span>
+          </div>
 
           <button
             className="btn btn-primary btn-sm d-flex align-items-center gap-1"

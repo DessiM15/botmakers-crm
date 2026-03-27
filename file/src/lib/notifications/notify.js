@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/client';
-import { inAppNotifications, teamUsers } from '@/lib/db/schema';
+import { inAppNotifications, teamUsers, notificationPreferences } from '@/lib/db/schema';
 import { eq, and, desc, count, sql } from 'drizzle-orm';
 import { sendEmail } from '@/lib/email/client';
 
@@ -11,6 +11,28 @@ async function getActiveTeamUsers() {
     .select({ id: teamUsers.id, email: teamUsers.email, fullName: teamUsers.fullName })
     .from(teamUsers)
     .where(eq(teamUsers.isActive, true));
+}
+
+/**
+ * Get user IDs that have email DISABLED for a notification type.
+ * Returns a Set of user IDs. Defaults to empty (all emails sent) on failure.
+ */
+async function getEmailDisabledUsers(userIds, notificationType) {
+  if (userIds.length === 0) return new Set();
+  try {
+    const prefs = await db
+      .select({ userId: notificationPreferences.userId })
+      .from(notificationPreferences)
+      .where(
+        and(
+          eq(notificationPreferences.notificationType, notificationType),
+          eq(notificationPreferences.emailEnabled, false)
+        )
+      );
+    return new Set(prefs.map(p => p.userId));
+  } catch {
+    return new Set();
+  }
 }
 
 function crmLink(path) {
@@ -49,9 +71,11 @@ export async function sendTeamNotification({ type, title, body, link, excludeUse
 
     await db.insert(inAppNotifications).values(values);
 
-    // Also send email to each (non-blocking)
+    // Also send email to each (non-blocking, respecting preferences)
     const fullLink = link ? crmLink(link) : null;
+    const emailDisabled = await getEmailDisabledUsers(recipients.map(m => m.id), type);
     for (const m of recipients) {
+      if (emailDisabled.has(m.id)) continue;
       sendEmail({
         to: m.email,
         subject: title,
@@ -91,12 +115,15 @@ export async function sendUserNotification({ userId, type, title, body, link }) 
       .limit(1);
 
     if (user) {
-      const fullLink = link ? crmLink(link) : null;
-      sendEmail({
-        to: user.email,
-        subject: title,
-        html: `<p>${body || title}</p>${fullLink ? `<p><a href="${fullLink}">View in CRM</a></p>` : ''}`,
-      }).catch(() => {});
+      const disabled = await getEmailDisabledUsers([userId], type);
+      if (!disabled.has(userId)) {
+        const fullLink = link ? crmLink(link) : null;
+        sendEmail({
+          to: user.email,
+          subject: title,
+          html: `<p>${body || title}</p>${fullLink ? `<p><a href="${fullLink}">View in CRM</a></p>` : ''}`,
+        }).catch(() => {});
+      }
     }
   } catch {
     // Non-critical
@@ -144,4 +171,14 @@ export async function markAllNotificationsRead(userId) {
     .update(inAppNotifications)
     .set({ isRead: true })
     .where(and(eq(inAppNotifications.userId, userId), eq(inAppNotifications.isRead, false)));
+}
+
+/**
+ * Mark a single notification as unread.
+ */
+export async function markNotificationUnread(notificationId, userId) {
+  await db
+    .update(inAppNotifications)
+    .set({ isRead: false })
+    .where(and(eq(inAppNotifications.id, notificationId), eq(inAppNotifications.userId, userId)));
 }

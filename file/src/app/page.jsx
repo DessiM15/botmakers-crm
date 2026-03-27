@@ -12,6 +12,7 @@ import {
   getLeadSourceAnalytics,
   getUnassignedLeads,
   getTeamMembersForAssignment,
+  getMonthlyRevenue,
 } from '@/lib/db/queries/dashboard';
 import { getPendingFollowUps } from '@/lib/db/queries/follow-ups';
 import { getUpcomingRenewals } from '@/lib/db/queries/services';
@@ -32,9 +33,9 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings;
+  let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue;
   try {
-    [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings] = await Promise.all([
+    [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue] = await Promise.all([
       getMetrics(),
       getAlerts(),
       getRecentActivity(),
@@ -46,6 +47,7 @@ const Page = async () => {
       getTeamMembersForAssignment(),
       getUpcomingRenewals(7).catch(() => []),
       getTodaysMeetings().catch(() => []),
+      getMonthlyRevenue().catch(() => []),
     ]);
   } catch (err) {
     console.error('[Dashboard] Data fetch error:', err.message, err.stack);
@@ -61,6 +63,7 @@ const Page = async () => {
     teamMembersForAssign = [];
     upcomingRenewals = [];
     todaysMeetings = [];
+    monthlyRevenue = [];
   }
 
   return (
@@ -78,6 +81,7 @@ const Page = async () => {
         teamMembersForAssign={teamMembersForAssign}
         upcomingRenewals={upcomingRenewals}
         todaysMeetings={todaysMeetings}
+        monthlyRevenue={monthlyRevenue}
       />
     </MasterLayout>
   );

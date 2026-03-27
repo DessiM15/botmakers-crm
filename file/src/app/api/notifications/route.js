@@ -6,6 +6,7 @@ import {
   getNotificationCount,
   markNotificationRead,
   markAllNotificationsRead,
+  markNotificationUnread,
 } from '@/lib/notifications/notify';
 
 /**
@@ -51,6 +52,11 @@ export async function POST(request) {
 
     if (body.action === 'mark_all_read') {
       await markAllNotificationsRead(teamUser.id);
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'mark_unread' && body.notificationId) {
+      await markNotificationUnread(body.notificationId, teamUser.id);
       return NextResponse.json({ success: true });
     }
 

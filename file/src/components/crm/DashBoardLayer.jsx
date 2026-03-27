@@ -9,6 +9,8 @@ import LeadSourceAnalytics from './LeadSourceAnalytics';
 import FollowUpQueue from './FollowUpQueue';
 import NewLeadsAssign from './NewLeadsAssign';
 import TodaySchedule from './TodaySchedule';
+import RevenueChart from './RevenueChart';
+import LeadFunnelChart from './LeadFunnelChart';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -45,6 +47,7 @@ const DashBoardLayer = ({
   teamMembersForAssign = [],
   upcomingRenewals = [],
   todaysMeetings = [],
+  monthlyRevenue = [],
 }) => {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -81,6 +84,30 @@ const DashBoardLayer = ({
       <div className="mt-4">
         <MetricCards metrics={metrics} />
       </div>
+
+      {/* Charts: Revenue Trend + Lead Pipeline */}
+      <section className="row gy-4 mt-1">
+        <div className="col-lg-7">
+          <div className="card h-100">
+            <div className="card-header">
+              <h6 className="text-white fw-semibold mb-0">Revenue Trend</h6>
+            </div>
+            <div className="card-body">
+              <RevenueChart monthlyRevenue={monthlyRevenue} />
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-5">
+          <div className="card h-100">
+            <div className="card-header">
+              <h6 className="text-white fw-semibold mb-0">Lead Pipeline</h6>
+            </div>
+            <div className="card-body">
+              <LeadFunnelChart />
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Unassigned Leads + Follow-Up Queue */}
       <section className="row gy-4 mt-1">

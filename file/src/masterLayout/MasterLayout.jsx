@@ -7,6 +7,7 @@ import { signOutAction } from "@/lib/actions/auth";
 import NotificationBell from "@/components/crm/NotificationBell";
 import VoiceCommand from "@/components/crm/VoiceCommand";
 import RealtimeNotificationProvider from "@/components/crm/RealtimeNotificationProvider";
+import GlobalSearch from "@/components/crm/GlobalSearch";
 
 const sidebarItems = [
   { label: "Dashboard", icon: "solar:home-smile-angle-outline", href: "/" },
@@ -22,6 +23,7 @@ const sidebarItems = [
   { label: "Docs", icon: "mdi:notebook-edit-outline", href: "/docs" },
   { label: "Meetings", icon: "mdi:calendar-check-outline", href: "/meetings" },
   { label: "Calendar", icon: "mdi:calendar-month-outline", href: "/calendar" },
+  { label: "Notifications", icon: "mdi:bell-outline", href: "/notifications" },
   "separator",
   { label: "Settings", icon: "solar:settings-outline", href: "/settings" },
   { label: "Activity Log", icon: "mdi:history", href: "/activity" },
@@ -180,6 +182,18 @@ const MasterLayout = ({ children }) => {
             </div>
             <div className='col-auto'>
               <div className='d-flex flex-wrap align-items-center gap-3'>
+                {/* Global Search Trigger */}
+                <button
+                  type="button"
+                  className="d-flex justify-content-center align-items-center rounded-circle"
+                  title="Search (⌘K)"
+                  onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+                >
+                  <span className="w-40-px h-40-px bg-base rounded-circle d-flex justify-content-center align-items-center">
+                    <Icon icon="mdi:magnify" className="text-secondary-light text-xl" />
+                  </span>
+                </button>
                 {/* Notification Bell */}
                 <NotificationBell />
                 {/* User profile dropdown */}
@@ -250,6 +264,9 @@ const MasterLayout = ({ children }) => {
 
         {/* Real-time Notification Subscription */}
         <RealtimeNotificationProvider />
+
+        {/* Global Search Palette */}
+        <GlobalSearch />
 
         {/* Footer section */}
         <footer className='d-footer'>

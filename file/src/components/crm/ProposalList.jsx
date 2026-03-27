@@ -4,7 +4,9 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react/dist/iconify.js';
+import { toast } from 'react-toastify';
 import { PROPOSAL_STATUSES } from '@/lib/utils/constants';
+import { arrayToCSV, downloadCSV } from '@/lib/utils/csv-export';
 
 function TrackingBadge({ proposal }) {
   if (proposal.signedAt) {
@@ -57,6 +59,7 @@ const ProposalList = ({
   const router = useRouter();
   const [search, setSearch] = useState(currentSearch);
   const [debounceTimer, setDebounceTimer] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const updateUrl = useCallback(
     (params) => {
@@ -84,6 +87,29 @@ const ProposalList = ({
 
   const handlePageChange = (newPage) => {
     updateUrl({ status: currentStatus, search, page: newPage });
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/proposals');
+      const { rows } = await res.json();
+      const csv = arrayToCSV(rows, [
+        { label: 'Title', key: 'title' },
+        { label: 'Client', key: 'clientName' },
+        { label: 'Lead', key: 'leadName' },
+        { label: 'Amount', accessor: (r) => r.totalAmount ? '$' + Number(r.totalAmount).toFixed(2) : '$0.00' },
+        { label: 'Status', key: 'status' },
+        { label: 'Sent', accessor: (r) => r.sentAt ? new Date(r.sentAt).toLocaleDateString() : '' },
+        { label: 'Accepted', accessor: (r) => r.acceptedAt ? new Date(r.acceptedAt).toLocaleDateString() : '' },
+        { label: 'Created', accessor: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '' },
+      ]);
+      downloadCSV(csv, `proposals-export-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success('Export downloaded');
+    } catch {
+      toast.error('Export failed');
+    }
+    setExporting(false);
   };
 
   const formatDate = (dateStr) => {
@@ -147,7 +173,11 @@ const ProposalList = ({
                 ))}
               </select>
             </div>
-            <div className="col-md-3 text-end">
+            <div className="col-md-3 d-flex align-items-center justify-content-end gap-2">
+              <button className="btn btn-outline-secondary btn-sm" onClick={handleExport} disabled={exporting}>
+                {exporting ? <span className="spinner-border spinner-border-sm me-1" /> : <Icon icon="mdi:download" className="me-1" style={{ fontSize: '16px' }} />}
+                Export CSV
+              </button>
               <span className="text-secondary-light text-sm">
                 {total} proposal{total !== 1 ? 's' : ''}
               </span>

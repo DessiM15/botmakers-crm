@@ -11,6 +11,7 @@ import {
   LEAD_SCORES,
 } from '@/lib/utils/constants';
 import { formatRelativeTime } from '@/lib/utils/formatters';
+import { arrayToCSV, downloadCSV } from '@/lib/utils/csv-export';
 
 const LeadTable = ({ initialData, teamMembers }) => {
   const router = useRouter();
@@ -33,6 +34,7 @@ const LeadTable = ({ initialData, teamMembers }) => {
   );
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -150,6 +152,29 @@ const LeadTable = ({ initialData, teamMembers }) => {
     );
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/leads');
+      const { rows } = await res.json();
+      const csv = arrayToCSV(rows, [
+        { label: 'Name', key: 'fullName' },
+        { label: 'Email', key: 'email' },
+        { label: 'Phone', key: 'phone' },
+        { label: 'Company', key: 'companyName' },
+        { label: 'Source', key: 'source' },
+        { label: 'Stage', key: 'pipelineStage' },
+        { label: 'Score', key: 'score' },
+        { label: 'Created', accessor: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '' },
+      ]);
+      downloadCSV(csv, `leads-export-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success('Export downloaded');
+    } catch {
+      toast.error('Export failed');
+    }
+    setExporting(false);
+  };
+
   const { leads: rows, total, totalPages } = data;
 
   return (
@@ -233,10 +258,16 @@ const LeadTable = ({ initialData, teamMembers }) => {
             ))}
           </select>
 
-          {/* Results count */}
-          <span className="text-secondary-light text-sm ms-auto">
-            {total} lead{total !== 1 ? 's' : ''}
-          </span>
+          {/* Export + Results count */}
+          <div className="d-flex align-items-center gap-2 ms-auto">
+            <button className="btn btn-outline-secondary btn-sm" onClick={handleExport} disabled={exporting}>
+              {exporting ? <span className="spinner-border spinner-border-sm me-1" /> : <Icon icon="mdi:download" className="me-1" style={{ fontSize: '16px' }} />}
+              Export CSV
+            </button>
+            <span className="text-secondary-light text-sm">
+              {total} lead{total !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
       </div>
 

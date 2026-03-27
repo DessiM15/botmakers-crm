@@ -348,6 +348,38 @@ export async function getTeamMembersForAssignment() {
   }
 }
 
+/**
+ * Monthly revenue for the last 12 months — invoiced vs collected.
+ */
+export async function getMonthlyRevenue() {
+  const rows = await db.execute(sql`
+    WITH months AS (
+      SELECT generate_series(
+        date_trunc('month', NOW()) - interval '11 months',
+        date_trunc('month', NOW()),
+        '1 month'
+      )::date AS month_start
+    )
+    SELECT
+      to_char(m.month_start, 'Mon') AS month,
+      COALESCE((
+        SELECT SUM(i.amount::numeric)
+        FROM invoices i
+        WHERE i.status != 'draft'
+          AND date_trunc('month', i.created_at) = m.month_start
+      ), 0)::int AS invoiced,
+      COALESCE((
+        SELECT SUM(p.amount::numeric)
+        FROM payments p
+        WHERE date_trunc('month', p.paid_at) = m.month_start
+      ), 0)::int AS collected
+    FROM months m
+    ORDER BY m.month_start ASC
+  `);
+
+  return rows.rows || rows;
+}
+
 export async function getLeadSourceAnalytics() {
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);

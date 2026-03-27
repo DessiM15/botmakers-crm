@@ -499,6 +499,15 @@ export const inAppNotifications = pgTable('in_app_notifications', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => teamUsers.id, { onDelete: 'cascade' }),
+  notificationType: text('notification_type').notNull(),
+  emailEnabled: boolean('email_enabled').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const followUpReminders = pgTable('follow_up_reminders', {
   id: uuid('id').primaryKey().defaultRandom(),
   leadId: uuid('lead_id').notNull().references(() => leads.id),

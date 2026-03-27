@@ -4,7 +4,9 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react/dist/iconify.js';
+import { toast } from 'react-toastify';
 import { INVOICE_STATUSES } from '@/lib/utils/constants';
+import { arrayToCSV, downloadCSV } from '@/lib/utils/csv-export';
 
 const InvoiceTable = ({
   invoices,
@@ -19,6 +21,7 @@ const InvoiceTable = ({
   const router = useRouter();
   const [search, setSearch] = useState(currentSearch);
   const [debounceTimer, setDebounceTimer] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const updateUrl = useCallback(
     (params) => {
@@ -46,6 +49,28 @@ const InvoiceTable = ({
 
   const handlePageChange = (newPage) => {
     updateUrl({ status: currentStatus, search, page: newPage });
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/invoices');
+      const { rows } = await res.json();
+      const csv = arrayToCSV(rows, [
+        { label: 'Title', key: 'title' },
+        { label: 'Client', key: 'clientName' },
+        { label: 'Amount', accessor: (r) => r.amount ? '$' + Number(r.amount).toFixed(2) : '$0.00' },
+        { label: 'Status', key: 'status' },
+        { label: 'Due Date', accessor: (r) => r.dueDate ? new Date(r.dueDate).toLocaleDateString() : '' },
+        { label: 'Paid At', accessor: (r) => r.paidAt ? new Date(r.paidAt).toLocaleDateString() : '' },
+        { label: 'Created', accessor: (r) => r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '' },
+      ]);
+      downloadCSV(csv, `invoices-export-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success('Export downloaded');
+    } catch {
+      toast.error('Export failed');
+    }
+    setExporting(false);
   };
 
   const formatDate = (dateStr) => {
@@ -173,7 +198,11 @@ const InvoiceTable = ({
                 ))}
               </select>
             </div>
-            <div className="col-md-3 text-end">
+            <div className="col-md-3 d-flex align-items-center justify-content-end gap-2">
+              <button className="btn btn-outline-secondary btn-sm" onClick={handleExport} disabled={exporting}>
+                {exporting ? <span className="spinner-border spinner-border-sm me-1" /> : <Icon icon="mdi:download" className="me-1" style={{ fontSize: '16px' }} />}
+                Export CSV
+              </button>
               <span className="text-secondary-light text-sm">
                 {total} invoice{total !== 1 ? 's' : ''}
               </span>

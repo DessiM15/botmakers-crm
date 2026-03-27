@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db/client';
 import { createAdminClient } from '@/lib/db/client';
-import { teamUsers, systemSettings } from '@/lib/db/schema';
+import { teamUsers, systemSettings, notificationPreferences } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { requireAdmin, requireTeam } from '@/lib/auth/helpers';
@@ -125,5 +125,38 @@ export async function saveCalendarColors(colors) {
     return { success: true };
   } catch {
     return { error: 'Failed to save calendar colors.' };
+  }
+}
+
+/**
+ * Save notification preferences for the current team user.
+ * @param {Array<{type: string, emailEnabled: boolean}>} prefs
+ */
+export async function saveNotificationPreferences(prefs) {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireTeam(cookieStore);
+
+    for (const { type, emailEnabled } of prefs) {
+      await db
+        .insert(notificationPreferences)
+        .values({
+          userId: teamUser.id,
+          notificationType: type,
+          emailEnabled,
+        })
+        .onConflictDoUpdate({
+          target: [notificationPreferences.userId, notificationPreferences.notificationType],
+          set: {
+            emailEnabled,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    revalidatePath('/settings');
+    return { success: true };
+  } catch {
+    return { error: 'Failed to save notification preferences' };
   }
 }

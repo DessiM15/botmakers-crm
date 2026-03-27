@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import SettingsIntegrations from './SettingsIntegrations';
-import { inviteTeamMember, toggleTeamMemberActive, saveSetting, saveCalendarColors } from '@/lib/actions/settings';
+import { inviteTeamMember, toggleTeamMemberActive, saveSetting, saveCalendarColors, saveNotificationPreferences } from '@/lib/actions/settings';
+import { NOTIFICATION_CATEGORIES, typeLabel } from '@/lib/utils/notification-helpers';
 import { DEFAULT_CALENDAR_COLORS, CALENDAR_PRESET_COLORS } from '@/lib/utils/constants';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -268,6 +269,19 @@ function TeamTab({ members, onUpdate }) {
 function NotificationsTab({ initialStaleDays }) {
   const [staleDays, setStaleDays] = useState(initialStaleDays);
   const [saving, setSaving] = useState(false);
+  const [prefs, setPrefs] = useState({});
+  const [prefsLoading, setPrefsLoading] = useState(true);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/notifications/preferences')
+      .then(res => res.json())
+      .then(data => {
+        setPrefs(data.preferences || {});
+        setPrefsLoading(false);
+      })
+      .catch(() => setPrefsLoading(false));
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -279,6 +293,28 @@ function NotificationsTab({ initialStaleDays }) {
     } else {
       toast.success('Settings saved.');
     }
+  };
+
+  const toggleEmail = (type) => {
+    setPrefs(prev => ({
+      ...prev,
+      [type]: { emailEnabled: prev[type]?.emailEnabled === false ? true : false },
+    }));
+  };
+
+  const handleSavePrefs = async () => {
+    setPrefsSaving(true);
+    const prefsList = Object.entries(prefs).map(([type, val]) => ({
+      type,
+      emailEnabled: val.emailEnabled !== false,
+    }));
+    const result = await saveNotificationPreferences(prefsList);
+    if (result.success) {
+      toast.success('Notification preferences saved');
+    } else {
+      toast.error(result.error || 'Failed to save preferences');
+    }
+    setPrefsSaving(false);
   };
 
   return (
@@ -321,35 +357,75 @@ function NotificationsTab({ initialStaleDays }) {
       </div>
 
       <div className="card">
-        <div className="card-header">
-          <h6 className="text-white fw-semibold mb-0">Notification Types</h6>
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <h6 className="text-white fw-semibold mb-0">Email Notification Preferences</h6>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={handleSavePrefs}
+            disabled={prefsSaving || prefsLoading}
+          >
+            {prefsSaving ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+            Save Preferences
+          </button>
         </div>
         <div className="card-body">
           <p className="text-secondary-light text-sm mb-3">
-            All notification types are currently active. Email notifications are sent to all team members.
+            In-app notifications are always on. Toggle email delivery per notification type.
           </p>
-          <div className="d-flex flex-column gap-2">
-            {[
-              { type: 'New Lead', desc: 'When a new lead is submitted', icon: 'mdi:account-plus-outline' },
-              { type: 'Lead Stage Change', desc: 'When a lead moves to a new pipeline stage', icon: 'mdi:swap-horizontal' },
-              { type: 'Proposal Accepted', desc: 'When a client accepts a proposal', icon: 'mdi:check-circle-outline' },
-              { type: 'Payment Received', desc: 'When a payment is received via Square', icon: 'mdi:cash-check' },
-              { type: 'Client Question', desc: 'When a client submits a question in the portal', icon: 'mdi:help-circle-outline' },
-              { type: 'Milestone Overdue', desc: 'Daily alert for overdue milestones', icon: 'mdi:alert-circle-outline' },
-              { type: 'Stale Lead', desc: 'Daily alert for leads needing follow-up', icon: 'mdi:clock-alert-outline' },
-            ].map((n) => (
-              <div key={n.type} className="d-flex align-items-center gap-3 p-2 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                <Icon icon={n.icon} className="text-secondary-light" style={{ fontSize: '20px' }} />
-                <div className="flex-grow-1">
-                  <span className="text-white text-sm fw-medium">{n.type}</span>
-                  <p className="text-secondary-light text-xs mb-0">{n.desc}</p>
+          {prefsLoading ? (
+            <div className="text-center py-4">
+              <span className="spinner-border spinner-border-sm text-secondary-light" />
+            </div>
+          ) : (
+            Object.entries(NOTIFICATION_CATEGORIES).map(([category, types]) => (
+              <div key={category} className="mb-4">
+                <h6 className="text-secondary-light fw-medium text-xs text-uppercase mb-2" style={{ letterSpacing: '0.5px' }}>
+                  {category}
+                </h6>
+                <div className="d-flex flex-column gap-1">
+                  {types.map((type) => {
+                    const emailOn = prefs[type]?.emailEnabled !== false;
+                    return (
+                      <div
+                        key={type}
+                        className="d-flex align-items-center justify-content-between p-2 rounded"
+                        style={{ background: 'rgba(255,255,255,0.03)' }}
+                      >
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="text-white text-sm">{typeLabel(type)}</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-3">
+                          <div className="d-flex align-items-center gap-1">
+                            <span className="text-secondary-light" style={{ fontSize: '11px' }}>In-app</span>
+                            <div className="form-check form-switch mb-0">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked
+                                disabled
+                                style={{ opacity: 0.5 }}
+                              />
+                            </div>
+                          </div>
+                          <div className="d-flex align-items-center gap-1">
+                            <span className="text-secondary-light" style={{ fontSize: '11px' }}>Email</span>
+                            <div className="form-check form-switch mb-0">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={emailOn}
+                                onChange={() => toggleEmail(type)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <span className="badge bg-success bg-opacity-25 text-success" style={{ fontSize: '11px' }}>
-                  Active
-                </span>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
       </div>
     </div>
