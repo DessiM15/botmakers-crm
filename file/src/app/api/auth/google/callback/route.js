@@ -11,7 +11,9 @@ import { teamUsers } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(request) {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const host = request.headers.get('host') || 'crm.botmakers.ai';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `${proto}://${host}`;
 
   try {
     const cookieStore = await cookies();
@@ -61,6 +63,7 @@ export async function GET(request) {
 
     return NextResponse.redirect(new URL('/settings?google_success=true', baseUrl));
   } catch (err) {
+    console.error('[Google Callback] Error:', err.message);
     const message = err.message?.includes('CB-AUTH') ? 'auth_required' : 'exchange_failed';
     return NextResponse.redirect(new URL(`/settings?google_error=${message}`, baseUrl));
   }
