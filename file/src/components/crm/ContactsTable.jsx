@@ -7,6 +7,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { createLead } from '@/lib/actions/leads';
 import { createClient } from '@/lib/actions/clients';
+import { inviteTeamMember } from '@/lib/actions/settings';
 import { LEAD_SOURCES } from '@/lib/utils/constants';
 
 const ContactsTable = ({ initialData }) => {
@@ -38,7 +39,7 @@ const ContactsTable = ({ initialData }) => {
   const [addSaving, setAddSaving] = useState(false);
 
   const resetAddForm = () => {
-    setAddForm({ fullName: '', email: '', company: '', phone: '', source: 'other' });
+    setAddForm({ fullName: '', email: '', company: '', phone: '', source: 'other', role: 'member' });
     setAddType('lead');
   };
 
@@ -59,13 +60,16 @@ const ContactsTable = ({ initialData }) => {
         companyName: addForm.company || undefined,
         source: addForm.source,
       });
-    } else {
+    } else if (addType === 'client') {
       res = await createClient({
         fullName: addForm.fullName,
         email: addForm.email,
         phone: addForm.phone || undefined,
         company: addForm.company || undefined,
       });
+    } else {
+      // teammate
+      res = await inviteTeamMember(addForm.email, addForm.fullName, addForm.role || 'member');
     }
 
     setAddSaving(false);
@@ -73,12 +77,14 @@ const ContactsTable = ({ initialData }) => {
     if (res?.error) {
       toast.error(res.error);
     } else {
-      toast.success(`${addType === 'lead' ? 'Lead' : 'Client'} created`);
+      const typeLabel = addType === 'lead' ? 'Lead' : addType === 'client' ? 'Client' : 'Teammate';
+      toast.success(`${typeLabel} created`);
       resetAddForm();
       setShowAddModal(false);
-      const newId = addType === 'lead' ? res.lead?.id : res.client?.id;
-      if (newId) {
-        router.push(`/${addType === 'lead' ? 'leads' : 'clients'}/${newId}`);
+      if (addType === 'lead' && res.lead?.id) {
+        router.push(`/leads/${res.lead.id}`);
+      } else if (addType === 'client' && res.client?.id) {
+        router.push(`/clients/${res.client.id}`);
       } else {
         router.refresh();
       }
@@ -174,6 +180,7 @@ const ContactsTable = ({ initialData }) => {
               { value: 'all', label: 'All' },
               { value: 'lead', label: 'Leads' },
               { value: 'client', label: 'Clients' },
+              { value: 'teammate', label: 'Team' },
             ].map((opt) => (
               <button
                 key={opt.value}
@@ -280,23 +287,43 @@ const ContactsTable = ({ initialData }) => {
                           const detailHref =
                             contact.type === 'client'
                               ? `/clients/${contact.id}`
-                              : `/leads/${contact.id}`;
+                              : contact.type === 'lead'
+                              ? `/leads/${contact.id}`
+                              : null;
+                          const badgeClass =
+                            contact.type === 'client'
+                              ? 'bg-success-600'
+                              : contact.type === 'teammate'
+                              ? 'bg-warning-600'
+                              : 'bg-info-600';
+                          const badgeLabel =
+                            contact.type === 'client'
+                              ? 'Client'
+                              : contact.type === 'teammate'
+                              ? 'Team'
+                              : 'Lead';
                           return (
                             <tr
                               key={`${contact.type}-${contact.id}`}
-                              className="cursor-pointer"
-                              onClick={() => router.push(detailHref)}
-                              style={{ cursor: 'pointer' }}
+                              className={detailHref ? 'cursor-pointer' : ''}
+                              onClick={() => detailHref && router.push(detailHref)}
+                              style={detailHref ? { cursor: 'pointer' } : {}}
                             >
                               <td className="px-3 py-3">
-                                <Link
-                                  href={detailHref}
-                                  className="fw-medium text-sm contact-name-link"
-                                  style={{ color: '#000', textDecoration: 'none' }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {contact.fullName}
-                                </Link>
+                                {detailHref ? (
+                                  <Link
+                                    href={detailHref}
+                                    className="fw-medium text-sm contact-name-link"
+                                    style={{ color: '#000', textDecoration: 'none' }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {contact.fullName}
+                                  </Link>
+                                ) : (
+                                  <span className="fw-medium text-sm" style={{ color: '#000' }}>
+                                    {contact.fullName}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
                                 {contact.email}
@@ -308,14 +335,8 @@ const ContactsTable = ({ initialData }) => {
                                 {contact.phone || '—'}
                               </td>
                               <td className="px-3 py-3">
-                                <span
-                                  className={`badge text-xs ${
-                                    contact.type === 'client'
-                                      ? 'bg-success-600'
-                                      : 'bg-info-600'
-                                  }`}
-                                >
-                                  {contact.type === 'client' ? 'Client' : 'Lead'}
+                                <span className={`badge text-xs ${badgeClass}`}>
+                                  {badgeLabel}
                                 </span>
                               </td>
                               <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -460,6 +481,14 @@ const ContactsTable = ({ initialData }) => {
                         <Icon icon="mdi:account-tie" className="me-1" style={{ fontSize: '16px' }} />
                         Client
                       </button>
+                      <button
+                        type="button"
+                        className={`btn ${addType === 'teammate' ? 'btn-warning-600' : 'btn-outline-neutral-600 text-secondary-light'}`}
+                        onClick={() => setAddType('teammate')}
+                      >
+                        <Icon icon="mdi:account-group" className="me-1" style={{ fontSize: '16px' }} />
+                        Teammate
+                      </button>
                     </div>
                   </div>
 
@@ -489,30 +518,34 @@ const ContactsTable = ({ initialData }) => {
                       required
                     />
                   </div>
-                  <div className="mb-3">
-                    <label className="form-label text-secondary-light text-sm">
-                      Company
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control bg-base text-white"
-                      placeholder="Acme Inc."
-                      value={addForm.company}
-                      onChange={(e) => setAddForm((prev) => ({ ...prev, company: e.target.value }))}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label text-secondary-light text-sm">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      className="form-control bg-base text-white"
-                      placeholder="(555) 123-4567"
-                      value={addForm.phone}
-                      onChange={(e) => setAddForm((prev) => ({ ...prev, phone: e.target.value }))}
-                    />
-                  </div>
+                  {addType !== 'teammate' && (
+                    <>
+                      <div className="mb-3">
+                        <label className="form-label text-secondary-light text-sm">
+                          Company
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control bg-base text-white"
+                          placeholder="Acme Inc."
+                          value={addForm.company}
+                          onChange={(e) => setAddForm((prev) => ({ ...prev, company: e.target.value }))}
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label text-secondary-light text-sm">
+                          Phone
+                        </label>
+                        <input
+                          type="tel"
+                          className="form-control bg-base text-white"
+                          placeholder="(555) 123-4567"
+                          value={addForm.phone}
+                          onChange={(e) => setAddForm((prev) => ({ ...prev, phone: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Lead-specific: source */}
                   {addType === 'lead' && (
@@ -528,6 +561,23 @@ const ContactsTable = ({ initialData }) => {
                         {LEAD_SOURCES.map((s) => (
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Teammate-specific: role */}
+                  {addType === 'teammate' && (
+                    <div className="mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Role
+                      </label>
+                      <select
+                        className="form-select bg-base text-white"
+                        value={addForm.role || 'member'}
+                        onChange={(e) => setAddForm((prev) => ({ ...prev, role: e.target.value }))}
+                      >
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
                       </select>
                     </div>
                   )}
@@ -552,7 +602,7 @@ const ContactsTable = ({ initialData }) => {
                         Creating...
                       </>
                     ) : (
-                      `Create ${addType === 'lead' ? 'Lead' : 'Client'}`
+                      `Create ${addType === 'lead' ? 'Lead' : addType === 'client' ? 'Client' : 'Teammate'}`
                     )}
                   </button>
                 </div>

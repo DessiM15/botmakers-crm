@@ -503,10 +503,10 @@ export default function EmailGenerator({ teamUser }) {
                     <div className="d-flex align-items-center gap-2">
                       <span
                         className={`badge text-xs ${
-                          c.type === 'client' ? 'bg-success-600' : 'bg-info-600'
+                          c.type === 'client' ? 'bg-success-600' : c.type === 'teammate' ? 'bg-warning-600' : 'bg-info-600'
                         }`}
                       >
-                        {c.type === 'client' ? 'C' : 'L'}
+                        {c.type === 'client' ? 'C' : c.type === 'teammate' ? 'T' : 'L'}
                       </span>
                       <span className="fw-medium text-white text-sm text-truncate">
                         {c.name}

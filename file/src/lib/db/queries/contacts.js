@@ -1,9 +1,9 @@
 import { db } from '@/lib/db/client';
-import { clients, leads } from '@/lib/db/schema';
-import { desc, ilike, or, sql, count } from 'drizzle-orm';
+import { clients, leads, teamUsers } from '@/lib/db/schema';
+import { desc, ilike, or, and, eq, count } from 'drizzle-orm';
 
 /**
- * Fetch paginated, filtered, searchable contacts (union of leads + clients).
+ * Fetch paginated, filtered, searchable contacts (union of leads + clients + team_users).
  */
 export async function getAllContacts({
   search = '',
@@ -18,6 +18,8 @@ export async function getAllContacts({
   let leadTotal = 0;
   let clientRows = [];
   let clientTotal = 0;
+  let teamRows = [];
+  let teamTotal = 0;
 
   // Fetch leads
   if (typeFilter === 'all' || typeFilter === 'lead') {
@@ -87,12 +89,42 @@ export async function getAllContacts({
     clientTotal = total;
   }
 
+  // Fetch team members
+  if (typeFilter === 'all' || typeFilter === 'teammate') {
+    const teamWhere = pattern
+      ? and(
+          eq(teamUsers.isActive, true),
+          or(ilike(teamUsers.fullName, pattern), ilike(teamUsers.email, pattern))
+        )
+      : eq(teamUsers.isActive, true);
+
+    const [rows, [{ total }]] = await Promise.all([
+      db
+        .select({
+          id: teamUsers.id,
+          fullName: teamUsers.fullName,
+          email: teamUsers.email,
+          createdAt: teamUsers.createdAt,
+        })
+        .from(teamUsers)
+        .where(teamWhere)
+        .orderBy(desc(teamUsers.createdAt)),
+      db
+        .select({ total: count() })
+        .from(teamUsers)
+        .where(teamWhere),
+    ]);
+
+    teamRows = rows.map((r) => ({ ...r, company: null, phone: null, type: 'teammate' }));
+    teamTotal = total;
+  }
+
   // Merge, sort by createdAt desc, then paginate in JS
-  const allContacts = [...leadRows, ...clientRows].sort(
+  const allContacts = [...leadRows, ...clientRows, ...teamRows].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
 
-  const total = leadTotal + clientTotal;
+  const total = leadTotal + clientTotal + teamTotal;
   const paginated = allContacts.slice(offset, offset + perPage);
 
   return {

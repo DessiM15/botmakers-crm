@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/lib/db/client';
-import { emailDrafts, contacts, activityLog, leads, clients } from '@/lib/db/schema';
-import { eq, desc, or, ilike, sql } from 'drizzle-orm';
+import { emailDrafts, contacts, activityLog, leads, clients, teamUsers } from '@/lib/db/schema';
+import { eq, desc, or, and, ilike, sql } from 'drizzle-orm';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
@@ -87,6 +87,36 @@ export async function getContactsForPanel(search = '', typeFilter = 'all') {
       });
     }
 
+    if (typeFilter === 'all' || typeFilter === 'teammate') {
+      const teamWhere = pattern
+        ? and(
+            eq(teamUsers.isActive, true),
+            or(ilike(teamUsers.fullName, pattern), ilike(teamUsers.email, pattern))
+          )
+        : eq(teamUsers.isActive, true);
+
+      const matchedTeam = await db
+        .select({
+          id: teamUsers.id,
+          fullName: teamUsers.fullName,
+          email: teamUsers.email,
+        })
+        .from(teamUsers)
+        .where(teamWhere)
+        .orderBy(desc(teamUsers.createdAt))
+        .limit(50);
+
+      matchedTeam.forEach((t) => {
+        results.push({
+          id: t.id,
+          name: t.fullName,
+          email: t.email,
+          company: null,
+          type: 'teammate',
+        });
+      });
+    }
+
     return { success: true, contacts: results };
   } catch (error) {
     if (error.message?.startsWith('CB-')) {
@@ -165,7 +195,33 @@ export async function getContactById(id, type) {
       };
     }
 
-    return { error: 'CB-API-001: Type must be "lead" or "client"' };
+    if (type === 'teammate') {
+      const [team] = await db
+        .select({
+          id: teamUsers.id,
+          fullName: teamUsers.fullName,
+          email: teamUsers.email,
+        })
+        .from(teamUsers)
+        .where(eq(teamUsers.id, id))
+        .limit(1);
+
+      if (!team) return { error: 'CB-DB-002: Team member not found' };
+
+      return {
+        success: true,
+        contact: {
+          id: team.id,
+          name: team.fullName,
+          email: team.email,
+          company: null,
+          phone: null,
+          type: 'teammate',
+        },
+      };
+    }
+
+    return { error: 'CB-API-001: Type must be "lead", "client", or "teammate"' };
   } catch (error) {
     if (error.message?.startsWith('CB-')) {
       return { error: error.message };
