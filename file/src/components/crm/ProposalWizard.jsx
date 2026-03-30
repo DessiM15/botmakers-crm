@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react/dist/iconify.js';
@@ -53,6 +53,9 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
 
+  // Track if auto-generate has been triggered
+  const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(false);
+
   // Pre-populate discovery notes from AI analysis when lead is selected
   const handleLeadSelect = useCallback((leadId) => {
     setSelectedLeadId(leadId);
@@ -61,8 +64,22 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
       const lead = leads.find((l) => l.id === leadId);
       if (lead) {
         const parts = [];
+
+        // Discovery call summary (richest data source)
+        if (lead.discoveryCallSummary) {
+          const s = lead.discoveryCallSummary;
+          if (s.key_points?.length > 0) parts.push(`Key Points:\n${s.key_points.map(p => `- ${p}`).join('\n')}`);
+          if (s.client_needs?.length > 0) parts.push(`Client Needs:\n${s.client_needs.map(n => `- ${n}`).join('\n')}`);
+          if (s.technical_requirements?.length > 0) parts.push(`Technical Requirements: ${s.technical_requirements.join(', ')}`);
+          if (s.budget) parts.push(`Budget: ${s.budget}`);
+          if (s.timeline) parts.push(`Timeline: ${s.timeline}`);
+          if (s.decisions?.length > 0) parts.push(`Decisions:\n${s.decisions.map(d => `- ${d}`).join('\n')}`);
+          if (s.action_items?.length > 0) parts.push(`Action Items:\n${s.action_items.map(a => `- ${a}`).join('\n')}`);
+        }
+
         if (lead.projectDetails) parts.push(`Project Details:\n${lead.projectDetails}`);
         if (lead.projectType) parts.push(`Project Type: ${lead.projectType}`);
+        if (lead.notes) parts.push(`Notes:\n${lead.notes}`);
         if (lead.aiProspectSummary) parts.push(`AI Summary:\n${lead.aiProspectSummary}`);
         if (parts.length > 0 && !discoveryNotes.trim()) {
           setDiscoveryNotes(parts.join('\n\n'));
@@ -71,9 +88,41 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
     }
   }, [leads, discoveryNotes]);
 
-  // Pre-select lead on mount if preselectedLeadId
+  // Pre-select lead on mount + handle discovery proposal data from sessionStorage
   useEffect(() => {
-    if (preselectedLeadId) {
+    // Check for discovery proposal data passed from DiscoveryCallSection
+    let discoveryData = null;
+    try {
+      const stored = sessionStorage.getItem('discoveryProposalData');
+      if (stored) {
+        discoveryData = JSON.parse(stored);
+        sessionStorage.removeItem('discoveryProposalData');
+      }
+    } catch {}
+
+    if (discoveryData && discoveryData.leadId) {
+      // Pre-fill from discovery call processing — skip straight to edit step
+      setSelectedLeadId(discoveryData.leadId);
+      if (discoveryData.pricingType) setPricingType(discoveryData.pricingType);
+      if (discoveryData.title) setTitle(discoveryData.title);
+      if (discoveryData.scope_of_work) setScopeOfWork(discoveryData.scope_of_work);
+      if (discoveryData.deliverables) setDeliverables(discoveryData.deliverables);
+      if (discoveryData.terms_and_conditions) setTermsAndConditions(discoveryData.terms_and_conditions);
+      if (discoveryData.suggested_line_items?.length > 0) {
+        setLineItems(
+          discoveryData.suggested_line_items.map((item) => ({
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            unitPrice: item.unit_price || 0,
+            total: (item.quantity || 1) * (item.unit_price || 0),
+            phaseLabel: item.phase_label || '',
+          }))
+        );
+      }
+      setAiGenerated(true);
+      setAutoGenerateTriggered(true);
+      setStep(1);
+    } else if (preselectedLeadId) {
       handleLeadSelect(preselectedLeadId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,6 +216,25 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
       setAiGenerating(false);
     }
   };
+
+  // Auto-trigger AI generation when lead is preselected and discovery notes are populated
+  const autoGenRef = useRef(false);
+  useEffect(() => {
+    if (
+      preselectedLeadId &&
+      discoveryNotes.trim().length > 50 &&
+      !autoGenerateTriggered &&
+      !autoGenRef.current &&
+      !aiGenerating &&
+      step === 0
+    ) {
+      autoGenRef.current = true;
+      setAutoGenerateTriggered(true);
+      const timer = setTimeout(() => handleGenerate(), 600);
+      return () => clearTimeout(timer);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discoveryNotes, preselectedLeadId]);
 
   // Line items
   const updateLineItem = (index, field, value) => {

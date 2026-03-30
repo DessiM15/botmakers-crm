@@ -168,6 +168,8 @@ export async function getLeadsAndClientsForDropdown() {
         aiInternalAnalysis: leads.aiInternalAnalysis,
         projectDetails: leads.projectDetails,
         projectType: leads.projectType,
+        notes: leads.notes,
+        discoveryCallSummary: leads.discoveryCallSummary,
       })
       .from(leads)
       .orderBy(desc(leads.createdAt)),
