@@ -192,3 +192,40 @@ body,
 .ql-snow .ql-picker-options { background: #1a2332 !important; border-color: rgba(255,255,255,0.1) !important; }
 .ql-snow .ql-picker-item { color: rgba(255,255,255,0.7); }
 .ql-snow .ql-picker-item:hover { color: #fff; }
+
+/* ── FullCalendar event overrides (month view pill style) ───────────── */
+.fc .fc-daygrid-event {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+  padding: 0 !important;
+  margin: 1px 2px !important;
+}
+.fc .fc-daygrid-event .fc-event-main {
+  padding: 2px 6px !important;
+}
+.fc .fc-daygrid-dot-event:hover {
+  background: rgba(255,255,255,0.06) !important;
+}
+.fc .fc-daygrid-block-event .fc-event-main {
+  padding: 2px 6px !important;
+}
+/* Remove the default colored left border on dot events */
+.fc .fc-daygrid-event .fc-daygrid-event-dot {
+  display: none !important;
+}
+/* More link styling */
+.fc .fc-more-link {
+  color: #94a3b8 !important;
+  font-size: 12px;
+}
+/* Dark theme for FullCalendar popovers */
+.fc .fc-popover {
+  background: #1a2332 !important;
+  border-color: rgba(255,255,255,0.1) !important;
+}
+.fc .fc-popover-header {
+  background: #0f1724 !important;
+  color: #e2e8f0 !important;
+}
