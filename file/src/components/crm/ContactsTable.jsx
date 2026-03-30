@@ -4,6 +4,10 @@ import { useState, useCallback, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@iconify/react/dist/iconify.js';
+import { toast } from 'react-toastify';
+import { createLead } from '@/lib/actions/leads';
+import { createClient } from '@/lib/actions/clients';
+import { LEAD_SOURCES } from '@/lib/utils/constants';
 
 const ContactsTable = ({ initialData }) => {
   const router = useRouter();
@@ -20,6 +24,66 @@ const ContactsTable = ({ initialData }) => {
   );
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
+
+  // Add Contact Modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addType, setAddType] = useState('lead');
+  const [addForm, setAddForm] = useState({
+    fullName: '',
+    email: '',
+    company: '',
+    phone: '',
+    source: 'other',
+  });
+  const [addSaving, setAddSaving] = useState(false);
+
+  const resetAddForm = () => {
+    setAddForm({ fullName: '', email: '', company: '', phone: '', source: 'other' });
+    setAddType('lead');
+  };
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!addForm.fullName.trim() || !addForm.email.trim()) {
+      toast.error('Name and email are required');
+      return;
+    }
+    setAddSaving(true);
+
+    let res;
+    if (addType === 'lead') {
+      res = await createLead({
+        fullName: addForm.fullName,
+        email: addForm.email,
+        phone: addForm.phone || undefined,
+        companyName: addForm.company || undefined,
+        source: addForm.source,
+      });
+    } else {
+      res = await createClient({
+        fullName: addForm.fullName,
+        email: addForm.email,
+        phone: addForm.phone || undefined,
+        company: addForm.company || undefined,
+      });
+    }
+
+    setAddSaving(false);
+
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success(`${addType === 'lead' ? 'Lead' : 'Client'} created`);
+      resetAddForm();
+      setShowAddModal(false);
+      const newId = addType === 'lead' ? res.lead?.id : res.client?.id;
+      if (newId) {
+        router.push(`/${addType === 'lead' ? 'leads' : 'clients'}/${newId}`);
+      } else {
+        router.refresh();
+      }
+    }
+  };
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -128,6 +192,14 @@ const ContactsTable = ({ initialData }) => {
           <span className="text-secondary-light text-sm ms-auto">
             {total} contact{total !== 1 ? 's' : ''}
           </span>
+
+          <button
+            className="btn btn-primary btn-sm d-flex align-items-center gap-1"
+            onClick={() => setShowAddModal(true)}
+          >
+            <Icon icon="mdi:plus" style={{ fontSize: '16px' }} />
+            Add Contact
+          </button>
         </div>
       </div>
 
@@ -147,6 +219,15 @@ const ContactsTable = ({ initialData }) => {
                   ? 'Try adjusting your search or filters.'
                   : 'Add leads or clients to see them here.'}
               </p>
+              {!search && typeFilter === 'all' && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowAddModal(true)}
+                >
+                  <Icon icon="mdi:plus" className="me-1" />
+                  Add Contact
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -330,6 +411,156 @@ const ContactsTable = ({ initialData }) => {
           )}
         </div>
       </div>
+
+      {/* Add Contact Modal */}
+      {showAddModal && (
+        <div
+          className="modal show d-block"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAddModal(false);
+              resetAddForm();
+            }
+          }}
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content bg-base">
+              <div className="modal-header border-secondary-subtle">
+                <h5 className="modal-title text-white fw-semibold">
+                  Add Contact
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => { setShowAddModal(false); resetAddForm(); }}
+                />
+              </div>
+              <form onSubmit={handleAddSubmit}>
+                <div className="modal-body">
+                  {/* Type toggle */}
+                  <div className="mb-3">
+                    <label className="form-label text-secondary-light text-sm">
+                      Contact Type
+                    </label>
+                    <div className="btn-group w-100">
+                      <button
+                        type="button"
+                        className={`btn ${addType === 'lead' ? 'btn-info-600' : 'btn-outline-neutral-600 text-secondary-light'}`}
+                        onClick={() => setAddType('lead')}
+                      >
+                        <Icon icon="gridicons:multiple-users" className="me-1" style={{ fontSize: '16px' }} />
+                        Lead
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn ${addType === 'client' ? 'btn-success-600' : 'btn-outline-neutral-600 text-secondary-light'}`}
+                        onClick={() => setAddType('client')}
+                      >
+                        <Icon icon="mdi:account-tie" className="me-1" style={{ fontSize: '16px' }} />
+                        Client
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label text-secondary-light text-sm">
+                      Full Name <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control bg-base text-white"
+                      placeholder="John Doe"
+                      value={addForm.fullName}
+                      onChange={(e) => setAddForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label text-secondary-light text-sm">
+                      Email <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      className="form-control bg-base text-white"
+                      placeholder="john@example.com"
+                      value={addForm.email}
+                      onChange={(e) => setAddForm((prev) => ({ ...prev, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label text-secondary-light text-sm">
+                      Company
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control bg-base text-white"
+                      placeholder="Acme Inc."
+                      value={addForm.company}
+                      onChange={(e) => setAddForm((prev) => ({ ...prev, company: e.target.value }))}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label text-secondary-light text-sm">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      className="form-control bg-base text-white"
+                      placeholder="(555) 123-4567"
+                      value={addForm.phone}
+                      onChange={(e) => setAddForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </div>
+
+                  {/* Lead-specific: source */}
+                  {addType === 'lead' && (
+                    <div className="mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Lead Source
+                      </label>
+                      <select
+                        className="form-select bg-base text-white"
+                        value={addForm.source}
+                        onChange={(e) => setAddForm((prev) => ({ ...prev, source: e.target.value }))}
+                      >
+                        {LEAD_SOURCES.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer border-secondary-subtle">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => { setShowAddModal(false); resetAddForm(); }}
+                    disabled={addSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={addSaving}
+                  >
+                    {addSaving ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" />
+                        Creating...
+                      </>
+                    ) : (
+                      `Create ${addType === 'lead' ? 'Lead' : 'Client'}`
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
