@@ -7,7 +7,7 @@ import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { sendTeamNotification } from '@/lib/notifications/notify';
-import { meetingCreatedAlert, meetingCancelledAttendeeEmail } from '@/lib/email/notifications';
+import { meetingCreatedAlert, meetingCancelledAttendeeEmail, meetingInviteAttendeeEmail } from '@/lib/email/notifications';
 
 /**
  * Create a new meeting (manual).
@@ -71,6 +71,19 @@ export async function createMeeting(data) {
       meetingUrl: data.meetingUrl || null,
       creatorName: teamUser.fullName,
     }).catch(() => {});
+
+    // Attendee invite email (non-blocking)
+    if (data.attendeeEmail?.trim()) {
+      meetingInviteAttendeeEmail({
+        attendeeEmail: data.attendeeEmail.trim(),
+        attendeeName: data.attendeeName?.trim() || null,
+        title: meeting.title,
+        startTime: meeting.startTime,
+        endTime: meeting.endTime,
+        meetingUrl: data.meetingUrl?.trim() || null,
+        creatorName: teamUser.fullName,
+      }).catch(() => {});
+    }
 
     revalidatePath('/');
     revalidatePath('/calendar');

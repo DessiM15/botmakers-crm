@@ -510,6 +510,45 @@ export async function meetingCancelledAttendeeEmail(attendeeEmail, attendeeName,
 }
 
 /**
+ * Meeting invite — sent to attendee when a meeting is manually created with their email.
+ */
+export async function meetingInviteAttendeeEmail({ attendeeEmail, attendeeName, title, startTime, endTime, meetingUrl, creatorName }) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+  const formattedStart = new Date(startTime).toLocaleString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+  const formattedEnd = new Date(endTime).toLocaleString('en-US', {
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  });
+
+  const joinSection = meetingUrl
+    ? `<p style="margin:16px 0 0;"><a href="${meetingUrl}" style="display:inline-block;background-color:#033457;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:6px;">Join Meeting</a></p>`
+    : '';
+
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">You've been invited to a meeting with the BotMakers team:</p>
+    <div style="border-left:4px solid #033457; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+      <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">${title}</h3>
+      <p style="margin:0 0 4px; color:#333;"><strong>When:</strong> ${formattedStart} – ${formattedEnd}</p>
+      <p style="margin:0; color:#333;"><strong>Scheduled by:</strong> ${creatorName}</p>
+    </div>
+    ${joinSection}
+    <p style="margin:16px 0 0; color:#333;">If you need to reschedule, please reply to this email.</p>`;
+
+  const html = wrapInBrandedTemplate({
+    recipientName: attendeeName || 'there',
+    bodyHtml,
+    senderName: creatorName || 'The BotMakers Team',
+    senderTitle: null,
+    ctaUrl: meetingUrl || siteUrl,
+    ctaText: meetingUrl ? 'Join Meeting' : 'Visit BotMakers',
+  });
+
+  await sendEmail({ to: attendeeEmail, subject: `Meeting Scheduled: ${title}`, html });
+}
+
+/**
  * Meeting booked alert — sent to team when a Cal.com meeting is booked.
  */
 export async function meetingBookedAlert({ attendeeName, attendeeEmail, title, startTime, endTime, meetingUrl, matchedLeadName, matchedLeadId }) {

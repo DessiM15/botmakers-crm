@@ -187,6 +187,10 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
     const startTime = new Date(clickedDate);
     if (dateInfo.allDay) {
       startTime.setHours(10, 0, 0, 0);
+    } else {
+      // Snap to nearest 30-min interval
+      const mins = startTime.getMinutes();
+      startTime.setMinutes(mins < 15 ? 0 : mins < 45 ? 30 : 60, 0, 0);
     }
     const endTime = new Date(startTime.getTime() + 3600000);
 
@@ -291,6 +295,9 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
                 className="btn btn-primary w-100 mb-4"
                 onClick={() => {
                   const now = new Date();
+                  // Snap to next 30-min interval
+                  const mins = now.getMinutes();
+                  now.setMinutes(mins < 30 ? 30 : 60, 0, 0);
                   const toLocalISO = (d) => {
                     const pad = (n) => String(n).padStart(2, '0');
                     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -671,6 +678,7 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
                     <input
                       type="datetime-local"
                       className="form-control"
+                      step="1800"
                       value={form.startTime}
                       onChange={(e) =>
                         setForm((f) => ({ ...f, startTime: e.target.value }))
@@ -683,6 +691,7 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
                     <input
                       type="datetime-local"
                       className="form-control"
+                      step="1800"
                       value={form.endTime}
                       onChange={(e) =>
                         setForm((f) => ({ ...f, endTime: e.target.value }))
