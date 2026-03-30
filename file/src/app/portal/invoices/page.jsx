@@ -17,8 +17,18 @@ const STATUS_COLORS = {
 
 export default async function PortalInvoicesPage() {
   const cookieStore = await cookies();
-  const { client } = await requireClient(cookieStore);
-  const invoices = await getPortalInvoices(client.id);
+  let client;
+  try {
+    const result = await requireClient(cookieStore);
+    client = result.client;
+  } catch {
+    const { redirect } = await import('next/navigation');
+    redirect('/portal/login');
+  }
+  let invoices = [];
+  try {
+    invoices = await getPortalInvoices(client.id);
+  } catch {}
 
   const formatCurrency = (val) =>
     Number(val).toLocaleString('en-US', { style: 'currency', currency: 'USD' });

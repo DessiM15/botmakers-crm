@@ -20,7 +20,12 @@ const Page = async ({ searchParams }) => {
   const params = await searchParams;
   const leadId = params?.lead_id || null;
 
-  const { leads, clients } = await getLeadsAndClientsForDropdown();
+  let leads = [], clients = [];
+  try {
+    const dropdown = await getLeadsAndClientsForDropdown();
+    leads = dropdown.leads;
+    clients = dropdown.clients;
+  } catch {}
 
   return (
     <MasterLayout>

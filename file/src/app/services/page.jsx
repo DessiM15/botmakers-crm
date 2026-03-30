@@ -24,11 +24,18 @@ const Page = async ({ searchParams }) => {
   const status = sp?.status || 'all';
   const page = parseInt(sp?.page || '1', 10);
 
-  const [data, summary, clients] = await Promise.all([
-    getServices({ search, category, status, page, perPage: 10 }),
-    getServiceSummary(),
-    getClientsForServiceDropdown(),
-  ]);
+  let data = { services: [], total: 0, page: 1, perPage: 10, totalPages: 0 };
+  let summary = { totalMonthlyCost: 0, activeCount: 0, upcomingRenewals: 0 };
+  let clients = [];
+  try {
+    [data, summary, clients] = await Promise.all([
+      getServices({ search, category, status, page, perPage: 10 }),
+      getServiceSummary(),
+      getClientsForServiceDropdown(),
+    ]);
+  } catch (err) {
+    console.error('[Services] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

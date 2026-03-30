@@ -12,8 +12,20 @@ export const metadata = {
 export default async function PortalInvoiceDetailPage({ params }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const { client } = await requireClient(cookieStore);
-  const invoice = await getPortalInvoice(id, client.id);
+  let client;
+  try {
+    const result = await requireClient(cookieStore);
+    client = result.client;
+  } catch {
+    const { redirect } = await import('next/navigation');
+    redirect('/portal/login');
+  }
+  let invoice;
+  try {
+    invoice = await getPortalInvoice(id, client.id);
+  } catch (err) {
+    console.error('[PortalInvoiceDetail] Data fetch error:', err.message);
+  }
 
   if (!invoice) notFound();
 

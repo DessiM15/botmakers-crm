@@ -11,13 +11,17 @@ import { getDocumentsByProjectId } from '@/lib/db/queries/documents';
 import { getEditableDocsByProjectId } from '@/lib/db/queries/editable-docs';
 
 export async function generateMetadata({ params }) {
-  const { id } = await params;
-  const project = await getProjectById(id);
-  return {
-    title: project
-      ? `${project.name} — Botmakers CRM`
-      : 'Project Not Found — Botmakers CRM',
-  };
+  try {
+    const { id } = await params;
+    const project = await getProjectById(id);
+    return {
+      title: project
+        ? `${project.name} — Botmakers CRM`
+        : 'Project Not Found — Botmakers CRM',
+    };
+  } catch {
+    return { title: 'Project — Botmakers CRM' };
+  }
 }
 
 const Page = async ({ params }) => {
@@ -30,14 +34,19 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  const [project, projectInvoices, projectQuestions, projectServices, projectDocuments, projectEditableDocs] = await Promise.all([
-    getProjectById(id),
-    getInvoicesByProjectId(id),
-    getProjectQuestions(id),
-    getServicesByProjectId(id).catch(() => []),
-    getDocumentsByProjectId(id).catch(() => []),
-    getEditableDocsByProjectId(id).catch(() => []),
-  ]);
+  let project, projectInvoices = [], projectQuestions = [], projectServices = [], projectDocuments = [], projectEditableDocs = [];
+  try {
+    [project, projectInvoices, projectQuestions, projectServices, projectDocuments, projectEditableDocs] = await Promise.all([
+      getProjectById(id),
+      getInvoicesByProjectId(id).catch(() => []),
+      getProjectQuestions(id).catch(() => []),
+      getServicesByProjectId(id).catch(() => []),
+      getDocumentsByProjectId(id).catch(() => []),
+      getEditableDocsByProjectId(id).catch(() => []),
+    ]);
+  } catch (err) {
+    console.error('[ProjectDetail] Data fetch error:', err.message);
+  }
 
   if (!project) {
     notFound();

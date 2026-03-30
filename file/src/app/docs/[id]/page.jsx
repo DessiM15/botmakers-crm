@@ -6,13 +6,17 @@ import { requireTeam } from '@/lib/auth/helpers';
 import { getEditableDocById } from '@/lib/db/queries/editable-docs';
 
 export async function generateMetadata({ params }) {
-  const { id } = await params;
-  const doc = await getEditableDocById(id);
-  return {
-    title: doc
-      ? `${doc.title} — Botmakers CRM`
-      : 'Document Not Found — Botmakers CRM',
-  };
+  try {
+    const { id } = await params;
+    const doc = await getEditableDocById(id);
+    return {
+      title: doc
+        ? `${doc.title} — Botmakers CRM`
+        : 'Document Not Found — Botmakers CRM',
+    };
+  } catch {
+    return { title: 'Document — Botmakers CRM' };
+  }
 }
 
 const Page = async ({ params }) => {
@@ -25,7 +29,12 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  const doc = await getEditableDocById(id);
+  let doc;
+  try {
+    doc = await getEditableDocById(id);
+  } catch (err) {
+    console.error('[DocDetail] Data fetch error:', err.message);
+  }
 
   if (!doc) {
     notFound();

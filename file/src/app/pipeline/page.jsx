@@ -18,10 +18,15 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  const [leadsByStage, teamMembers] = await Promise.all([
-    getLeadsByStage(),
-    getTeamMembers(),
-  ]);
+  let leadsByStage = {}, teamMembers = [];
+  try {
+    [leadsByStage, teamMembers] = await Promise.all([
+      getLeadsByStage(),
+      getTeamMembers(),
+    ]);
+  } catch (err) {
+    console.error('[Pipeline] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

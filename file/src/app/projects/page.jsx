@@ -21,16 +21,22 @@ const Page = async ({ searchParams }) => {
 
   const params = await searchParams;
 
-  const [data, clientOptions] = await Promise.all([
-    getProjects({
-      search: params?.search || '',
-      status: params?.status || 'all',
-      clientId: params?.clientId || 'all',
-      page: parseInt(params?.page || '1', 10),
-      perPage: 24,
-    }),
-    getClientsForDropdown(),
-  ]);
+  let data = { projects: [], total: 0, page: 1, perPage: 24, totalPages: 0 };
+  let clientOptions = [];
+  try {
+    [data, clientOptions] = await Promise.all([
+      getProjects({
+        search: params?.search || '',
+        status: params?.status || 'all',
+        clientId: params?.clientId || 'all',
+        page: parseInt(params?.page || '1', 10),
+        perPage: 24,
+      }),
+      getClientsForDropdown(),
+    ]);
+  } catch (err) {
+    console.error('[Projects] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

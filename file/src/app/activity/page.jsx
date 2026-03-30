@@ -25,15 +25,20 @@ const Page = async ({ searchParams }) => {
   const dateFrom = params?.from || null;
   const dateTo = params?.to || null;
 
-  const data = await getActivityLog({
-    page,
-    perPage: 25,
-    actorType,
-    entityType,
-    action,
-    dateFrom,
-    dateTo,
-  });
+  let data = { entries: [], total: 0, page: 1, totalPages: 0 };
+  try {
+    data = await getActivityLog({
+      page,
+      perPage: 25,
+      actorType,
+      entityType,
+      action,
+      dateFrom,
+      dateTo,
+    });
+  } catch (err) {
+    console.error('[Activity] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

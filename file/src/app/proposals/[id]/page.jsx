@@ -18,7 +18,12 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  const proposal = await getProposalById(id);
+  let proposal;
+  try {
+    proposal = await getProposalById(id);
+  } catch (err) {
+    console.error('[ProposalDetail] Data fetch error:', err.message);
+  }
 
   if (!proposal) {
     notFound();

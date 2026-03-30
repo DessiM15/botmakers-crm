@@ -7,13 +7,17 @@ import { getInvoiceById } from '@/lib/db/queries/invoices';
 import { isSquareConfigured } from '@/lib/integrations/square';
 
 export async function generateMetadata({ params }) {
-  const { id } = await params;
-  const invoice = await getInvoiceById(id);
-  return {
-    title: invoice
-      ? `${invoice.title} — Botmakers CRM`
-      : 'Invoice Not Found — Botmakers CRM',
-  };
+  try {
+    const { id } = await params;
+    const invoice = await getInvoiceById(id);
+    return {
+      title: invoice
+        ? `${invoice.title} — Botmakers CRM`
+        : 'Invoice Not Found — Botmakers CRM',
+    };
+  } catch {
+    return { title: 'Invoice — Botmakers CRM' };
+  }
 }
 
 const Page = async ({ params }) => {
@@ -26,7 +30,12 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  const invoice = await getInvoiceById(id);
+  let invoice;
+  try {
+    invoice = await getInvoiceById(id);
+  } catch (err) {
+    console.error('[InvoiceDetail] Data fetch error:', err.message);
+  }
 
   if (!invoice) {
     notFound();

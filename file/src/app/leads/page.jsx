@@ -20,18 +20,24 @@ const Page = async ({ searchParams }) => {
 
   const params = await searchParams;
 
-  const [data, teamMembers] = await Promise.all([
-    getLeadsFiltered({
-      search: params?.search || '',
-      source: params?.source || 'all',
-      score: params?.score || 'all',
-      stage: params?.stage || 'all',
-      assignedTo: params?.assignedTo || 'all',
-      page: parseInt(params?.page || '1', 10),
-      perPage: parseInt(params?.perPage || '25', 10),
-    }),
-    getTeamMembers(),
-  ]);
+  let data = { leads: [], total: 0, page: 1, perPage: 25, totalPages: 0 };
+  let teamMembers = [];
+  try {
+    [data, teamMembers] = await Promise.all([
+      getLeadsFiltered({
+        search: params?.search || '',
+        source: params?.source || 'all',
+        score: params?.score || 'all',
+        stage: params?.stage || 'all',
+        assignedTo: params?.assignedTo || 'all',
+        page: parseInt(params?.page || '1', 10),
+        perPage: parseInt(params?.perPage || '25', 10),
+      }),
+      getTeamMembers(),
+    ]);
+  } catch (err) {
+    console.error('[Leads] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

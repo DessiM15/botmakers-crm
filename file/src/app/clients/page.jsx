@@ -20,11 +20,16 @@ const Page = async ({ searchParams }) => {
 
   const params = await searchParams;
 
-  const data = await getClients({
-    search: params?.search || '',
-    page: parseInt(params?.page || '1', 10),
-    perPage: parseInt(params?.perPage || '25', 10),
-  });
+  let data = { clients: [], total: 0, page: 1, perPage: 25, totalPages: 0 };
+  try {
+    data = await getClients({
+      search: params?.search || '',
+      page: parseInt(params?.page || '1', 10),
+      perPage: parseInt(params?.perPage || '25', 10),
+    });
+  } catch (err) {
+    console.error('[Clients] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

@@ -25,7 +25,10 @@ const Page = async ({ searchParams }) => {
   const preselectedMilestoneTitle = params?.milestone_title || null;
   const preselectedAmount = params?.amount || null;
 
-  const clients = await getClientsForInvoiceDropdown();
+  let clients = [];
+  try {
+    clients = await getClientsForInvoiceDropdown();
+  } catch {}
   const squareConfigured = isSquareConfigured();
 
   return (

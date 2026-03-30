@@ -9,7 +9,14 @@ export const metadata = {
 
 export default async function EmailGeneratorPage() {
   const cookieStore = await cookies();
-  const { teamUser } = await requireTeam(cookieStore);
+  let teamUser;
+  try {
+    const result = await requireTeam(cookieStore);
+    teamUser = result.teamUser;
+  } catch {
+    const { redirect } = await import('next/navigation');
+    redirect('/sign-in');
+  }
 
   return (
     <MasterLayout>

@@ -17,11 +17,23 @@ export async function generateMetadata({ params }) {
 export default async function PortalProjectPage({ params }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const { client } = await requireClient(cookieStore);
-  const [project, portalDocuments] = await Promise.all([
-    getPortalProject(id, client.id),
-    getPortalDocumentsByProjectId(id).catch(() => []),
-  ]);
+  let client;
+  try {
+    const result = await requireClient(cookieStore);
+    client = result.client;
+  } catch {
+    const { redirect } = await import('next/navigation');
+    redirect('/portal/login');
+  }
+  let project, portalDocuments = [];
+  try {
+    [project, portalDocuments] = await Promise.all([
+      getPortalProject(id, client.id),
+      getPortalDocumentsByProjectId(id).catch(() => []),
+    ]);
+  } catch (err) {
+    console.error('[PortalProject] Data fetch error:', err.message);
+  }
 
   if (!project) notFound();
 

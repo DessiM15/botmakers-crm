@@ -22,7 +22,12 @@ const Page = async ({ searchParams }) => {
   const page = Number(params?.page) || 1;
   const search = params?.search || '';
 
-  const data = await getProposals({ status, page, search });
+  let data = { proposals: [], total: 0, page: 1, perPage: 10, totalPages: 0 };
+  try {
+    data = await getProposals({ status, page, search });
+  } catch (err) {
+    console.error('[Proposals] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

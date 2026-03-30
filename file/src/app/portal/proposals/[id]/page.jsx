@@ -13,13 +13,25 @@ export const metadata = {
 export default async function PortalProposalPage({ params }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const { client } = await requireClient(cookieStore);
-  const proposal = await getPortalProposal(id, client.id);
+  let client;
+  try {
+    const result = await requireClient(cookieStore);
+    client = result.client;
+  } catch {
+    const { redirect } = await import('next/navigation');
+    redirect('/portal/login');
+  }
+  let proposal;
+  try {
+    proposal = await getPortalProposal(id, client.id);
+  } catch (err) {
+    console.error('[PortalProposal] Data fetch error:', err.message);
+  }
 
   if (!proposal) notFound();
 
   // Track view (non-blocking)
-  await trackProposalView(id);
+  trackProposalView(id).catch(() => {});
 
   return (
     <PortalLayout>

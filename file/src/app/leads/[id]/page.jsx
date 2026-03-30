@@ -11,13 +11,17 @@ import {
 import { getLeadFollowUps } from '@/lib/db/queries/follow-ups';
 
 export async function generateMetadata({ params }) {
-  const { id } = await params;
-  const lead = await getLeadById(id);
-  return {
-    title: lead
-      ? `${lead.fullName} — Botmakers CRM`
-      : 'Lead Not Found — Botmakers CRM',
-  };
+  try {
+    const { id } = await params;
+    const lead = await getLeadById(id);
+    return {
+      title: lead
+        ? `${lead.fullName} — Botmakers CRM`
+        : 'Lead Not Found — Botmakers CRM',
+    };
+  } catch {
+    return { title: 'Lead — Botmakers CRM' };
+  }
 }
 
 const Page = async ({ params }) => {
@@ -31,12 +35,17 @@ const Page = async ({ params }) => {
 
   const { id } = await params;
 
-  const [lead, contactLog, teamMembers, followUps] = await Promise.all([
-    getLeadById(id),
-    getLeadContacts(id),
-    getTeamMembers(),
-    getLeadFollowUps(id),
-  ]);
+  let lead, contactLog = [], teamMembers = [], followUps = [];
+  try {
+    [lead, contactLog, teamMembers, followUps] = await Promise.all([
+      getLeadById(id),
+      getLeadContacts(id).catch(() => []),
+      getTeamMembers().catch(() => []),
+      getLeadFollowUps(id).catch(() => []),
+    ]);
+  } catch (err) {
+    console.error('[LeadDetail] Data fetch error:', err.message);
+  }
 
   if (!lead) {
     notFound();

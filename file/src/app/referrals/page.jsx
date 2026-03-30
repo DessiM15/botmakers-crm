@@ -18,15 +18,18 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  const referrers = await getReferrers();
-
-  // Fetch leads for each referrer
+  let referrers = [];
   const referrerLeads = {};
-  await Promise.all(
-    referrers.map(async (ref) => {
-      referrerLeads[ref.id] = await getReferrerWithLeads(ref.id);
-    })
-  );
+  try {
+    referrers = await getReferrers();
+    await Promise.all(
+      referrers.map(async (ref) => {
+        referrerLeads[ref.id] = await getReferrerWithLeads(ref.id);
+      })
+    );
+  } catch (err) {
+    console.error('[Referrals] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

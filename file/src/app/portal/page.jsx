@@ -12,7 +12,13 @@ export const metadata = {
 
 export default async function PortalHomePage() {
   const cookieStore = await cookies();
-  const { client } = await requireClient(cookieStore);
+  let client;
+  try {
+    const result = await requireClient(cookieStore);
+    client = result.client;
+  } catch {
+    redirect('/portal/login');
+  }
 
   // Check if access is revoked
   if (client.portalAccessRevoked) {
@@ -30,7 +36,10 @@ export default async function PortalHomePage() {
     redirect('/portal/welcome');
   }
 
-  const projects = await getClientProjects(client.id);
+  let projects = [];
+  try {
+    projects = await getClientProjects(client.id);
+  } catch {}
 
   // Auto-redirect if exactly 1 project
   if (projects.length === 1) {

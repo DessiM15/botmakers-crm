@@ -23,10 +23,16 @@ const Page = async ({ searchParams }) => {
   const status = params?.status || 'all';
   const page = parseInt(params?.page || '1', 10);
 
-  const [data, summary] = await Promise.all([
-    getInvoices({ search, status, page }),
-    getInvoiceSummary(),
-  ]);
+  let data = { invoices: [], total: 0, page: 1, perPage: 10, totalPages: 0 };
+  let summary = { outstanding: 0, paidThisMonth: 0, overdue: 0 };
+  try {
+    [data, summary] = await Promise.all([
+      getInvoices({ search, status, page }),
+      getInvoiceSummary(),
+    ]);
+  } catch (err) {
+    console.error('[Invoices] Data fetch error:', err.message);
+  }
 
   return (
     <MasterLayout>

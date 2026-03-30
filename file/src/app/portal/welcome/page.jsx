@@ -9,7 +9,13 @@ export const metadata = {
 
 export default async function PortalWelcomePage() {
   const cookieStore = await cookies();
-  const { client } = await requireClient(cookieStore);
+  let client;
+  try {
+    const result = await requireClient(cookieStore);
+    client = result.client;
+  } catch {
+    redirect('/portal/login');
+  }
 
   // Already completed onboarding — redirect to portal
   if (client.portalOnboardingComplete) {

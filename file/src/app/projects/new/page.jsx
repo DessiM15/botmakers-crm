@@ -19,7 +19,10 @@ const Page = async ({ searchParams }) => {
   }
 
   const params = await searchParams;
-  const clients = await getClientsForDropdown();
+  let clients = [];
+  try {
+    clients = await getClientsForDropdown();
+  } catch {}
 
   return (
     <MasterLayout>

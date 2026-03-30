@@ -52,24 +52,33 @@ export default async function PortalPreviewPage({ searchParams }) {
   }
 
   // Fetch client
-  const [client] = await db
-    .select({
-      id: clients.id,
-      fullName: clients.fullName,
-      email: clients.email,
-      company: clients.company,
-    })
-    .from(clients)
-    .where(eq(clients.id, payload.clientId))
-    .limit(1);
+  let client;
+  try {
+    const [row] = await db
+      .select({
+        id: clients.id,
+        fullName: clients.fullName,
+        email: clients.email,
+        company: clients.company,
+      })
+      .from(clients)
+      .where(eq(clients.id, payload.clientId))
+      .limit(1);
+    client = row;
+  } catch (err) {
+    console.error('[PortalPreview] Client fetch error:', err.message);
+  }
 
   if (!client) notFound();
 
   // Fetch data
-  const [clientProjects, clientInvoices] = await Promise.all([
-    getClientProjects(client.id),
-    getPortalInvoices(client.id),
-  ]);
+  let clientProjects = [], clientInvoices = [];
+  try {
+    [clientProjects, clientInvoices] = await Promise.all([
+      getClientProjects(client.id).catch(() => []),
+      getPortalInvoices(client.id).catch(() => []),
+    ]);
+  } catch {}
 
   const formatCurrency = (val) =>
     Number(val).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
