@@ -1,5 +1,6 @@
 'use server';
 
+import crypto from 'crypto';
 import { db } from '@/lib/db/client';
 import { createAdminClient } from '@/lib/db/client';
 import { teamUsers, systemSettings, notificationPreferences } from '@/lib/db/schema';
@@ -159,4 +160,79 @@ export async function saveNotificationPreferences(prefs) {
   } catch {
     return { error: 'Failed to save notification preferences' };
   }
+}
+
+/**
+ * Generate a new Project Tracking API key.
+ * Requires admin. Upserts into system_settings with key 'project_tracking_api_key'.
+ */
+export async function generateProjectTrackingApiKey() {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireAdmin(cookieStore);
+
+    const key = 'btmk_' + crypto.randomBytes(48).toString('hex');
+
+    await db.execute(sql`
+      INSERT INTO system_settings (id, key, value, updated_by, updated_at)
+      VALUES (gen_random_uuid(), 'project_tracking_api_key', ${JSON.stringify({ key, createdAt: new Date().toISOString(), createdBy: teamUser.id })}::jsonb, ${teamUser.id}, NOW())
+      ON CONFLICT (key) DO UPDATE SET
+        value = ${JSON.stringify({ key, createdAt: new Date().toISOString(), createdBy: teamUser.id })}::jsonb,
+        updated_by = ${teamUser.id},
+        updated_at = NOW()
+    `);
+
+    revalidatePath('/settings');
+    return { success: true, maskedKey: maskApiKey(key) };
+  } catch {
+    return { error: 'Failed to generate API key.' };
+  }
+}
+
+/**
+ * Get the stored Project Tracking API key (masked for display).
+ * Any team member can view the masked key.
+ */
+export async function getProjectTrackingApiKey() {
+  try {
+    const cookieStore = await cookies();
+    await requireTeam(cookieStore);
+
+    const [row] = await db
+      .select({ value: systemSettings.value })
+      .from(systemSettings)
+      .where(eq(systemSettings.key, 'project_tracking_api_key'))
+      .limit(1);
+
+    if (!row?.value?.key) {
+      return { configured: false, maskedKey: null };
+    }
+
+    return { configured: true, maskedKey: maskApiKey(row.value.key) };
+  } catch {
+    return { configured: false, maskedKey: null };
+  }
+}
+
+/**
+ * Get the raw (unmasked) API key — used internally by the API route and CLAUDE.md generator.
+ * NOT a server action — no 'use server' export, called server-side only.
+ */
+export async function getProjectTrackingApiKeyRaw() {
+  try {
+    const [row] = await db
+      .select({ value: systemSettings.value })
+      .from(systemSettings)
+      .where(eq(systemSettings.key, 'project_tracking_api_key'))
+      .limit(1);
+
+    return row?.value?.key || null;
+  } catch {
+    return null;
+  }
+}
+
+function maskApiKey(key) {
+  if (!key || key.length < 12) return '****';
+  return key.slice(0, 9) + '...' + key.slice(-4);
 }

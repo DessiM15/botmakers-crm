@@ -61,6 +61,21 @@ const Page = async () => {
     console.error('[Settings] Failed to fetch team members:', err.message);
   }
 
+  // Fetch project tracking API key status
+  let trackingKeyConfigured = false;
+  let trackingKeyMasked = null;
+  try {
+    const [keyRow] = await db
+      .select({ value: systemSettings.value })
+      .from(systemSettings)
+      .where(eq(systemSettings.key, 'project_tracking_api_key'));
+    if (keyRow?.value?.key) {
+      trackingKeyConfigured = true;
+      const k = keyRow.value.key;
+      trackingKeyMasked = k.length >= 12 ? k.slice(0, 9) + '...' + k.slice(-4) : '****';
+    }
+  } catch {}
+
   // Fetch settings
   let staleDays = 7;
   let defaultProposalTerms = '';
@@ -94,6 +109,8 @@ const Page = async () => {
         defaultProposalTerms={defaultProposalTerms}
         defaultProjectPhases={defaultProjectPhases}
         calendarColors={calendarColors}
+        trackingKeyConfigured={trackingKeyConfigured}
+        trackingKeyMasked={trackingKeyMasked}
       />
     </MasterLayout>
   );

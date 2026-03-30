@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { backfillSquareHistory } from '@/lib/actions/square-backfill';
+import { generateProjectTrackingApiKey } from '@/lib/actions/settings';
 
 const SettingsIntegrations = ({
   githubConfigured,
@@ -15,6 +16,8 @@ const SettingsIntegrations = ({
   googleCalendarConnected,
   googleCalendarEmail,
   siteUrl,
+  trackingKeyConfigured: initialTrackingConfigured,
+  trackingKeyMasked: initialTrackingMasked,
 }) => {
   const searchParams = useSearchParams();
   const [backfilling, setBackfilling] = useState(false);
@@ -22,6 +25,9 @@ const SettingsIntegrations = ({
   const [disconnecting, setDisconnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
+  const [trackingConfigured, setTrackingConfigured] = useState(initialTrackingConfigured);
+  const [trackingMasked, setTrackingMasked] = useState(initialTrackingMasked);
+  const [generatingKey, setGeneratingKey] = useState(false);
 
   // Handle OAuth redirect params
   useEffect(() => {
@@ -68,8 +74,105 @@ const SettingsIntegrations = ({
     }
   };
 
+  const handleGenerateKey = async () => {
+    const msg = trackingConfigured
+      ? 'This will replace the existing API key. All projects using the old key will need to re-download their CLAUDE.md. Continue?'
+      : 'Generate a new Project Tracking API key?';
+    if (!window.confirm(msg)) return;
+
+    setGeneratingKey(true);
+    const res = await generateProjectTrackingApiKey();
+    setGeneratingKey(false);
+
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      setTrackingConfigured(true);
+      setTrackingMasked(res.maskedKey);
+      toast.success('API key generated successfully');
+    }
+  };
+
   return (
     <div className="row g-4">
+      {/* Project Tracking API */}
+      <div className="col-xl-6">
+        <div className="card">
+          <div className="card-header d-flex align-items-center gap-2">
+            <Icon icon="mdi:robot-outline" className="text-white" style={{ fontSize: '24px' }} />
+            <h6 className="text-white fw-semibold mb-0">Project Tracking API</h6>
+          </div>
+          <div className="card-body">
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <span className="text-secondary-light text-sm">API Key:</span>
+              {trackingConfigured ? (
+                <span className="badge bg-success bg-opacity-25 text-success">
+                  <Icon icon="mdi:check-circle" className="me-1" style={{ fontSize: '14px' }} />
+                  Active
+                </span>
+              ) : (
+                <span className="badge bg-secondary bg-opacity-25 text-secondary-light">
+                  Not Configured
+                </span>
+              )}
+            </div>
+
+            {trackingConfigured && trackingMasked && (
+              <div className="mb-3">
+                <label className="text-secondary-light text-xs d-block mb-1">Key</label>
+                <code className="text-info text-sm">{trackingMasked}</code>
+              </div>
+            )}
+
+            <div className="mb-3">
+              <label className="text-secondary-light text-xs d-block mb-1">
+                API Endpoint
+              </label>
+              <div className="input-group input-group-sm">
+                <input
+                  type="text"
+                  className="form-control bg-base text-white"
+                  readOnly
+                  value={`${siteUrl}/api/projects/track`}
+                />
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={() => copyToClipboard(`${siteUrl}/api/projects/track`)}
+                >
+                  <Icon icon="mdi:content-copy" style={{ fontSize: '14px' }} />
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <button
+                className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2"
+                onClick={handleGenerateKey}
+                disabled={generatingKey}
+              >
+                {generatingKey ? (
+                  <span className="spinner-border spinner-border-sm" />
+                ) : (
+                  <Icon icon="mdi:key-plus" style={{ fontSize: '16px' }} />
+                )}
+                {trackingConfigured ? 'Regenerate Key' : 'Generate API Key'}
+              </button>
+            </div>
+
+            <div className="p-3 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <h6 className="text-white text-xs fw-semibold mb-2">How It Works</h6>
+              <ol className="text-secondary-light text-xs mb-0 ps-3">
+                <li className="mb-1">Generate an API key above</li>
+                <li className="mb-1">Go to any Project &gt; Repos &amp; Demos tab</li>
+                <li className="mb-1">Download the CLAUDE.md file</li>
+                <li className="mb-1">Drop it in the client&apos;s repo root</li>
+                <li>Claude Code will auto-update milestones as it works</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* GitHub */}
       <div className="col-xl-6">
         <div className="card">

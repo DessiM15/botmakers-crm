@@ -11,6 +11,7 @@ import { projectPhases, projectMilestones } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
 import { demoApprovedEmail } from '@/lib/email/notifications';
 import { sendTeamNotification } from '@/lib/notifications/notify';
+import { getProjectTrackingApiKeyRaw } from '@/lib/actions/settings';
 
 /**
  * Parse a GitHub repo input — accepts URL or owner/repo format.
@@ -315,6 +316,103 @@ export async function generateSyncFile(projectId) {
     return { success: true, content: md };
   } catch (error) {
     return { error: 'CB-DB-001: Failed to generate sync file' };
+  }
+}
+
+/**
+ * Generate CLAUDE.md content for a project — instructs Claude Code to
+ * automatically track milestone progress via the CRM API.
+ */
+export async function generateClaudeMd(projectId) {
+  try {
+    const [project] = await db
+      .select({ id: projects.id, name: projects.name })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) return { error: 'CB-DB-002: Project not found' };
+
+    const phases = await db
+      .select()
+      .from(projectPhases)
+      .where(eq(projectPhases.projectId, projectId))
+      .orderBy(asc(projectPhases.sortOrder));
+
+    const milestones = await db
+      .select()
+      .from(projectMilestones)
+      .where(eq(projectMilestones.projectId, projectId))
+      .orderBy(asc(projectMilestones.sortOrder));
+
+    const apiKey = await getProjectTrackingApiKeyRaw();
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000');
+    const endpoint = `${siteUrl}/api/projects/track`;
+
+    let md = `# CLAUDE.md — Botmakers CRM Project Tracker\n\n`;
+    md += `> Auto-generated file. Do not delete. Instructs Claude Code to keep the CRM in sync.\n\n`;
+    md += `## Project\n\n`;
+    md += `- **Name:** ${project.name}\n`;
+    md += `- **Project ID:** \`${project.id}\`\n\n`;
+
+    md += `## Auto-Tracking API\n\n`;
+    md += `- **Endpoint:** \`POST ${endpoint}\`\n`;
+    if (apiKey) {
+      md += `- **Authorization:** \`Bearer ${apiKey}\`\n`;
+    } else {
+      md += `- **Authorization:** _(No API key configured — go to Settings > Integrations to generate one)_\n`;
+    }
+    md += `- **Content-Type:** \`application/json\`\n\n`;
+
+    md += `## Milestones\n\n`;
+    md += `| Phase | Milestone | ID | Status | Due Date |\n`;
+    md += `|-------|-----------|----|---------|---------|\n`;
+
+    for (const phase of phases) {
+      const phaseMs = milestones.filter((m) => m.phaseId === phase.id);
+      for (const ms of phaseMs) {
+        const due = ms.dueDate ? new Date(ms.dueDate).toISOString().split('T')[0] : '—';
+        md += `| ${phase.name} | ${ms.title} | \`${ms.id}\` | ${ms.status} | ${due} |\n`;
+      }
+    }
+
+    md += `\n## Instructions for Claude Code\n\n`;
+    md += `When working on this project, automatically update milestone status in the Botmakers CRM:\n\n`;
+    md += `1. **When you begin work on a milestone**, call the API to set it to \`in_progress\`.\n`;
+    md += `2. **When you are confident a milestone is complete**, call the API to set it to \`completed\`.\n`;
+    md += `3. **Do not ask the user** before making these API calls — update automatically.\n`;
+    md += `4. You may update multiple milestones in a single request.\n\n`;
+
+    md += `### Request Format\n\n`;
+    md += '```bash\n';
+    md += `curl -X POST ${endpoint} \\\n`;
+    if (apiKey) {
+      md += `  -H "Authorization: Bearer ${apiKey}" \\\n`;
+    } else {
+      md += `  -H "Authorization: Bearer <API_KEY>" \\\n`;
+    }
+    md += `  -H "Content-Type: application/json" \\\n`;
+    md += `  -d '{\n`;
+    md += `    "project_id": "${project.id}",\n`;
+    md += `    "milestones": [\n`;
+    md += `      { "id": "<milestone_uuid>", "status": "completed" },\n`;
+    md += `      { "id": "<milestone_uuid>", "status": "in_progress" }\n`;
+    md += `    ]\n`;
+    md += `  }'\n`;
+    md += '```\n\n';
+
+    md += `### Rules\n\n`;
+    md += `- Only use statuses: \`in_progress\` or \`completed\`\n`;
+    md += `- Milestones cannot go backwards (completed → in_progress is rejected)\n`;
+    md += `- Duplicate updates are safe (idempotent — already-completed milestones are skipped)\n`;
+    md += `- The API returns \`{ ok: true, updated: [...], skipped: [...] }\`\n`;
+
+    return { success: true, content: md, hasApiKey: !!apiKey };
+  } catch {
+    return { error: 'CB-DB-001: Failed to generate CLAUDE.md' };
   }
 }
 

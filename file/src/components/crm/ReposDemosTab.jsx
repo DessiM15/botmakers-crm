@@ -23,29 +23,33 @@ const ReposDemosTab = ({ projectId, repos: initialRepos, demos: initialDemos, ph
   );
 };
 
-// ── Sync File Section ─────────────────────────────────────────────────────────
+// ── CLAUDE.md Project Tracker Section ────────────────────────────────────────
 
 const SyncFileSection = ({ projectId }) => {
   const [downloading, setDownloading] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [noApiKey, setNoApiKey] = useState(false);
+
+  const fetchContent = async () => {
+    const res = await fetch(`/api/projects/${projectId}/sync-file`);
+    if (!res.ok) throw new Error('Failed to generate');
+    return res.text();
+  };
 
   const handleDownload = async () => {
     setDownloading(true);
+    setNoApiKey(false);
     try {
-      const res = await fetch(`/api/projects/${projectId}/sync-file`);
-      if (!res.ok) {
-        toast.error('Failed to generate sync file');
-        return;
-      }
-      const text = await res.text();
+      const text = await fetchContent();
+      if (!text.includes('Bearer btmk_')) setNoApiKey(true);
       const blob = new Blob([text], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'BOTMAKERS-CRM.md';
+      a.download = 'CLAUDE.md';
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Sync file downloaded');
+      toast.success('CLAUDE.md downloaded');
     } catch {
       toast.error('Download failed');
     } finally {
@@ -55,15 +59,12 @@ const SyncFileSection = ({ projectId }) => {
 
   const handleCopy = async () => {
     setCopying(true);
+    setNoApiKey(false);
     try {
-      const res = await fetch(`/api/projects/${projectId}/sync-file`);
-      if (!res.ok) {
-        toast.error('Failed to generate sync file');
-        return;
-      }
-      const text = await res.text();
+      const text = await fetchContent();
+      if (!text.includes('Bearer btmk_')) setNoApiKey(true);
       await navigator.clipboard.writeText(text);
-      toast.success('Sync file copied to clipboard');
+      toast.success('CLAUDE.md copied to clipboard');
     } catch {
       toast.error('Copy failed');
     } finally {
@@ -75,15 +76,21 @@ const SyncFileSection = ({ projectId }) => {
     <div className="card mt-4">
       <div className="card-header">
         <h6 className="text-white fw-semibold mb-0 d-flex align-items-center gap-2">
-          <Icon icon="mdi:sync" style={{ fontSize: '20px' }} />
-          Project Sync
+          <Icon icon="mdi:robot-outline" style={{ fontSize: '20px' }} />
+          CLAUDE.md Project Tracker
         </h6>
       </div>
       <div className="card-body">
         <p className="text-secondary-light text-xs mb-3">
-          Place <code>BOTMAKERS-CRM.md</code> in your repo root. Edit checkboxes or use{' '}
-          <code>[milestone: Name]</code> in commit messages to auto-update milestones.
+          Drop <code>CLAUDE.md</code> in your repo root. When using Claude Code, it will
+          automatically update milestone progress in the CRM — no manual tracking needed.
         </p>
+        {noApiKey && (
+          <div className="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: '12px' }}>
+            <Icon icon="mdi:alert-outline" style={{ fontSize: '16px' }} />
+            No API key configured. Go to <a href="/settings" className="text-warning fw-semibold">Settings &gt; Integrations</a> to generate one.
+          </div>
+        )}
         <div className="d-flex gap-2">
           <button
             className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"

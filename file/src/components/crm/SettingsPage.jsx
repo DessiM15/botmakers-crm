@@ -34,6 +34,8 @@ const SettingsPage = ({
   defaultProposalTerms: initialProposalTerms,
   defaultProjectPhases: initialProjectPhases,
   calendarColors: initialCalendarColors,
+  trackingKeyConfigured,
+  trackingKeyMasked,
 }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('integrations');
@@ -75,6 +77,8 @@ const SettingsPage = ({
           googleCalendarConnected={googleCalendarConnected}
           googleCalendarEmail={googleCalendarEmail}
           siteUrl={siteUrl}
+          trackingKeyConfigured={trackingKeyConfigured}
+          trackingKeyMasked={trackingKeyMasked}
         />
       )}
 
