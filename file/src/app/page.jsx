@@ -36,13 +36,13 @@ const Page = async () => {
   let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue;
   try {
     [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue] = await Promise.all([
-      getMetrics(),
-      getAlerts(),
-      getRecentActivity(),
-      getUpcomingMilestones(),
-      getRevenueMetrics(),
-      getLeadSourceAnalytics(),
-      getPendingFollowUps(teamUser.id),
+      getMetrics().catch(() => ({ leadsThisWeek: 0, leadsDelta: 0, pipelineValue: 0, activeProjects: 0, revenueThisMonth: 0 })),
+      getAlerts().catch(() => ({ staleLeads: [], overdueMilestones: [], pendingQuestions: [] })),
+      getRecentActivity().catch(() => []),
+      getUpcomingMilestones().catch(() => []),
+      getRevenueMetrics().catch(() => ({ invoicedThisMonth: 0, paidThisMonth: 0, outstanding: 0, momChange: 0 })),
+      getLeadSourceAnalytics().catch(() => []),
+      getPendingFollowUps(teamUser.id).catch(() => []),
       getUnassignedLeads(),
       getTeamMembersForAssignment(),
       getUpcomingRenewals(7).catch(() => []),
@@ -52,11 +52,11 @@ const Page = async () => {
   } catch (err) {
     console.error('[Dashboard] Data fetch error:', err.message, err.stack);
     // Fallback to empty data so the page still renders
-    metrics = { totalLeads: 0, totalClients: 0, totalProjects: 0, totalRevenue: 0, activeProjects: 0, openInvoices: 0 };
-    alerts = [];
+    metrics = { leadsThisWeek: 0, leadsDelta: 0, pipelineValue: 0, activeProjects: 0, revenueThisMonth: 0 };
+    alerts = { staleLeads: [], overdueMilestones: [], pendingQuestions: [] };
     activity = [];
     upcomingMilestones = [];
-    revenue = { monthlyRevenue: [], totalPaid: 0, totalOutstanding: 0 };
+    revenue = { invoicedThisMonth: 0, paidThisMonth: 0, outstanding: 0, momChange: 0 };
     leadSources = [];
     followUps = [];
     unassignedLeads = [];

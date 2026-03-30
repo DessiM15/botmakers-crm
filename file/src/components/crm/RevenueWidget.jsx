@@ -1,10 +1,11 @@
 import { Icon } from '@iconify/react';
 
 const formatCurrency = (val) => {
-  if (val >= 1000) {
-    return `$${(val / 1000).toFixed(val % 1000 === 0 ? 0 : 1)}k`;
+  const n = Number(val) || 0;
+  if (n >= 1000) {
+    return `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
   }
-  return `$${val.toFixed(0)}`;
+  return `$${n.toFixed(0)}`;
 };
 
 const RevenueWidget = ({ revenue }) => {

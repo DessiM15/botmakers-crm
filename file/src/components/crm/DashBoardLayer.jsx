@@ -170,7 +170,7 @@ const DashBoardLayer = ({
                               {svc.renewalDate ? new Date(svc.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                             </span>
                           </td>
-                          <td><span className="text-white text-sm">${Number(svc.monthlyCost).toFixed(2)}/mo</span></td>
+                          <td><span className="text-white text-sm">${(Number(svc.monthlyCost) || 0).toFixed(2)}/mo</span></td>
                         </tr>
                       ))}
                     </tbody>
