@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
-import { updateLeadStage } from '@/lib/actions/leads';
+import { updateLeadStage, createLead } from '@/lib/actions/leads';
 import {
   PIPELINE_STAGES,
   LEAD_SOURCES,
@@ -35,6 +35,55 @@ const LeadTable = ({ initialData, teamMembers }) => {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // Add Lead Modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    companyName: '',
+    source: 'other',
+    score: '',
+    projectType: '',
+    projectDetails: '',
+    notes: '',
+  });
+  const [addSaving, setAddSaving] = useState(false);
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!addForm.fullName.trim() || !addForm.email.trim()) {
+      toast.error('Name and email are required');
+      return;
+    }
+    setAddSaving(true);
+    const payload = {
+      ...addForm,
+      score: addForm.score || undefined,
+    };
+    const res = await createLead(payload);
+    setAddSaving(false);
+
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Lead created');
+      setAddForm({
+        fullName: '',
+        email: '',
+        phone: '',
+        companyName: '',
+        source: 'other',
+        score: '',
+        projectType: '',
+        projectDetails: '',
+        notes: '',
+      });
+      setShowAddModal(false);
+      router.push(`/leads/${res.lead.id}`);
+    }
+  };
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -258,7 +307,7 @@ const LeadTable = ({ initialData, teamMembers }) => {
             ))}
           </select>
 
-          {/* Export + Results count */}
+          {/* Export + Results count + Add Lead */}
           <div className="d-flex align-items-center gap-2 ms-auto">
             <button className="btn btn-outline-secondary btn-sm" onClick={handleExport} disabled={exporting}>
               {exporting ? <span className="spinner-border spinner-border-sm me-1" /> : <Icon icon="mdi:download" className="me-1" style={{ fontSize: '16px' }} />}
@@ -268,6 +317,14 @@ const LeadTable = ({ initialData, teamMembers }) => {
               {total} lead{total !== 1 ? 's' : ''}
             </span>
           </div>
+
+          <button
+            className="btn btn-primary btn-sm d-flex align-items-center gap-1"
+            onClick={() => setShowAddModal(true)}
+          >
+            <Icon icon="mdi:plus" style={{ fontSize: '16px' }} />
+            Add Lead
+          </button>
         </div>
       </div>
 
@@ -480,6 +537,212 @@ const LeadTable = ({ initialData, teamMembers }) => {
           )}
         </div>
       </div>
+
+      {/* Add Lead Modal */}
+      {showAddModal && (
+        <div
+          className="modal show d-block"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAddModal(false);
+          }}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content bg-base">
+              <div className="modal-header border-secondary-subtle">
+                <h5 className="modal-title text-white fw-semibold">
+                  Add Lead
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowAddModal(false)}
+                />
+              </div>
+              <form onSubmit={handleAddSubmit}>
+                <div className="modal-body">
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Full Name <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control bg-base text-white"
+                        placeholder="John Doe"
+                        value={addForm.fullName}
+                        onChange={(e) =>
+                          setAddForm((prev) => ({ ...prev, fullName: e.target.value }))
+                        }
+                        disabled={addSaving}
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Email <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        className="form-control bg-base text-white"
+                        placeholder="john@example.com"
+                        value={addForm.email}
+                        onChange={(e) =>
+                          setAddForm((prev) => ({ ...prev, email: e.target.value }))
+                        }
+                        disabled={addSaving}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        className="form-control bg-base text-white"
+                        placeholder="(555) 123-4567"
+                        value={addForm.phone}
+                        onChange={(e) =>
+                          setAddForm((prev) => ({ ...prev, phone: e.target.value }))
+                        }
+                        disabled={addSaving}
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Company
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control bg-base text-white"
+                        placeholder="Acme Inc."
+                        value={addForm.companyName}
+                        onChange={(e) =>
+                          setAddForm((prev) => ({ ...prev, companyName: e.target.value }))
+                        }
+                        disabled={addSaving}
+                      />
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Source
+                      </label>
+                      <select
+                        className="form-select bg-base text-white"
+                        value={addForm.source}
+                        onChange={(e) =>
+                          setAddForm((prev) => ({ ...prev, source: e.target.value }))
+                        }
+                        disabled={addSaving}
+                      >
+                        {LEAD_SOURCES.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Score
+                      </label>
+                      <select
+                        className="form-select bg-base text-white"
+                        value={addForm.score}
+                        onChange={(e) =>
+                          setAddForm((prev) => ({ ...prev, score: e.target.value }))
+                        }
+                        disabled={addSaving}
+                      >
+                        <option value="">No score</option>
+                        {LEAD_SCORES.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label text-secondary-light text-sm">
+                        Project Type
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control bg-base text-white"
+                        placeholder="e.g. AI Chatbot"
+                        value={addForm.projectType}
+                        onChange={(e) =>
+                          setAddForm((prev) => ({ ...prev, projectType: e.target.value }))
+                        }
+                        disabled={addSaving}
+                      />
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label text-secondary-light text-sm">
+                      Project Details
+                    </label>
+                    <textarea
+                      className="form-control bg-base text-white"
+                      rows={3}
+                      placeholder="Brief description of the project..."
+                      value={addForm.projectDetails}
+                      onChange={(e) =>
+                        setAddForm((prev) => ({ ...prev, projectDetails: e.target.value }))
+                      }
+                      disabled={addSaving}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label text-secondary-light text-sm">
+                      Notes
+                    </label>
+                    <textarea
+                      className="form-control bg-base text-white"
+                      rows={2}
+                      placeholder="Internal notes..."
+                      value={addForm.notes}
+                      onChange={(e) =>
+                        setAddForm((prev) => ({ ...prev, notes: e.target.value }))
+                      }
+                      disabled={addSaving}
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer border-secondary-subtle">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => setShowAddModal(false)}
+                    disabled={addSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={addSaving}
+                  >
+                    {addSaving ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Lead'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

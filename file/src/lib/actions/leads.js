@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { contactLogSchema } from '@/lib/utils/validators';
+import { contactLogSchema, leadCreateSchema } from '@/lib/utils/validators';
 import { leadStageChange } from '@/lib/email/notifications';
 import { advanceLead } from '@/lib/pipeline/transitions';
 import { sendTeamNotification, sendUserNotification } from '@/lib/notifications/notify';
@@ -279,5 +279,58 @@ export async function createContact(formData) {
       return { error: error.message };
     }
     return { error: 'CB-DB-001: Failed to log contact' };
+  }
+}
+
+/**
+ * Create a new lead manually from the CRM.
+ */
+export async function createLead(formData) {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireTeam(cookieStore);
+
+    const parsed = leadCreateSchema.safeParse(formData);
+    if (!parsed.success) {
+      return { error: 'CB-API-001: ' + parsed.error.issues[0].message };
+    }
+
+    const data = parsed.data;
+
+    const [inserted] = await db
+      .insert(leads)
+      .values({
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone || null,
+        companyName: data.companyName || null,
+        source: data.source,
+        score: data.score || null,
+        projectType: data.projectType || null,
+        projectDetails: data.projectDetails || null,
+        notes: data.notes || null,
+        pipelineStage: 'new_lead',
+      })
+      .returning();
+
+    await db.insert(activityLog).values({
+      actorId: teamUser.id,
+      actorType: 'team',
+      action: 'lead.created',
+      entityType: 'lead',
+      entityId: inserted.id,
+      metadata: { source: data.source },
+    });
+
+    revalidatePath('/leads');
+    revalidatePath('/pipeline');
+    revalidatePath('/');
+
+    return { success: true, lead: inserted };
+  } catch (error) {
+    if (error.message?.startsWith('CB-')) {
+      return { error: error.message };
+    }
+    return { error: 'CB-DB-001: Failed to create lead' };
   }
 }

@@ -56,6 +56,8 @@ export const LEAD_SOURCES = [
   { value: 'vapi', label: 'Vapi' },
   { value: 'cold_outreach', label: 'Cold Outreach' },
   { value: 'word_of_mouth', label: 'Word of Mouth' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'social_media', label: 'Social Media' },
   { value: 'other', label: 'Other' },
 ];
 

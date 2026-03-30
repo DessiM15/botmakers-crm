@@ -3,12 +3,44 @@
 import { useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react/dist/iconify.js';
+import { toast } from 'react-toastify';
 import { formatDate, formatRelativeTime } from '@/lib/utils/formatters';
 import { PIPELINE_STAGES, LEAD_SCORES } from '@/lib/utils/constants';
+import { createReferrer } from '@/lib/actions/referrals';
 
 const ReferralTable = ({ referrers, referrerLeads }) => {
   const router = useRouter();
   const [expandedId, setExpandedId] = useState(null);
+
+  // Add Referrer Modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    fullName: '',
+    email: '',
+    company: '',
+    feedback: '',
+  });
+  const [addSaving, setAddSaving] = useState(false);
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!addForm.fullName.trim() || !addForm.email.trim()) {
+      toast.error('Name and email are required');
+      return;
+    }
+    setAddSaving(true);
+    const res = await createReferrer(addForm);
+    setAddSaving(false);
+
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Referrer created');
+      setAddForm({ fullName: '', email: '', company: '', feedback: '' });
+      setShowAddModal(false);
+      router.refresh();
+    }
+  };
 
   const toggleExpand = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -42,23 +74,164 @@ const ReferralTable = ({ referrers, referrerLeads }) => {
 
   if (referrers.length === 0) {
     return (
-      <div className="card">
-        <div className="card-body d-flex flex-column justify-content-center align-items-center py-80">
-          <Icon
-            icon="mdi:account-multiple-outline"
-            className="text-secondary-light mb-3"
-            style={{ fontSize: '48px' }}
-          />
-          <h6 className="text-white fw-semibold mb-2">No referrals yet</h6>
-          <p className="text-secondary-light text-sm mb-0">
-            Referrals from the website will appear here.
-          </p>
+      <>
+        <div className="card">
+          <div className="card-body d-flex flex-column justify-content-center align-items-center py-80">
+            <Icon
+              icon="mdi:account-multiple-outline"
+              className="text-secondary-light mb-3"
+              style={{ fontSize: '48px' }}
+            />
+            <h6 className="text-white fw-semibold mb-2">No referrals yet</h6>
+            <p className="text-secondary-light text-sm mb-3">
+              Referrals from the website will appear here, or add one manually.
+            </p>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setShowAddModal(true)}
+            >
+              <Icon icon="mdi:plus" className="me-1" />
+              Add Referrer
+            </button>
+          </div>
         </div>
-      </div>
+        {renderAddModal()}
+      </>
     );
   }
 
+  const renderAddModal = () =>
+    showAddModal && (
+      <div
+        className="modal show d-block"
+        style={{ background: 'rgba(0,0,0,0.6)' }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setShowAddModal(false);
+        }}
+      >
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content bg-base">
+            <div className="modal-header border-secondary-subtle">
+              <h5 className="modal-title text-white fw-semibold">
+                Add Referrer
+              </h5>
+              <button
+                type="button"
+                className="btn-close btn-close-white"
+                onClick={() => setShowAddModal(false)}
+              />
+            </div>
+            <form onSubmit={handleAddSubmit}>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label text-secondary-light text-sm">
+                    Full Name <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control bg-base text-white"
+                    placeholder="John Doe"
+                    value={addForm.fullName}
+                    onChange={(e) =>
+                      setAddForm((prev) => ({ ...prev, fullName: e.target.value }))
+                    }
+                    disabled={addSaving}
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label text-secondary-light text-sm">
+                    Email <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="form-control bg-base text-white"
+                    placeholder="john@example.com"
+                    value={addForm.email}
+                    onChange={(e) =>
+                      setAddForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    disabled={addSaving}
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label text-secondary-light text-sm">
+                    Company
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control bg-base text-white"
+                    placeholder="Acme Inc."
+                    value={addForm.company}
+                    onChange={(e) =>
+                      setAddForm((prev) => ({ ...prev, company: e.target.value }))
+                    }
+                    disabled={addSaving}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label text-secondary-light text-sm">
+                    Feedback / Notes
+                  </label>
+                  <textarea
+                    className="form-control bg-base text-white"
+                    rows={3}
+                    placeholder="Any notes about this referrer..."
+                    value={addForm.feedback}
+                    onChange={(e) =>
+                      setAddForm((prev) => ({ ...prev, feedback: e.target.value }))
+                    }
+                    disabled={addSaving}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer border-secondary-subtle">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={addSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={addSaving}
+                >
+                  {addSaving ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-1" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Referrer'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+
   return (
+    <>
+    <div className="card p-3 mb-4">
+      <div className="d-flex align-items-center justify-content-between">
+        <span className="text-secondary-light text-sm">
+          {referrers.length} referrer{referrers.length !== 1 ? 's' : ''}
+        </span>
+        <button
+          className="btn btn-primary btn-sm d-flex align-items-center gap-1"
+          onClick={() => setShowAddModal(true)}
+        >
+          <Icon icon="mdi:plus" style={{ fontSize: '16px' }} />
+          Add Referrer
+        </button>
+      </div>
+    </div>
     <div className="card p-0">
       <div className="card-body p-0">
         <div className="table-responsive">
@@ -227,6 +400,8 @@ const ReferralTable = ({ referrers, referrerLeads }) => {
         </div>
       </div>
     </div>
+    {renderAddModal()}
+    </>
   );
 };
 

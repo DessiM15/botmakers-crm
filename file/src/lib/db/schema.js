@@ -20,6 +20,8 @@ export const leadSourceEnum = pgEnum('lead_source', [
   'vapi',
   'cold_outreach',
   'word_of_mouth',
+  'tiktok',
+  'social_media',
   'other',
 ]);
 

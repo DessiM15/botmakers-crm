@@ -151,6 +151,25 @@ export const saveDraftSchema = z.object({
   customInstructions: z.string().optional(),
 });
 
+export const leadCreateSchema = z.object({
+  fullName: z.string().min(1, 'Full name is required'),
+  email: z.string().email('Valid email is required'),
+  phone: z.string().optional(),
+  companyName: z.string().optional(),
+  source: z.enum(['web_form', 'referral', 'vapi', 'cold_outreach', 'word_of_mouth', 'tiktok', 'social_media', 'other']).default('other'),
+  score: z.enum(['high', 'medium', 'low']).optional(),
+  projectType: z.string().optional(),
+  projectDetails: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const referrerCreateSchema = z.object({
+  fullName: z.string().min(1, 'Full name is required'),
+  email: z.string().email('Valid email is required'),
+  company: z.string().optional(),
+  feedback: z.string().optional(),
+});
+
 export const contactLogSchema = z.object({
   leadId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
