@@ -1,27 +1,25 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { requireTeam } from '@/lib/auth/helpers';
-import { db } from '@/lib/db/client';
-import { teamUsers } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 function htmlRedirect(url) {
   return new Response(
     `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${url}"></head><body><p>Redirecting to <a href="${url}">settings</a>...</p></body></html>`,
-    { status: 200, headers: { 'Content-Type': 'text/html' } }
+    { status: 200, headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' } }
   );
 }
 
 export async function GET(request) {
-  const proto = request.headers.get('x-forwarded-proto') || 'https';
-  const host = request.headers.get('host') || 'crm.botmakers.ai';
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `${proto}://${host}`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${request.headers.get('host') || 'crm.botmakers.ai'}`;
 
   try {
-    // Check Google Calendar env vars directly (avoid importing google-calendar.js at top level)
+    // Check Google Calendar env vars
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REDIRECT_URI) {
       return htmlRedirect(`${baseUrl}/settings?google_error=not_configured`);
     }
+
+    // Lazy imports — avoid any module-level failures
+    const { cookies } = await import('next/headers');
+    const { requireTeam } = await import('@/lib/auth/helpers');
 
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
@@ -44,7 +42,7 @@ export async function GET(request) {
       return htmlRedirect(`${baseUrl}/settings?google_error=state_mismatch`);
     }
 
-    // Lazy import googleapis to avoid module-level crash
+    // Lazy import googleapis
     const { google } = await import('googleapis');
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -64,16 +62,22 @@ export async function GET(request) {
     const { data } = await oauth2.userinfo.get();
     const googleEmail = data.email;
 
-    // Save to team_users
-    await db
-      .update(teamUsers)
-      .set({
-        googleRefreshToken: tokens.refresh_token,
-        googleCalendarConnected: true,
-        googleCalendarEmail: googleEmail,
-        updatedAt: new Date(),
+    // Save via Supabase admin client (more reliable than Drizzle on Vercel)
+    const { createClient } = await import('@supabase/supabase-js');
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    await admin
+      .from('team_users')
+      .update({
+        google_refresh_token: tokens.refresh_token,
+        google_calendar_connected: true,
+        google_calendar_email: googleEmail,
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(teamUsers.id, teamUser.id));
+      .eq('id', teamUser.id);
 
     return htmlRedirect(`${baseUrl}/settings?google_success=true`);
   } catch (err) {
