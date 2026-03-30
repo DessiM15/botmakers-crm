@@ -480,7 +480,7 @@ const SettingsIntegrations = ({
 
             {googleCalendarConfigured && !googleCalendarConnected && (
               <a
-                href="/api/auth/google"
+                href="/auth/google"
                 className="btn btn-primary btn-sm d-flex align-items-center gap-2"
                 style={{ width: 'fit-content' }}
               >
