@@ -771,148 +771,212 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
       )}
 
       {/* Step 3: Preview */}
-      {step === 2 && (
-        <div className="row g-4">
-          <div className="col-xxl-8 mx-auto">
-            <div className="card mb-4">
-              <div className="card-body p-4">
-                {/* Preview Header */}
-                <div className="text-center mb-4">
-                  <h2 className="text-white fw-bold mb-1">{title}</h2>
-                  <p className="text-secondary-light text-sm mb-0">
-                    Prepared by BotMakers Inc.
-                  </p>
+      {step === 2 && (() => {
+        const recipientName = selectedLeadId
+          ? leads.find((l) => l.id === selectedLeadId)?.fullName
+          : selectedClientId
+            ? clients.find((c) => c.id === selectedClientId)?.fullName
+            : null;
+        const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        return (
+          <div className="row g-4">
+            <div className="col-xxl-9 mx-auto">
+              {/* Branded Proposal Document */}
+              <div className="proposal-preview" style={{ borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
+
+                {/* Header — navy gradient */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #033457 0%, #022038 100%)',
+                  padding: '40px 40px 32px',
+                  color: '#fff',
+                }}>
+                  <div className="d-flex align-items-start justify-content-between mb-4">
+                    <div className="d-flex align-items-center gap-3">
+                      <img
+                        src="https://botmakers.ai/assets/botmakers-white-green-logo.png"
+                        alt="BotMakers"
+                        style={{ height: '44px', width: 'auto' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '0.5px' }}>BotMakers Inc.</div>
+                        <div style={{ fontSize: '13px', opacity: 0.7 }}>botmakers.ai &nbsp;·&nbsp; 832.790.5001</div>
+                      </div>
+                    </div>
+                    <div className="text-end" style={{ fontSize: '13px', opacity: 0.7 }}>
+                      <div>{today}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0 0 24px' }} />
+
+                  <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 8px', lineHeight: 1.2 }}>{title}</h2>
+                  {recipientName && (
+                    <div style={{ fontSize: '15px', opacity: 0.8 }}>Prepared for: <strong style={{ opacity: 1 }}>{recipientName}</strong></div>
+                  )}
                 </div>
 
-                <hr className="border-secondary-subtle" />
+                {/* Body — white background */}
+                <div style={{ background: '#ffffff', padding: '36px 40px', color: '#333' }}>
 
-                {/* Scope */}
-                <div className="mb-4">
-                  <h5 className="text-white fw-semibold mb-3">Scope of Work</h5>
-                  <div
-                    className="text-secondary-light proposal-content"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(scopeOfWork) }}
-                  />
-                </div>
+                  {/* Scope of Work */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h5 style={{
+                      color: '#033457', fontWeight: '600', fontSize: '17px', marginBottom: '16px',
+                      paddingLeft: '14px', borderLeft: '3px solid #03FF00',
+                    }}>Scope of Work</h5>
+                    <div
+                      className="proposal-content proposal-preview-content"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(scopeOfWork) }}
+                    />
+                  </div>
 
-                {/* Deliverables */}
-                <div className="mb-4">
-                  <h5 className="text-white fw-semibold mb-3">Deliverables</h5>
-                  <div
-                    className="text-secondary-light proposal-content"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(deliverables) }}
-                  />
-                </div>
+                  <hr style={{ border: 'none', borderTop: '1px solid #e9ecef', margin: '0 0 32px' }} />
 
-                {/* Line Items */}
-                <div className="mb-4">
-                  <h5 className="text-white fw-semibold mb-3">Pricing</h5>
-                  <div className="table-responsive">
-                    <table className="table table-dark table-bordered mb-0">
-                      <thead>
-                        <tr className="text-secondary-light text-xs">
-                          <th>Description</th>
-                          {pricingType === 'phased' && <th>Phase</th>}
-                          <th className="text-end" style={{ width: '80px' }}>Qty</th>
-                          <th className="text-end" style={{ width: '120px' }}>Unit Price</th>
-                          <th className="text-end" style={{ width: '120px' }}>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {lineItems.map((item, idx) => (
-                          <tr key={idx}>
-                            <td className="text-white text-sm">{item.description}</td>
+                  {/* Deliverables */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h5 style={{
+                      color: '#033457', fontWeight: '600', fontSize: '17px', marginBottom: '16px',
+                      paddingLeft: '14px', borderLeft: '3px solid #03FF00',
+                    }}>Deliverables</h5>
+                    <div
+                      className="proposal-content proposal-preview-content"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(deliverables) }}
+                    />
+                  </div>
+
+                  <hr style={{ border: 'none', borderTop: '1px solid #e9ecef', margin: '0 0 32px' }} />
+
+                  {/* Pricing */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h5 style={{
+                      color: '#033457', fontWeight: '600', fontSize: '17px', marginBottom: '16px',
+                      paddingLeft: '14px', borderLeft: '3px solid #03FF00',
+                    }}>Pricing</h5>
+                    <div className="table-responsive">
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: '#f8f9fa' }}>
+                            <th style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '600', color: '#033457', textAlign: 'left', borderBottom: '2px solid #e9ecef' }}>Description</th>
                             {pricingType === 'phased' && (
-                              <td className="text-secondary-light text-sm">{item.phaseLabel}</td>
+                              <th style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '600', color: '#033457', textAlign: 'left', borderBottom: '2px solid #e9ecef' }}>Phase</th>
                             )}
-                            <td className="text-white text-sm text-end">{item.quantity}</td>
-                            <td className="text-white text-sm text-end">
-                              ${Number(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            <th style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '600', color: '#033457', textAlign: 'right', width: '80px', borderBottom: '2px solid #e9ecef' }}>Qty</th>
+                            <th style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '600', color: '#033457', textAlign: 'right', width: '120px', borderBottom: '2px solid #e9ecef' }}>Unit Price</th>
+                            <th style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '600', color: '#033457', textAlign: 'right', width: '120px', borderBottom: '2px solid #e9ecef' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lineItems.map((item, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                              <td style={{ padding: '10px 14px', fontSize: '14px', color: '#333' }}>{item.description}</td>
+                              {pricingType === 'phased' && (
+                                <td style={{ padding: '10px 14px', fontSize: '14px', color: '#666' }}>{item.phaseLabel}</td>
+                              )}
+                              <td style={{ padding: '10px 14px', fontSize: '14px', color: '#333', textAlign: 'right' }}>{item.quantity}</td>
+                              <td style={{ padding: '10px 14px', fontSize: '14px', color: '#333', textAlign: 'right' }}>
+                                ${Number(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td style={{ padding: '10px 14px', fontSize: '14px', color: '#333', textAlign: 'right', fontWeight: '500' }}>
+                                ${Number(item.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr style={{ background: '#03FF00' }}>
+                            <td
+                              colSpan={pricingType === 'phased' ? 4 : 3}
+                              style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '700', fontSize: '15px', color: '#033457' }}
+                            >
+                              Total
                             </td>
-                            <td className="text-white text-sm text-end fw-medium">
-                              ${Number(item.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: '800', fontSize: '18px', color: '#033457' }}>
+                              ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr>
-                          <td
-                            colSpan={pricingType === 'phased' ? 4 : 3}
-                            className="text-end text-white fw-semibold"
-                          >
-                            Total
-                          </td>
-                          <td className="text-end text-white fw-bold text-lg">
-                            ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+
+                  <hr style={{ border: 'none', borderTop: '1px solid #e9ecef', margin: '0 0 32px' }} />
+
+                  {/* Terms */}
+                  <div>
+                    <h5 style={{
+                      color: '#033457', fontWeight: '600', fontSize: '17px', marginBottom: '16px',
+                      paddingLeft: '14px', borderLeft: '3px solid #03FF00',
+                    }}>Terms &amp; Conditions</h5>
+                    <div
+                      className="proposal-content proposal-preview-content"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(termsAndConditions) }}
+                    />
                   </div>
                 </div>
 
-                {/* Terms */}
-                <div className="mb-4">
-                  <h5 className="text-white fw-semibold mb-3">Terms & Conditions</h5>
-                  <div
-                    className="text-secondary-light proposal-content"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(termsAndConditions) }}
-                  />
+                {/* Footer */}
+                <div style={{
+                  background: '#f5f5f5', padding: '20px 40px', textAlign: 'center',
+                  fontSize: '13px', color: '#888', borderTop: '1px solid #e9ecef',
+                }}>
+                  <div>&copy; {new Date().getFullYear()} BotMakers Inc.</div>
+                  <div>832.790.5001 &nbsp;|&nbsp; botmakers.ai &nbsp;|&nbsp; Houston, TX</div>
+                </div>
+              </div>
+
+              {/* Actions — outside document, in admin dark theme */}
+              <div className="d-flex flex-wrap justify-content-between gap-2 mt-4">
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={() => setStep(1)}
+                >
+                  <Icon icon="mdi:arrow-left" className="me-1" />
+                  Back to Edit
+                </button>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-outline-primary"
+                    onClick={handleSaveDraft}
+                    disabled={saving || sending}
+                  >
+                    {saving ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Icon icon="mdi:content-save-outline" className="me-1" />
+                        Save Draft
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className="btn btn-success"
+                    onClick={handleSendToClient}
+                    disabled={saving || sending || (!selectedClientId && !selectedLeadId)}
+                    title={!selectedClientId && !selectedLeadId ? 'Select a client or lead first' : ''}
+                  >
+                    {sending ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Icon icon="mdi:send" className="me-1" />
+                        Send to Client
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="d-flex flex-wrap justify-content-between gap-2">
-              <button
-                className="btn btn-outline-secondary"
-                onClick={() => setStep(1)}
-              >
-                <Icon icon="mdi:arrow-left" className="me-1" />
-                Back to Edit
-              </button>
-              <div className="d-flex gap-2">
-                <button
-                  className="btn btn-outline-primary"
-                  onClick={handleSaveDraft}
-                  disabled={saving || sending}
-                >
-                  {saving ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-1" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Icon icon="mdi:content-save-outline" className="me-1" />
-                      Save Draft
-                    </>
-                  )}
-                </button>
-                <button
-                  className="btn btn-success"
-                  onClick={handleSendToClient}
-                  disabled={saving || sending || (!selectedClientId && !selectedLeadId)}
-                  title={!selectedClientId && !selectedLeadId ? 'Select a client or lead first' : ''}
-                >
-                  {sending ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-1" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Icon icon="mdi:send" className="me-1" />
-                      Send to Client
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 };
