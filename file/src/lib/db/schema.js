@@ -243,6 +243,9 @@ export const leads = pgTable('leads', {
   assignedTo: uuid('assigned_to').references(() => teamUsers.id),
   notes: text('notes'),
   lastContactedAt: timestamp('last_contacted_at', { withTimezone: true }),
+  discoveryTranscript: text('discovery_transcript'),
+  discoveryCallSummary: jsonb('discovery_call_summary'),
+  discoveryCallProcessedAt: timestamp('discovery_call_processed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

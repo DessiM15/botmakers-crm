@@ -132,6 +132,44 @@ export function invoiceSent(recipientName, invoiceTitle, amount, dueDate, paymen
 }
 
 /**
+ * Discovery call follow-up email sent after processing a call transcript.
+ * Includes call highlights, action items, and a CTA to view the full proposal.
+ */
+export function discoveryCallFollowUp(recipientName, summary, proposalTitle, portalUrl) {
+  const keyPointsHtml = (summary.key_points || [])
+    .map((p) => `<li style="margin-bottom:6px; color:#333;">${p}</li>`)
+    .join('');
+
+  const actionItemsHtml = (summary.action_items || [])
+    .map((a) => `<li style="margin-bottom:6px; color:#333;">${a}</li>`)
+    .join('');
+
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">Thank you for taking the time to discuss your project with us! Here's a summary of our conversation and the next steps.</p>
+
+    <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+      <h3 style="color:#033457; margin:0 0 12px; font-size:16px;">Call Highlights</h3>
+      <ul style="margin:0; padding-left:20px;">${keyPointsHtml}</ul>
+    </div>
+
+    ${actionItemsHtml ? `<div style="border-left:4px solid #033457; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+      <h3 style="color:#033457; margin:0 0 12px; font-size:16px;">Action Items</h3>
+      <ul style="margin:0; padding-left:20px;">${actionItemsHtml}</ul>
+    </div>` : ''}
+
+    <p style="margin:0 0 16px; color:#333;">Based on our discussion, we've prepared a detailed proposal for you: <strong style="color:#033457;">${proposalTitle}</strong></p>
+    <p style="margin:0 0 16px; color:#333;">Please review the scope, deliverables, and pricing at your convenience. You can accept the proposal directly through your portal.</p>`;
+
+  return wrapInBrandedTemplate({
+    recipientName,
+    bodyHtml,
+    senderName: 'The BotMakers Team',
+    senderTitle: null,
+    ctaUrl: portalUrl,
+    ctaText: 'View Full Proposal',
+  });
+}
+
+/**
  * Payment receipt email sent to client after payment is received.
  */
 export function paymentReceipt(recipientName, invoiceTitle, amount) {

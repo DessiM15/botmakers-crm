@@ -12,6 +12,7 @@ import {
 } from '@/lib/actions/leads';
 import { convertLeadToClient } from '@/lib/actions/clients';
 import { approveAndSendFollowUp, dismissFollowUp } from '@/lib/actions/follow-ups';
+import DiscoveryCallSection from './DiscoveryCallSection';
 import {
   PIPELINE_STAGES,
   LEAD_SOURCES,
@@ -369,6 +370,12 @@ const LeadDetail = ({ lead: initialLead, contacts: initialContacts, teamMembers,
               </div>
             </div>
           </div>
+
+          {/* Discovery Call Section */}
+          <DiscoveryCallSection
+            lead={lead}
+            onUpdate={() => router.refresh()}
+          />
 
           {/* AI Analysis Panel */}
           <div className="card mb-4">

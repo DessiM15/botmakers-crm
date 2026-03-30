@@ -179,6 +179,9 @@ export async function getLeadById(id) {
       assignedName: teamUsers.fullName,
       notes: leads.notes,
       lastContactedAt: leads.lastContactedAt,
+      discoveryTranscript: leads.discoveryTranscript,
+      discoveryCallSummary: leads.discoveryCallSummary,
+      discoveryCallProcessedAt: leads.discoveryCallProcessedAt,
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
     })

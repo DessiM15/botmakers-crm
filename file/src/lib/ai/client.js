@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT, VOICE_COMMAND_PROMPT, LEAD_RESPONSE_PROMPT } from './prompts';
+import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT, VOICE_COMMAND_PROMPT, LEAD_RESPONSE_PROMPT, DISCOVERY_CALL_PROMPT } from './prompts';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -236,6 +236,39 @@ ${context.currentPage ? `Current page: ${context.currentPage}` : ''}`;
 
   const result = response.content[0].text;
   return safeParseJSON(result);
+}
+
+/**
+ * Process a discovery call transcript: summarize the call AND generate a proposal.
+ * @param {Object} params
+ * @param {Object} params.leadData - Lead record from database
+ * @param {string} params.transcript - Raw call transcript
+ * @param {string} params.pricingType - 'fixed', 'phased', or 'hourly'
+ * @returns {Object} - { summary, proposal }
+ */
+export async function processDiscoveryCallWithAI({ leadData, transcript, pricingType }) {
+  const userMessage = `Analyze this discovery call transcript for a potential project with BotMakers.ai.
+
+Prospect: ${leadData.fullName || 'Unknown'}
+Company: ${leadData.companyName || 'Unknown'}
+Project Type: ${leadData.projectType || 'Not specified'}
+Pricing Model: ${pricingType}
+
+${leadData.aiInternalAnalysis?.project_summary ? `Prior AI Analysis: ${leadData.aiInternalAnalysis.project_summary}` : ''}
+
+--- TRANSCRIPT START ---
+${transcript}
+--- TRANSCRIPT END ---`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 6144,
+    system: DISCOVERY_CALL_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const text = response.content[0].text;
+  return safeParseJSON(text);
 }
 
 /**
