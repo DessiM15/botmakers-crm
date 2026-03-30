@@ -72,34 +72,6 @@ const ReferralTable = ({ referrers, referrerLeads }) => {
     );
   };
 
-  if (referrers.length === 0) {
-    return (
-      <>
-        <div className="card">
-          <div className="card-body d-flex flex-column justify-content-center align-items-center py-80">
-            <Icon
-              icon="mdi:account-multiple-outline"
-              className="text-secondary-light mb-3"
-              style={{ fontSize: '48px' }}
-            />
-            <h6 className="text-white fw-semibold mb-2">No referrals yet</h6>
-            <p className="text-secondary-light text-sm mb-3">
-              Referrals from the website will appear here, or add one manually.
-            </p>
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => setShowAddModal(true)}
-            >
-              <Icon icon="mdi:plus" className="me-1" />
-              Add Referrer
-            </button>
-          </div>
-        </div>
-        {renderAddModal()}
-      </>
-    );
-  }
-
   const renderAddModal = () =>
     showAddModal && (
       <div
@@ -215,6 +187,34 @@ const ReferralTable = ({ referrers, referrerLeads }) => {
         </div>
       </div>
     );
+
+  if (referrers.length === 0) {
+    return (
+      <>
+        <div className="card">
+          <div className="card-body d-flex flex-column justify-content-center align-items-center py-80">
+            <Icon
+              icon="mdi:account-multiple-outline"
+              className="text-secondary-light mb-3"
+              style={{ fontSize: '48px' }}
+            />
+            <h6 className="text-white fw-semibold mb-2">No referrals yet</h6>
+            <p className="text-secondary-light text-sm mb-3">
+              Referrals from the website will appear here, or add one manually.
+            </p>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setShowAddModal(true)}
+            >
+              <Icon icon="mdi:plus" className="me-1" />
+              Add Referrer
+            </button>
+          </div>
+        </div>
+        {renderAddModal()}
+      </>
+    );
+  }
 
   return (
     <>
