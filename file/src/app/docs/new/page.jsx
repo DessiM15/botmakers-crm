@@ -25,13 +25,15 @@ const Page = async ({ searchParams }) => {
   const entityId = sp?.entity_id || null;
 
   let entityName = '';
-  if (entityType === 'project' && entityId) {
-    const [project] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, entityId)).limit(1);
-    entityName = project?.name || '';
-  } else if (entityType === 'client' && entityId) {
-    const [client] = await db.select({ fullName: clients.fullName }).from(clients).where(eq(clients.id, entityId)).limit(1);
-    entityName = client?.fullName || '';
-  }
+  try {
+    if (entityType === 'project' && entityId) {
+      const [project] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, entityId)).limit(1);
+      entityName = project?.name || '';
+    } else if (entityType === 'client' && entityId) {
+      const [client] = await db.select({ fullName: clients.fullName }).from(clients).where(eq(clients.id, entityId)).limit(1);
+      entityName = client?.fullName || '';
+    }
+  } catch {}
 
   return (
     <MasterLayout>

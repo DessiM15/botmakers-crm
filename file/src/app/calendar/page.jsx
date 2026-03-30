@@ -20,22 +20,27 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  const [clients, leadRows, settings] = await Promise.all([
-    getClientsForDropdown(),
-    db
-      .select({ id: leads.id, fullName: leads.fullName, email: leads.email })
-      .from(leads)
-      .orderBy(desc(leads.createdAt)),
-    db
-      .select({ key: systemSettings.key, value: systemSettings.value })
-      .from(systemSettings),
-  ]);
-
-  let savedColors = null;
-  for (const s of settings) {
-    if (s.key === 'calendar_colors') {
-      savedColors = s.value;
+  let clients = [], leadRows = [], savedColors = null;
+  try {
+    const [c, l, settings] = await Promise.all([
+      getClientsForDropdown().catch(() => []),
+      db
+        .select({ id: leads.id, fullName: leads.fullName, email: leads.email })
+        .from(leads)
+        .orderBy(desc(leads.createdAt))
+        .catch(() => []),
+      db
+        .select({ key: systemSettings.key, value: systemSettings.value })
+        .from(systemSettings)
+        .catch(() => []),
+    ]);
+    clients = c;
+    leadRows = l;
+    for (const s of settings) {
+      if (s.key === 'calendar_colors') savedColors = s.value;
     }
+  } catch (err) {
+    console.error('[Calendar] Data fetch error:', err.message);
   }
 
   return (

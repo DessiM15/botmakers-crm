@@ -29,10 +29,15 @@ const Page = async () => {
     : 'http://localhost:3000');
 
   // Fetch team members
-  const members = await db
-    .select()
-    .from(teamUsers)
-    .orderBy(asc(teamUsers.fullName));
+  let members = [];
+  try {
+    members = await db
+      .select()
+      .from(teamUsers)
+      .orderBy(asc(teamUsers.fullName));
+  } catch (err) {
+    console.error('[Settings] Failed to fetch team members:', err.message);
+  }
 
   // Fetch settings
   let staleDays = 7;
