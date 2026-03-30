@@ -2,13 +2,177 @@
 
 import { db } from '@/lib/db/client';
 import { emailDrafts, contacts, activityLog, leads, clients } from '@/lib/db/schema';
-import { eq, desc, or, ilike } from 'drizzle-orm';
+import { eq, desc, or, ilike, sql } from 'drizzle-orm';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { sendEmail } from '@/lib/email/client';
 import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
 import { saveDraftSchema } from '@/lib/utils/validators';
+
+/**
+ * Get contacts for the email generator sidebar panel.
+ * Returns up to 100 contacts (50 leads + 50 clients).
+ * Works without a search term (unlike getRecipients).
+ */
+export async function getContactsForPanel(search = '', typeFilter = 'all') {
+  try {
+    const cookieStore = await cookies();
+    await requireTeam(cookieStore);
+
+    const results = [];
+    const pattern = search.trim() ? `%${search.trim()}%` : null;
+
+    if (typeFilter === 'all' || typeFilter === 'lead') {
+      const leadConditions = pattern
+        ? or(
+            ilike(leads.fullName, pattern),
+            ilike(leads.email, pattern),
+            ilike(leads.companyName, pattern)
+          )
+        : undefined;
+
+      const matchedLeads = await db
+        .select({
+          id: leads.id,
+          fullName: leads.fullName,
+          email: leads.email,
+          company: leads.companyName,
+        })
+        .from(leads)
+        .where(leadConditions)
+        .orderBy(desc(leads.createdAt))
+        .limit(50);
+
+      matchedLeads.forEach((l) => {
+        results.push({
+          id: l.id,
+          name: l.fullName,
+          email: l.email,
+          company: l.company,
+          type: 'lead',
+        });
+      });
+    }
+
+    if (typeFilter === 'all' || typeFilter === 'client') {
+      const clientConditions = pattern
+        ? or(
+            ilike(clients.fullName, pattern),
+            ilike(clients.email, pattern),
+            ilike(clients.company, pattern)
+          )
+        : undefined;
+
+      const matchedClients = await db
+        .select({
+          id: clients.id,
+          fullName: clients.fullName,
+          email: clients.email,
+          company: clients.company,
+        })
+        .from(clients)
+        .where(clientConditions)
+        .orderBy(desc(clients.createdAt))
+        .limit(50);
+
+      matchedClients.forEach((c) => {
+        results.push({
+          id: c.id,
+          name: c.fullName,
+          email: c.email,
+          company: c.company,
+          type: 'client',
+        });
+      });
+    }
+
+    return { success: true, contacts: results };
+  } catch (error) {
+    if (error.message?.startsWith('CB-')) {
+      return { error: error.message };
+    }
+    return { error: 'CB-DB-001: Failed to load contacts' };
+  }
+}
+
+/**
+ * Look up a single lead or client by ID and type.
+ * Used when navigating from Contacts page → Email Generator.
+ */
+export async function getContactById(id, type) {
+  try {
+    const cookieStore = await cookies();
+    await requireTeam(cookieStore);
+
+    if (!id || !type) {
+      return { error: 'CB-API-001: ID and type are required' };
+    }
+
+    if (type === 'lead') {
+      const [lead] = await db
+        .select({
+          id: leads.id,
+          fullName: leads.fullName,
+          email: leads.email,
+          company: leads.companyName,
+          phone: leads.phone,
+        })
+        .from(leads)
+        .where(eq(leads.id, id))
+        .limit(1);
+
+      if (!lead) return { error: 'CB-DB-002: Lead not found' };
+
+      return {
+        success: true,
+        contact: {
+          id: lead.id,
+          name: lead.fullName,
+          email: lead.email,
+          company: lead.company,
+          phone: lead.phone,
+          type: 'lead',
+        },
+      };
+    }
+
+    if (type === 'client') {
+      const [client] = await db
+        .select({
+          id: clients.id,
+          fullName: clients.fullName,
+          email: clients.email,
+          company: clients.company,
+          phone: clients.phone,
+        })
+        .from(clients)
+        .where(eq(clients.id, id))
+        .limit(1);
+
+      if (!client) return { error: 'CB-DB-002: Client not found' };
+
+      return {
+        success: true,
+        contact: {
+          id: client.id,
+          name: client.fullName,
+          email: client.email,
+          company: client.company,
+          phone: client.phone,
+          type: 'client',
+        },
+      };
+    }
+
+    return { error: 'CB-API-001: Type must be "lead" or "client"' };
+  } catch (error) {
+    if (error.message?.startsWith('CB-')) {
+      return { error: error.message };
+    }
+    return { error: 'CB-DB-001: Failed to load contact' };
+  }
+}
 
 /**
  * Search leads and clients for the recipient dropdown.

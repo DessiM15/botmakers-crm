@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react/dist/iconify.js';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-toastify';
-import { getRecipients, sendEmailFromCRM, saveDraft, getDrafts, loadDraft, deleteDraft, markDraftSent } from '@/lib/actions/emails';
+import { getRecipients, sendEmailFromCRM, saveDraft, getDrafts, loadDraft, deleteDraft, markDraftSent, getContactsForPanel, getContactById } from '@/lib/actions/emails';
 import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -38,6 +39,8 @@ const TONES = [
 ];
 
 export default function EmailGenerator({ teamUser }) {
+  const urlParams = useSearchParams();
+
   // Recipient state
   const [recipientSearch, setRecipientSearch] = useState('');
   const [recipients, setRecipients] = useState([]);
@@ -73,6 +76,13 @@ export default function EmailGenerator({ teamUser }) {
   const [loadingDrafts, setLoadingDrafts] = useState(false);
   const [showDrafts, setShowDrafts] = useState(false);
 
+  // Contacts panel state
+  const [showContacts, setShowContacts] = useState(false);
+  const [contactsList, setContactsList] = useState([]);
+  const [contactsSearch, setContactsSearch] = useState('');
+  const [contactsTypeFilter, setContactsTypeFilter] = useState('all');
+  const [contactsLoading, setContactsLoading] = useState(false);
+
   // Search recipients with debounce
   useEffect(() => {
     if (recipientSearch.length < 2) {
@@ -106,6 +116,36 @@ export default function EmailGenerator({ teamUser }) {
   useEffect(() => {
     loadDrafts();
   }, []);
+
+  // Auto-fill recipient from URL params (from Contacts page "Compose Email")
+  useEffect(() => {
+    const recipientId = urlParams.get('recipient_id');
+    const recipientType = urlParams.get('type');
+    if (recipientId && recipientType) {
+      getContactById(recipientId, recipientType).then((result) => {
+        if (result.success && result.contact) {
+          selectRecipient(result.contact);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load contacts when panel is opened or search/filter changes
+  useEffect(() => {
+    if (!showContacts) return;
+
+    const timer = setTimeout(async () => {
+      setContactsLoading(true);
+      const result = await getContactsForPanel(contactsSearch, contactsTypeFilter);
+      if (result.success) {
+        setContactsList(result.contacts);
+      }
+      setContactsLoading(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [showContacts, contactsSearch, contactsTypeFilter]);
 
   const loadDrafts = async () => {
     setLoadingDrafts(true);
@@ -386,15 +426,125 @@ export default function EmailGenerator({ teamUser }) {
 
   const hasContent = subject || bodyHtml;
 
+  // Compute column widths based on which panels are open
+  const getMainColClass = () => {
+    if (showContacts && showDrafts) return 'col-lg-6';
+    if (showContacts) return 'col-lg-9';
+    if (showDrafts) return 'col-lg-8';
+    return 'col-12';
+  };
+
   return (
     <div className="row">
+      {/* Contacts Panel */}
+      {showContacts && (
+        <div className="col-lg-3">
+          <div className="card" style={{ position: 'sticky', top: 90 }}>
+            <div className="card-header d-flex align-items-center justify-content-between">
+              <h6 className="text-white fw-semibold mb-0">
+                <Icon icon="mdi:contacts-outline" className="me-2" />
+                Contacts
+              </h6>
+              <button
+                className="btn btn-sm btn-outline-neutral-600"
+                onClick={() => setShowContacts(false)}
+              >
+                <Icon icon="mdi:close" />
+              </button>
+            </div>
+            <div className="card-body p-12 pb-0">
+              <input
+                type="text"
+                className="form-control form-control-sm mb-8"
+                placeholder="Search contacts..."
+                value={contactsSearch}
+                onChange={(e) => setContactsSearch(e.target.value)}
+              />
+              <div className="btn-group btn-group-sm w-100 mb-8">
+                {[
+                  { value: 'all', label: 'All' },
+                  { value: 'lead', label: 'Leads' },
+                  { value: 'client', label: 'Clients' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`btn ${
+                      contactsTypeFilter === opt.value
+                        ? 'btn-primary-600'
+                        : 'btn-outline-neutral-600 text-secondary-light'
+                    }`}
+                    onClick={() => setContactsTypeFilter(opt.value)}
+                    style={{ fontSize: '11px' }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="p-0" style={{ maxHeight: 420, overflowY: 'auto' }}>
+              {contactsLoading ? (
+                <div className="text-center py-20">
+                  <span className="spinner-border spinner-border-sm text-primary-600" />
+                </div>
+              ) : contactsList.length === 0 ? (
+                <div className="text-center py-20">
+                  <p className="text-secondary-light mb-0 text-sm">No contacts found</p>
+                </div>
+              ) : (
+                contactsList.map((c) => (
+                  <button
+                    key={`${c.type}-${c.id}`}
+                    className="d-flex flex-column w-100 px-12 py-8 border-0 bg-transparent text-start border-bottom border-neutral-600"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => selectRecipient(c)}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <div className="d-flex align-items-center gap-2">
+                      <span
+                        className={`badge text-xs ${
+                          c.type === 'client' ? 'bg-success-600' : 'bg-info-600'
+                        }`}
+                      >
+                        {c.type === 'client' ? 'C' : 'L'}
+                      </span>
+                      <span className="fw-medium text-white text-sm text-truncate">
+                        {c.name}
+                      </span>
+                    </div>
+                    <span
+                      className="text-xs text-truncate mt-2"
+                      style={{ color: 'rgba(255,255,255,0.55)' }}
+                    >
+                      {c.email}
+                      {c.company ? ` — ${c.company}` : ''}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className={showDrafts ? 'col-lg-8' : 'col-12'}>
+      <div className={getMainColClass()}>
         <div className="d-flex align-items-center justify-content-between mb-24">
           <h5 className="text-white fw-semibold mb-0">Email Generator</h5>
           <div className="d-flex gap-2">
             <button
-              className="btn btn-outline-primary-600 btn-sm d-flex align-items-center gap-1"
+              className={`btn btn-sm d-flex align-items-center gap-1 ${
+                showContacts ? 'btn-primary-600' : 'btn-outline-primary-600'
+              }`}
+              onClick={() => setShowContacts(!showContacts)}
+            >
+              <Icon icon="mdi:contacts-outline" className="text-lg" />
+              Contacts
+            </button>
+            <button
+              className={`btn btn-sm d-flex align-items-center gap-1 ${
+                showDrafts ? 'btn-primary-600' : 'btn-outline-primary-600'
+              }`}
               onClick={() => setShowDrafts(!showDrafts)}
             >
               <Icon icon="mdi:file-document-multiple-outline" className="text-lg" />
@@ -779,7 +929,7 @@ export default function EmailGenerator({ teamUser }) {
 
       {/* Drafts Sidebar */}
       {showDrafts && (
-        <div className="col-lg-4">
+        <div className={showContacts ? 'col-lg-3' : 'col-lg-4'}>
           <div className="card" style={{ position: 'sticky', top: 90 }}>
             <div className="card-header d-flex align-items-center justify-content-between">
               <h6 className="text-white fw-semibold mb-0">

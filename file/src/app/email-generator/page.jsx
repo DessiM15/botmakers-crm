@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { requireTeam } from '@/lib/auth/helpers';
 import MasterLayout from '@/masterLayout/MasterLayout';
@@ -28,7 +29,9 @@ export default async function EmailGeneratorPage() {
           </span>
         </div>
       </div>
-      <EmailGenerator teamUser={teamUser} />
+      <Suspense>
+        <EmailGenerator teamUser={teamUser} />
+      </Suspense>
     </MasterLayout>
   );
 }

@@ -15,6 +15,7 @@ const sidebarItems = [
   { label: "Leads", icon: "gridicons:multiple-users", href: "/leads" },
   { label: "Referrals", icon: "mdi:account-group-outline", href: "/referrals" },
   { label: "Clients", icon: "mdi:account-tie", href: "/clients" },
+  { label: "Contacts", icon: "mdi:contacts-outline", href: "/contacts" },
   { label: "Projects", icon: "solar:folder-with-files-outline", href: "/projects" },
   { label: "Proposals", icon: "mdi:file-document-edit-outline", href: "/proposals" },
   { label: "Invoices", icon: "mdi:receipt-text-outline", href: "/invoices" },
