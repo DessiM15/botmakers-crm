@@ -85,27 +85,72 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
     });
   }, [events, visibility]);
 
-  // Apply colors via eventDidMount
+  // Apply colors via eventDidMount — pill style with tinted background + dot
   const eventDidMount = useCallback(
     (info) => {
       const props = info.event.extendedProps || {};
       const cat = props.category;
-      let bg;
+      let accent;
       if (props.isCancelled) {
-        bg = colors.cancelled || DEFAULT_CALENDAR_COLORS.cancelled;
+        accent = colors.cancelled || DEFAULT_CALENDAR_COLORS.cancelled;
       } else if (cat === 'milestone' && props.isOverdue) {
-        bg = colors.milestone_overdue || DEFAULT_CALENDAR_COLORS.milestone_overdue;
+        accent = colors.milestone_overdue || DEFAULT_CALENDAR_COLORS.milestone_overdue;
       } else {
-        bg = colors[cat] || DEFAULT_CALENDAR_COLORS[cat] || '#0d6efd';
+        accent = colors[cat] || DEFAULT_CALENDAR_COLORS[cat] || '#0d6efd';
       }
-      const txt = contrastText(bg);
-      if (info.el) {
-        info.el.style.backgroundColor = bg;
-        info.el.style.borderColor = bg;
-        info.el.style.color = txt;
-        // Also style inner elements for time grid
+
+      if (!info.el) return;
+
+      const isTimeGrid = info.view?.type?.startsWith('timeGrid');
+
+      if (isTimeGrid) {
+        // Week/day view — keep solid style but with rounded corners
+        info.el.style.backgroundColor = accent;
+        info.el.style.borderColor = accent;
+        info.el.style.color = contrastText(accent);
+        info.el.style.borderRadius = '6px';
         const fc = info.el.querySelector('.fc-event-main');
-        if (fc) fc.style.color = txt;
+        if (fc) fc.style.color = contrastText(accent);
+      } else {
+        // Month view — pill style: light tinted bg + colored dot
+        const r = parseInt(accent.replace('#', '').substring(0, 2), 16);
+        const g = parseInt(accent.replace('#', '').substring(2, 4), 16);
+        const b = parseInt(accent.replace('#', '').substring(4, 6), 16);
+        const tintBg = `rgba(${r}, ${g}, ${b}, 0.15)`;
+
+        info.el.style.backgroundColor = tintBg;
+        info.el.style.borderColor = 'transparent';
+        info.el.style.borderRadius = '6px';
+        info.el.style.padding = '1px 6px';
+        info.el.style.margin = '1px 2px';
+
+        // Style the inner content
+        const fc = info.el.querySelector('.fc-event-main');
+        if (fc) {
+          fc.style.color = accent;
+          fc.style.fontWeight = '600';
+          fc.style.fontSize = '12px';
+          fc.style.display = 'flex';
+          fc.style.alignItems = 'center';
+          fc.style.gap = '4px';
+          fc.style.overflow = 'hidden';
+
+          // Add colored dot before text
+          if (!fc.querySelector('.ev-dot')) {
+            const dot = document.createElement('span');
+            dot.className = 'ev-dot';
+            dot.style.cssText = `width:7px;height:7px;border-radius:50%;background:${accent};flex-shrink:0;`;
+            fc.insertBefore(dot, fc.firstChild);
+          }
+        }
+
+        // Also style the time element if present
+        const time = info.el.querySelector('.fc-event-time');
+        if (time) {
+          time.style.color = accent;
+          time.style.fontWeight = '600';
+          time.style.fontSize = '12px';
+        }
       }
     },
     [colors]
