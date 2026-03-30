@@ -20,8 +20,8 @@ const CRM_ROUTES = [
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for webhooks and cron routes — handled in route handlers
-  if (pathname.startsWith('/api/webhooks') || pathname.startsWith('/api/cron')) {
+  // Skip middleware for all API routes — they handle auth themselves
+  if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
