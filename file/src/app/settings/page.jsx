@@ -2,9 +2,10 @@ import MasterLayout from "@/masterLayout/MasterLayout";
 import SettingsPage from "@/components/crm/SettingsPage";
 import { isGitHubConfigured } from "@/lib/integrations/github";
 import { isSquareConfigured, getSquareEnvironment } from "@/lib/integrations/square";
+import { isGoogleCalendarConfigured } from "@/lib/integrations/google-calendar";
 import { db } from "@/lib/db/client";
 import { teamUsers, systemSettings } from "@/lib/db/schema";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireTeam } from "@/lib/auth/helpers";
@@ -15,8 +16,9 @@ export const metadata = {
 
 const Page = async () => {
   const cookieStore = await cookies();
+  let teamUser;
   try {
-    await requireTeam(cookieStore);
+    teamUser = await requireTeam(cookieStore);
   } catch {
     redirect('/sign-in');
   }
@@ -24,9 +26,29 @@ const Page = async () => {
   const githubConfigured = isGitHubConfigured();
   const squareConfigured = isSquareConfigured();
   const squareEnvironment = getSquareEnvironment();
+  const googleCalendarConfigured = isGoogleCalendarConfigured();
+  const calConfigured = !!process.env.CAL_WEBHOOK_SECRET;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : 'http://localhost:3000');
+
+  // Check current user's Google Calendar connection
+  let googleCalendarConnected = false;
+  let googleCalendarEmail = null;
+  try {
+    const [row] = await db
+      .select({
+        connected: teamUsers.googleCalendarConnected,
+        email: teamUsers.googleCalendarEmail,
+      })
+      .from(teamUsers)
+      .where(eq(teamUsers.id, teamUser.id))
+      .limit(1);
+    if (row) {
+      googleCalendarConnected = row.connected || false;
+      googleCalendarEmail = row.email || null;
+    }
+  } catch {}
 
   // Fetch team members
   let members = [];
@@ -62,6 +84,10 @@ const Page = async () => {
         githubConfigured={githubConfigured}
         squareConfigured={squareConfigured}
         squareEnvironment={squareEnvironment}
+        calConfigured={calConfigured}
+        googleCalendarConfigured={googleCalendarConfigured}
+        googleCalendarConnected={googleCalendarConnected}
+        googleCalendarEmail={googleCalendarEmail}
         siteUrl={siteUrl}
         teamMembers={members}
         staleDays={staleDays}

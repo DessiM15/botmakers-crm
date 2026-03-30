@@ -24,6 +24,10 @@ const SettingsPage = ({
   githubConfigured,
   squareConfigured,
   squareEnvironment,
+  calConfigured,
+  googleCalendarConfigured,
+  googleCalendarConnected,
+  googleCalendarEmail,
   siteUrl,
   teamMembers,
   staleDays: initialStaleDays,
@@ -66,6 +70,10 @@ const SettingsPage = ({
           githubConfigured={githubConfigured}
           squareConfigured={squareConfigured}
           squareEnvironment={squareEnvironment}
+          calConfigured={calConfigured}
+          googleCalendarConfigured={googleCalendarConfigured}
+          googleCalendarConnected={googleCalendarConnected}
+          googleCalendarEmail={googleCalendarEmail}
           siteUrl={siteUrl}
         />
       )}
