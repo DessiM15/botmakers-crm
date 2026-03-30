@@ -473,6 +473,7 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
+                timeZone="America/Chicago"
                 headerToolbar={{
                   left: 'prev,next today',
                   center: 'title',

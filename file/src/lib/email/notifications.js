@@ -441,9 +441,11 @@ export async function meetingCreatedAlert({ title, attendeeName, attendeeEmail, 
   const formattedStart = new Date(startTime).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    timeZone: 'America/Chicago',
   });
   const formattedEnd = new Date(endTime).toLocaleString('en-US', {
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    timeZone: 'America/Chicago',
   });
 
   const attendeeSection = attendeeName
@@ -488,6 +490,7 @@ export async function meetingCancelledAttendeeEmail(attendeeEmail, attendeeName,
   const formattedStart = new Date(startTime).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    timeZone: 'America/Chicago',
   });
 
   const bodyHtml = `<p style="margin:0 0 16px; color:#333;">We're reaching out to let you know that the following meeting has been cancelled:</p>
@@ -518,9 +521,11 @@ export async function meetingInviteAttendeeEmail({ attendeeEmail, attendeeName, 
   const formattedStart = new Date(startTime).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    timeZone: 'America/Chicago',
   });
   const formattedEnd = new Date(endTime).toLocaleString('en-US', {
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    timeZone: 'America/Chicago',
   });
 
   const joinSection = meetingUrl
@@ -557,9 +562,11 @@ export async function meetingBookedAlert({ attendeeName, attendeeEmail, title, s
   const formattedStart = new Date(startTime).toLocaleString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    timeZone: 'America/Chicago',
   });
   const formattedEnd = new Date(endTime).toLocaleString('en-US', {
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    timeZone: 'America/Chicago',
   });
 
   const leadSection = matchedLeadName
