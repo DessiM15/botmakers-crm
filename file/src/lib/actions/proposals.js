@@ -297,3 +297,52 @@ export async function sendProposal(proposalId) {
     return { error: 'CB-DB-001: Failed to send proposal' };
   }
 }
+
+/**
+ * Delete a proposal (draft only).
+ */
+export async function deleteProposal(proposalId) {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireTeam(cookieStore);
+
+    const [existing] = await db
+      .select({ id: proposals.id, status: proposals.status, title: proposals.title })
+      .from(proposals)
+      .where(eq(proposals.id, proposalId))
+      .limit(1);
+
+    if (!existing) {
+      return { error: 'CB-DB-002: Proposal not found' };
+    }
+
+    if (existing.status !== 'draft') {
+      return { error: 'Only draft proposals can be deleted' };
+    }
+
+    await db
+      .delete(proposalLineItems)
+      .where(eq(proposalLineItems.proposalId, proposalId));
+
+    await db
+      .delete(proposals)
+      .where(eq(proposals.id, proposalId));
+
+    await db.insert(activityLog).values({
+      actorId: teamUser.id,
+      actorType: 'team',
+      action: 'proposal.deleted',
+      entityType: 'proposal',
+      entityId: proposalId,
+      metadata: { title: existing.title },
+    });
+
+    revalidatePath('/proposals');
+    return { success: true };
+  } catch (error) {
+    if (error.message?.startsWith('CB-')) {
+      return { error: error.message };
+    }
+    return { error: 'CB-DB-001: Failed to delete proposal' };
+  }
+}

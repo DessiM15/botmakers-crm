@@ -2,7 +2,7 @@ import MasterLayout from '@/masterLayout/MasterLayout';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { requireTeam } from '@/lib/auth/helpers';
-import { getLeadsAndClientsForDropdown } from '@/lib/db/queries/proposals';
+import { getLeadsAndClientsForDropdown, getProposalById } from '@/lib/db/queries/proposals';
 import ProposalWizard from '@/components/crm/ProposalWizard';
 
 export const metadata = {
@@ -19,6 +19,7 @@ const Page = async ({ searchParams }) => {
 
   const params = await searchParams;
   const leadId = params?.lead_id || null;
+  const editId = params?.edit_id || null;
 
   let leads = [], clients = [];
   try {
@@ -27,12 +28,23 @@ const Page = async ({ searchParams }) => {
     clients = dropdown.clients;
   } catch {}
 
+  let editProposal = null;
+  if (editId) {
+    try {
+      editProposal = await getProposalById(editId);
+      if (editProposal && editProposal.status !== 'draft') {
+        editProposal = null;
+      }
+    } catch {}
+  }
+
   return (
     <MasterLayout>
       <ProposalWizard
         leads={leads}
         clients={clients}
         preselectedLeadId={leadId}
+        editProposal={editProposal}
       />
     </MasterLayout>
   );

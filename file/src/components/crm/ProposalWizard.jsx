@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
-import { createProposal } from '@/lib/actions/proposals';
+import { createProposal, updateProposal } from '@/lib/actions/proposals';
 import { sanitizeHtml } from '@/lib/utils/sanitize';
+import { printProposal } from '@/lib/utils/proposal-print';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
@@ -26,35 +27,59 @@ const STEPS = [
   { key: 'preview', label: 'Preview', icon: 'mdi:eye-outline' },
 ];
 
-const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) => {
+const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null, editProposal = null }) => {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const isEditMode = !!editProposal;
+
+  // Start at step 1 (Edit) when editing an existing proposal
+  const [step, setStep] = useState(isEditMode ? 1 : 0);
 
   // Step 1: Context
-  const [entityType, setEntityType] = useState(preselectedLeadId ? 'lead' : 'lead');
-  const [selectedLeadId, setSelectedLeadId] = useState(preselectedLeadId || '');
-  const [selectedClientId, setSelectedClientId] = useState('');
+  const [entityType, setEntityType] = useState(
+    isEditMode
+      ? (editProposal.clientId ? 'client' : 'lead')
+      : (preselectedLeadId ? 'lead' : 'lead')
+  );
+  const [selectedLeadId, setSelectedLeadId] = useState(
+    isEditMode ? (editProposal.leadId || '') : (preselectedLeadId || '')
+  );
+  const [selectedClientId, setSelectedClientId] = useState(
+    isEditMode ? (editProposal.clientId || '') : ''
+  );
   const [discoveryNotes, setDiscoveryNotes] = useState('');
-  const [pricingType, setPricingType] = useState('fixed');
+  const [pricingType, setPricingType] = useState(
+    isEditMode ? (editProposal.pricingType || 'fixed') : 'fixed'
+  );
   const [aiGenerating, setAiGenerating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Step 2: Edit
-  const [title, setTitle] = useState('');
-  const [scopeOfWork, setScopeOfWork] = useState('');
-  const [deliverables, setDeliverables] = useState('');
-  const [termsAndConditions, setTermsAndConditions] = useState(DEFAULT_TERMS);
-  const [lineItems, setLineItems] = useState([
-    { description: '', quantity: 1, unitPrice: 0, total: 0, phaseLabel: '' },
-  ]);
-  const [aiGenerated, setAiGenerated] = useState(false);
+  // Step 2: Edit — initialize from editProposal if in edit mode
+  const [title, setTitle] = useState(isEditMode ? (editProposal.title || '') : '');
+  const [scopeOfWork, setScopeOfWork] = useState(isEditMode ? (editProposal.scopeOfWork || '') : '');
+  const [deliverables, setDeliverables] = useState(isEditMode ? (editProposal.deliverables || '') : '');
+  const [termsAndConditions, setTermsAndConditions] = useState(
+    isEditMode ? (editProposal.termsAndConditions || DEFAULT_TERMS) : DEFAULT_TERMS
+  );
+  const [lineItems, setLineItems] = useState(() => {
+    if (isEditMode && editProposal.lineItems?.length > 0) {
+      return editProposal.lineItems.map((item) => ({
+        description: item.description || '',
+        quantity: Number(item.quantity) || 1,
+        unitPrice: Number(item.unitPrice) || 0,
+        total: Number(item.total) || 0,
+        phaseLabel: item.phaseLabel || '',
+      }));
+    }
+    return [{ description: '', quantity: 1, unitPrice: 0, total: 0, phaseLabel: '' }];
+  });
+  const [aiGenerated, setAiGenerated] = useState(isEditMode ? (editProposal.aiGenerated || false) : false);
 
   // Saving
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
 
   // Track if auto-generate has been triggered
-  const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(false);
+  const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(isEditMode);
 
   // Pre-populate discovery notes from AI analysis when lead is selected
   const handleLeadSelect = useCallback((leadId) => {
@@ -65,7 +90,6 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
       if (lead) {
         const parts = [];
 
-        // Discovery call summary (richest data source)
         if (lead.discoveryCallSummary) {
           const s = lead.discoveryCallSummary;
           if (s.key_points?.length > 0) parts.push(`Key Points:\n${s.key_points.map(p => `- ${p}`).join('\n')}`);
@@ -90,6 +114,9 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
 
   // Pre-select lead on mount + handle discovery proposal data from sessionStorage
   useEffect(() => {
+    // Skip all auto-population when editing
+    if (isEditMode) return;
+
     // Check for discovery proposal data passed from DiscoveryCallSection
     let discoveryData = null;
     try {
@@ -101,7 +128,6 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
     } catch {}
 
     if (discoveryData && discoveryData.leadId) {
-      // Pre-fill from discovery call processing — skip straight to edit step
       setSelectedLeadId(discoveryData.leadId);
       if (discoveryData.pricingType) setPricingType(discoveryData.pricingType);
       if (discoveryData.title) setTitle(discoveryData.title);
@@ -220,6 +246,7 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
   // Auto-trigger AI generation when lead is preselected and discovery notes are populated
   const autoGenRef = useRef(false);
   useEffect(() => {
+    if (isEditMode) return;
     if (
       preselectedLeadId &&
       discoveryNotes.trim().length > 50 &&
@@ -295,14 +322,25 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
       return;
     }
     setSaving(true);
-    const res = await createProposal(buildFormData());
-    setSaving(false);
 
-    if (res?.error) {
-      toast.error(res.error);
+    if (isEditMode) {
+      const res = await updateProposal(editProposal.id, buildFormData());
+      setSaving(false);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success('Proposal updated');
+        router.push(`/proposals/${editProposal.id}`);
+      }
     } else {
-      toast.success('Proposal saved as draft');
-      router.push(`/proposals/${res.proposal.id}`);
+      const res = await createProposal(buildFormData());
+      setSaving(false);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success('Proposal saved as draft');
+        router.push(`/proposals/${res.proposal.id}`);
+      }
     }
   };
 
@@ -317,25 +355,61 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
     }
     setSending(true);
 
-    // Create first, then send
-    const createRes = await createProposal(buildFormData());
-    if (createRes?.error) {
-      toast.error(createRes.error);
-      setSending(false);
-      return;
+    let proposalId;
+
+    if (isEditMode) {
+      // Update first, then send
+      const updateRes = await updateProposal(editProposal.id, buildFormData());
+      if (updateRes?.error) {
+        toast.error(updateRes.error);
+        setSending(false);
+        return;
+      }
+      proposalId = editProposal.id;
+    } else {
+      // Create first, then send
+      const createRes = await createProposal(buildFormData());
+      if (createRes?.error) {
+        toast.error(createRes.error);
+        setSending(false);
+        return;
+      }
+      proposalId = createRes.proposal.id;
     }
 
-    // Import sendProposal dynamically to avoid circular deps
     const { sendProposal } = await import('@/lib/actions/proposals');
-    const sendRes = await sendProposal(createRes.proposal.id);
+    const sendRes = await sendProposal(proposalId);
     setSending(false);
 
     if (sendRes?.error) {
       toast.error(sendRes.error);
-      router.push(`/proposals/${createRes.proposal.id}`);
+      router.push(`/proposals/${proposalId}`);
     } else {
       toast.success('Proposal sent to client!');
-      router.push(`/proposals/${createRes.proposal.id}`);
+      router.push(`/proposals/${proposalId}`);
+    }
+  };
+
+  // Download PDF
+  const handleDownloadPDF = () => {
+    const recipientName = selectedLeadId
+      ? leads.find((l) => l.id === selectedLeadId)?.fullName
+      : selectedClientId
+        ? clients.find((c) => c.id === selectedClientId)?.fullName
+        : null;
+
+    const ok = printProposal({
+      title,
+      recipientName,
+      scopeOfWork,
+      deliverables,
+      termsAndConditions,
+      lineItems,
+      pricingType,
+      totalAmount,
+    });
+    if (!ok) {
+      toast.error('Please allow popups to download the PDF');
     }
   };
 
@@ -357,14 +431,16 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
       <div className="d-flex align-items-center gap-2 mb-4">
         <button
           className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
-          onClick={() => router.push('/proposals')}
+          onClick={() => router.push(isEditMode ? `/proposals/${editProposal.id}` : '/proposals')}
         >
           <Icon icon="mdi:arrow-left" style={{ fontSize: '16px' }} />
-          Proposals
+          {isEditMode ? 'Back to Proposal' : 'Proposals'}
         </button>
       </div>
 
-      <h4 className="text-white fw-semibold mb-4">New Proposal</h4>
+      <h4 className="text-white fw-semibold mb-4">
+        {isEditMode ? 'Edit Proposal' : 'New Proposal'}
+      </h4>
 
       {/* Step Indicator */}
       <div className="d-flex align-items-center gap-3 mb-4">
@@ -811,7 +887,7 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
 
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0 0 24px' }} />
 
-                  <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 8px', lineHeight: 1.2 }}>{title}</h2>
+                  <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 8px', lineHeight: 1.2, wordWrap: 'break-word' }}>{title}</h2>
                   {recipientName && (
                     <div style={{ fontSize: '15px', opacity: 0.8 }}>Prepared for: <strong style={{ opacity: 1 }}>{recipientName}</strong></div>
                   )}
@@ -937,6 +1013,13 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
                 </button>
                 <div className="d-flex gap-2">
                   <button
+                    className="btn btn-outline-info"
+                    onClick={handleDownloadPDF}
+                  >
+                    <Icon icon="mdi:download" className="me-1" />
+                    Download PDF
+                  </button>
+                  <button
                     className="btn btn-outline-primary"
                     onClick={handleSaveDraft}
                     disabled={saving || sending}
@@ -949,7 +1032,7 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null }) 
                     ) : (
                       <>
                         <Icon icon="mdi:content-save-outline" className="me-1" />
-                        Save Draft
+                        {isEditMode ? 'Save Changes' : 'Save Draft'}
                       </>
                     )}
                   </button>

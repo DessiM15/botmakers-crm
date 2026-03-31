@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
-import { sendProposal } from '@/lib/actions/proposals';
+import { sendProposal, deleteProposal } from '@/lib/actions/proposals';
 import { PROPOSAL_STATUSES } from '@/lib/utils/constants';
 import { sanitizeHtml } from '@/lib/utils/sanitize';
+import { printProposal } from '@/lib/utils/proposal-print';
 
 const STATUS_FLOW = ['draft', 'sent', 'viewed', 'accepted'];
 
@@ -14,6 +15,8 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
   const router = useRouter();
   const [proposal, setProposal] = useState(initialProposal);
   const [sending, setSending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const statusConfig = PROPOSAL_STATUSES.find((s) => s.value === proposal.status) || PROPOSAL_STATUSES[0];
   const recipientName = proposal.clientName || proposal.leadName || 'Unknown';
@@ -35,6 +38,35 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
         status: 'sent',
         sentAt: new Date().toISOString(),
       }));
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const res = await deleteProposal(proposal.id);
+    setDeleting(false);
+
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Proposal deleted');
+      router.push('/proposals');
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    const ok = printProposal({
+      title: proposal.title,
+      recipientName,
+      scopeOfWork: proposal.scopeOfWork,
+      deliverables: proposal.deliverables,
+      termsAndConditions: proposal.termsAndConditions,
+      lineItems,
+      pricingType: proposal.pricingType,
+      totalAmount,
+    });
+    if (!ok) {
+      toast.error('Please allow popups to download the PDF');
     }
   };
 
@@ -248,6 +280,15 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
               <h6 className="text-white fw-semibold mb-0">Actions</h6>
             </div>
             <div className="card-body d-flex flex-column gap-2">
+              {/* Download PDF — always available */}
+              <button
+                className="btn btn-outline-info w-100 d-flex align-items-center justify-content-center gap-2"
+                onClick={handleDownloadPDF}
+              >
+                <Icon icon="mdi:download" style={{ fontSize: '18px' }} />
+                Download PDF
+              </button>
+
               {proposal.status === 'draft' && (
                 <>
                   <button
@@ -274,6 +315,13 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
                       </>
                     )}
                   </button>
+                  <button
+                    className="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Icon icon="mdi:delete-outline" style={{ fontSize: '18px' }} />
+                    Delete Proposal
+                  </button>
                 </>
               )}
               {proposal.status === 'accepted' && !proposal.projectId && (
@@ -296,6 +344,41 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
               )}
             </div>
           </div>
+
+          {/* Delete Confirmation */}
+          {showDeleteConfirm && (
+            <div className="card mb-4 border-danger">
+              <div className="card-body">
+                <h6 className="text-danger fw-semibold mb-2">Delete this proposal?</h6>
+                <p className="text-secondary-light text-sm mb-3">
+                  This action cannot be undone. The proposal and all line items will be permanently removed.
+                </p>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-danger btn-sm flex-grow-1"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Yes, Delete'
+                    )}
+                  </button>
+                  <button
+                    className="btn btn-outline-secondary btn-sm flex-grow-1"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Details */}
           <div className="card mb-4">
