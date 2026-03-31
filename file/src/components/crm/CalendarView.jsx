@@ -127,7 +127,7 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
         // Style the inner content
         const fc = info.el.querySelector('.fc-event-main');
         if (fc) {
-          fc.style.color = accent;
+          fc.style.color = '#fff';
           fc.style.fontWeight = '600';
           fc.style.fontSize = '12px';
           fc.style.display = 'flex';
@@ -147,7 +147,7 @@ const CalendarView = ({ clients = [], leads = [], savedColors = null }) => {
         // Also style the time element if present
         const time = info.el.querySelector('.fc-event-time');
         if (time) {
-          time.style.color = accent;
+          time.style.color = '#fff';
           time.style.fontWeight = '600';
           time.style.fontSize = '12px';
         }

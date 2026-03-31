@@ -430,8 +430,8 @@ const LeadTable = ({ initialData, teamMembers }) => {
                             </td>
                             <td className="px-3 py-3">
                               <select
-                                className="form-select form-select-sm bg-base text-xs border-0"
-                                style={{ width: '150px', padding: '4px 8px' }}
+                                className="form-select form-select-sm bg-base text-white text-xs border-0"
+                                style={{ width: '150px', padding: '4px 24px 4px 8px' }}
                                 value={lead.pipelineStage || 'new_lead'}
                                 onChange={(e) => {
                                   e.stopPropagation();
