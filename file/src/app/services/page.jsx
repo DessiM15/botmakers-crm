@@ -22,14 +22,15 @@ const Page = async ({ searchParams }) => {
   const search = sp?.search || '';
   const category = sp?.category || 'all';
   const status = sp?.status || 'all';
+  const type = sp?.type || 'all';
   const page = parseInt(sp?.page || '1', 10);
 
   let data = { services: [], total: 0, page: 1, perPage: 10, totalPages: 0 };
-  let summary = { totalMonthlyCost: 0, activeCount: 0, upcomingRenewals: 0 };
+  let summary = { totalMonthlyCost: 0, internalMonthlyCost: 0, clientMonthlyCost: 0, activeCount: 0, internalActiveCount: 0, clientActiveCount: 0, expiringCount: 0 };
   let clients = [];
   try {
     [data, summary, clients] = await Promise.all([
-      getServices({ search, category, status, page, perPage: 10 }),
+      getServices({ search, category, status, type, page, perPage: 10 }),
       getServiceSummary(),
       getClientsForServiceDropdown(),
     ]);

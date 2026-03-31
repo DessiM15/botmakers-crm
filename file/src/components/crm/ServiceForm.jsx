@@ -10,6 +10,7 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
   const isEditing = !!service;
   const [submitting, setSubmitting] = useState(false);
   const [clientProjects, setClientProjects] = useState([]);
+  const [isInternal, setIsInternal] = useState(false);
   const [form, setForm] = useState({
     clientId: '',
     projectId: '',
@@ -28,6 +29,7 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
 
   useEffect(() => {
     if (service) {
+      setIsInternal(!service.clientId);
       setForm({
         clientId: service.clientId || '',
         projectId: service.projectId || '',
@@ -43,14 +45,17 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
         accountIdentifier: service.accountIdentifier || '',
         notes: service.notes || '',
       });
-    } else if (prefilledClientId) {
-      setForm((prev) => ({ ...prev, clientId: prefilledClientId }));
+    } else {
+      setIsInternal(false);
+      if (prefilledClientId) {
+        setForm((prev) => ({ ...prev, clientId: prefilledClientId }));
+      }
     }
   }, [service, prefilledClientId]);
 
   // Fetch projects when client changes
   useEffect(() => {
-    if (!form.clientId) {
+    if (!form.clientId || isInternal) {
       setClientProjects([]);
       return;
     }
@@ -58,7 +63,14 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
       .then((r) => r.json())
       .then((data) => setClientProjects(data.projects || []))
       .catch(() => setClientProjects([]));
-  }, [form.clientId]);
+  }, [form.clientId, isInternal]);
+
+  const handleToggleInternal = (internal) => {
+    setIsInternal(internal);
+    if (internal) {
+      setForm((p) => ({ ...p, clientId: '', projectId: '' }));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -67,7 +79,8 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
     const payload = {
       ...form,
       monthlyCost: parseFloat(form.monthlyCost) || 0,
-      projectId: form.projectId || null,
+      clientId: isInternal ? null : form.clientId,
+      projectId: isInternal ? null : (form.projectId || null),
       loginUrl: form.loginUrl || null,
       credentialsVaultUrl: form.credentialsVaultUrl || null,
       accountIdentifier: form.accountIdentifier || null,
@@ -90,6 +103,8 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
     }
   };
 
+  const canSubmit = form.serviceName && form.provider && (isInternal || form.clientId);
+
   if (!show) return null;
 
   return (
@@ -105,40 +120,69 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
               <div className="row g-3">
-                {/* Client */}
-                <div className="col-sm-6">
-                  <label className="form-label text-secondary-light text-xs">Client *</label>
-                  <select
-                    className="form-select bg-base text-white"
-                    value={form.clientId}
-                    onChange={(e) => setForm((p) => ({ ...p, clientId: e.target.value, projectId: '' }))}
-                    required
-                    disabled={submitting || !!prefilledClientId}
-                  >
-                    <option value="">Select client...</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.fullName}{c.company ? ` (${c.company})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                {/* Internal / Client toggle */}
+                <div className="col-12">
+                  <label className="form-label text-secondary-light text-xs">Service Type</label>
+                  <div className="btn-group w-100" role="group">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${!isInternal ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => handleToggleInternal(false)}
+                      disabled={submitting || !!prefilledClientId}
+                    >
+                      <Icon icon="mdi:account-outline" className="me-1" style={{ fontSize: '16px' }} />
+                      Client Service
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${isInternal ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => handleToggleInternal(true)}
+                      disabled={submitting || !!prefilledClientId}
+                    >
+                      <Icon icon="mdi:office-building-outline" className="me-1" style={{ fontSize: '16px' }} />
+                      Internal (BotMakers)
+                    </button>
+                  </div>
                 </div>
 
-                {/* Project */}
-                <div className="col-sm-6">
-                  <label className="form-label text-secondary-light text-xs">Project (optional)</label>
-                  <select
-                    className="form-select bg-base text-white"
-                    value={form.projectId}
-                    onChange={(e) => setForm((p) => ({ ...p, projectId: e.target.value }))}
-                    disabled={submitting || !form.clientId}
-                  >
-                    <option value="">None</option>
-                    {clientProjects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Client — only show when not internal */}
+                {!isInternal && (
+                  <>
+                    <div className="col-sm-6">
+                      <label className="form-label text-secondary-light text-xs">Client *</label>
+                      <select
+                        className="form-select bg-base text-white"
+                        value={form.clientId}
+                        onChange={(e) => setForm((p) => ({ ...p, clientId: e.target.value, projectId: '' }))}
+                        required
+                        disabled={submitting || !!prefilledClientId}
+                      >
+                        <option value="">Select client...</option>
+                        {clients.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.fullName}{c.company ? ` (${c.company})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Project */}
+                    <div className="col-sm-6">
+                      <label className="form-label text-secondary-light text-xs">Project (optional)</label>
+                      <select
+                        className="form-select bg-base text-white"
+                        value={form.projectId}
+                        onChange={(e) => setForm((p) => ({ ...p, projectId: e.target.value }))}
+                        disabled={submitting || !form.clientId}
+                      >
+                        <option value="">None</option>
+                        {clientProjects.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
 
                 {/* Service Name */}
                 <div className="col-sm-6">
@@ -295,7 +339,7 @@ const ServiceForm = ({ show, onClose, onSaved, clients = [], service = null, pre
               <button type="button" className="btn btn-outline-secondary btn-sm" onClick={onClose} disabled={submitting}>
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary btn-sm" disabled={submitting || !form.clientId || !form.serviceName || !form.provider}>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={submitting || !canSubmit}>
                 {submitting ? (
                   <><span className="spinner-border spinner-border-sm me-1" /> Saving...</>
                 ) : isEditing ? (

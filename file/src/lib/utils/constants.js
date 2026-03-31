@@ -93,6 +93,12 @@ export const INVOICE_STATUSES = [
   { value: 'cancelled', label: 'Cancelled', color: '#6c757d' },
 ];
 
+export const SERVICE_TYPES = [
+  { value: 'all', label: 'All Services' },
+  { value: 'internal', label: 'Internal (BotMakers)' },
+  { value: 'client', label: 'Client Services' },
+];
+
 export const SERVICE_CATEGORIES = [
   { value: 'hosting', label: 'Hosting', icon: 'mdi:server' },
   { value: 'domain', label: 'Domain', icon: 'mdi:web' },

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db/client';
 import { clientServices, clients, projects } from '@/lib/db/schema';
-import { eq, and, sql, desc, lte, gte, ilike, or } from 'drizzle-orm';
+import { eq, and, sql, desc, lte, gte, ilike, or, isNull, isNotNull } from 'drizzle-orm';
 
 /**
  * Fetch paginated services with filters.
@@ -9,6 +9,7 @@ export async function getServices({
   search = '',
   category = 'all',
   status = 'all',
+  type = 'all',
   clientId = null,
   page = 1,
   perPage = 10,
@@ -31,6 +32,12 @@ export async function getServices({
 
   if (status !== 'all') {
     conditions.push(eq(clientServices.status, status));
+  }
+
+  if (type === 'internal') {
+    conditions.push(isNull(clientServices.clientId));
+  } else if (type === 'client') {
+    conditions.push(isNotNull(clientServices.clientId));
   }
 
   if (clientId) {
@@ -56,7 +63,7 @@ export async function getServices({
         loginUrl: clientServices.loginUrl,
         accountIdentifier: clientServices.accountIdentifier,
         createdAt: clientServices.createdAt,
-        clientName: sql`(SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId})`.as('client_name'),
+        clientName: sql`COALESCE((SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId}), 'BotMakers')`.as('client_name'),
         projectName: sql`(SELECT name FROM projects WHERE projects.id = ${clientServices.projectId})`.as('project_name'),
       })
       .from(clientServices)
@@ -103,7 +110,7 @@ export async function getServiceById(id) {
       notes: clientServices.notes,
       createdAt: clientServices.createdAt,
       updatedAt: clientServices.updatedAt,
-      clientName: sql`(SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId})`.as('client_name'),
+      clientName: sql`COALESCE((SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId}), 'BotMakers')`.as('client_name'),
       projectName: sql`(SELECT name FROM projects WHERE projects.id = ${clientServices.projectId})`.as('project_name'),
     })
     .from(clientServices)
@@ -154,7 +161,7 @@ export async function getServicesByProjectId(projectId) {
       loginUrl: clientServices.loginUrl,
       accountIdentifier: clientServices.accountIdentifier,
       createdAt: clientServices.createdAt,
-      clientName: sql`(SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId})`.as('client_name'),
+      clientName: sql`COALESCE((SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId}), 'BotMakers')`.as('client_name'),
     })
     .from(clientServices)
     .where(eq(clientServices.projectId, projectId))
@@ -168,7 +175,11 @@ export async function getServiceSummary() {
   const result = await db.execute(sql`
     SELECT
       COALESCE(SUM(CASE WHEN status = 'active' OR status = 'expiring_soon' THEN monthly_cost ELSE 0 END), 0) AS total_monthly_cost,
+      COALESCE(SUM(CASE WHEN (status = 'active' OR status = 'expiring_soon') AND client_id IS NULL THEN monthly_cost ELSE 0 END), 0) AS internal_monthly_cost,
+      COALESCE(SUM(CASE WHEN (status = 'active' OR status = 'expiring_soon') AND client_id IS NOT NULL THEN monthly_cost ELSE 0 END), 0) AS client_monthly_cost,
       COUNT(*) FILTER (WHERE status = 'active') AS active_count,
+      COUNT(*) FILTER (WHERE status = 'active' AND client_id IS NULL) AS internal_active_count,
+      COUNT(*) FILTER (WHERE status = 'active' AND client_id IS NOT NULL) AS client_active_count,
       COUNT(*) FILTER (WHERE status = 'expiring_soon') AS expiring_count
     FROM client_services
   `);
@@ -176,7 +187,11 @@ export async function getServiceSummary() {
   const row = result.rows?.[0] || {};
   return {
     totalMonthlyCost: Number(row.total_monthly_cost || 0),
+    internalMonthlyCost: Number(row.internal_monthly_cost || 0),
+    clientMonthlyCost: Number(row.client_monthly_cost || 0),
     activeCount: Number(row.active_count || 0),
+    internalActiveCount: Number(row.internal_active_count || 0),
+    clientActiveCount: Number(row.client_active_count || 0),
     expiringCount: Number(row.expiring_count || 0),
   };
 }
@@ -198,7 +213,7 @@ export async function getUpcomingRenewals(days = 7) {
       renewalDate: clientServices.renewalDate,
       status: clientServices.status,
       clientId: clientServices.clientId,
-      clientName: sql`(SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId})`.as('client_name'),
+      clientName: sql`COALESCE((SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId}), 'BotMakers')`.as('client_name'),
     })
     .from(clientServices)
     .where(

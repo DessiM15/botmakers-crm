@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { serviceCreateSchema, serviceUpdateSchema } from '@/lib/utils/validators';
 
 /**
- * Create a new client service.
+ * Create a new client or internal service.
  */
 export async function createService(formData) {
   try {
@@ -22,11 +22,12 @@ export async function createService(formData) {
     }
 
     const data = parsed.data;
+    const isInternal = !data.clientId;
 
     const [service] = await db
       .insert(clientServices)
       .values({
-        clientId: data.clientId,
+        clientId: data.clientId || null,
         projectId: data.projectId || null,
         serviceName: data.serviceName,
         provider: data.provider,
@@ -46,13 +47,13 @@ export async function createService(formData) {
       actorId: teamUser.id,
       actorType: 'team',
       action: 'service.created',
-      entityType: 'client',
-      entityId: data.clientId,
-      metadata: { serviceId: service.id, serviceName: data.serviceName, provider: data.provider },
+      entityType: isInternal ? 'service' : 'client',
+      entityId: isInternal ? service.id : data.clientId,
+      metadata: { serviceId: service.id, serviceName: data.serviceName, provider: data.provider, internal: isInternal },
     });
 
     revalidatePath('/services');
-    revalidatePath(`/clients/${data.clientId}`);
+    if (data.clientId) revalidatePath(`/clients/${data.clientId}`);
     if (data.projectId) revalidatePath(`/projects/${data.projectId}`);
 
     return { success: true, service };
@@ -81,6 +82,7 @@ export async function updateService(id, formData) {
 
     // Build update object with only defined fields
     const updateData = { updatedAt: new Date() };
+    if (data.clientId !== undefined) updateData.clientId = data.clientId || null;
     if (data.serviceName !== undefined) updateData.serviceName = data.serviceName;
     if (data.provider !== undefined) updateData.provider = data.provider;
     if (data.category !== undefined) updateData.category = data.category;
@@ -104,17 +106,19 @@ export async function updateService(id, formData) {
       return { error: 'CB-DB-002: Service not found' };
     }
 
+    const isInternal = !updated.clientId;
+
     await db.insert(activityLog).values({
       actorId: teamUser.id,
       actorType: 'team',
       action: 'service.updated',
-      entityType: 'client',
-      entityId: updated.clientId,
-      metadata: { serviceId: id, serviceName: updated.serviceName },
+      entityType: isInternal ? 'service' : 'client',
+      entityId: isInternal ? id : updated.clientId,
+      metadata: { serviceId: id, serviceName: updated.serviceName, internal: isInternal },
     });
 
     revalidatePath('/services');
-    revalidatePath(`/clients/${updated.clientId}`);
+    if (updated.clientId) revalidatePath(`/clients/${updated.clientId}`);
     if (updated.projectId) revalidatePath(`/projects/${updated.projectId}`);
 
     return { success: true, service: updated };
@@ -146,17 +150,19 @@ export async function deleteService(id) {
 
     await db.delete(clientServices).where(eq(clientServices.id, id));
 
+    const isInternal = !service.clientId;
+
     await db.insert(activityLog).values({
       actorId: teamUser.id,
       actorType: 'team',
       action: 'service.deleted',
-      entityType: 'client',
-      entityId: service.clientId,
-      metadata: { serviceId: id, serviceName: service.serviceName },
+      entityType: isInternal ? 'service' : 'client',
+      entityId: isInternal ? id : service.clientId,
+      metadata: { serviceId: id, serviceName: service.serviceName, internal: isInternal },
     });
 
     revalidatePath('/services');
-    revalidatePath(`/clients/${service.clientId}`);
+    if (service.clientId) revalidatePath(`/clients/${service.clientId}`);
     if (service.projectId) revalidatePath(`/projects/${service.projectId}`);
 
     return { success: true };

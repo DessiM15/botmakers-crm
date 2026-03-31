@@ -180,7 +180,7 @@ export const contactLogSchema = z.object({
 });
 
 export const serviceCreateSchema = z.object({
-  clientId: z.string().uuid('Valid client is required'),
+  clientId: z.string().uuid('Valid client is required').optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),
   serviceName: z.string().min(1, 'Service name is required'),
   provider: z.string().min(1, 'Provider is required'),
@@ -196,6 +196,7 @@ export const serviceCreateSchema = z.object({
 });
 
 export const serviceUpdateSchema = z.object({
+  clientId: z.string().uuid().optional().nullable(),
   serviceName: z.string().min(1).optional(),
   provider: z.string().min(1).optional(),
   category: z.enum(['hosting', 'domain', 'api', 'analytics', 'email', 'storage', 'other']).optional(),

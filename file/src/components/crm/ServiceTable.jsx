@@ -6,7 +6,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { deleteService } from '@/lib/actions/services';
 import { formatCurrency, formatDate } from '@/lib/utils/formatters';
-import { SERVICE_CATEGORIES, SERVICE_STATUSES } from '@/lib/utils/constants';
+import { SERVICE_CATEGORIES, SERVICE_STATUSES, SERVICE_TYPES } from '@/lib/utils/constants';
 import ServiceForm from './ServiceForm';
 
 const ServiceTable = ({ initialData, summary, clients = [] }) => {
@@ -22,6 +22,7 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [status, setStatus] = useState(searchParams.get('status') || 'all');
+  const [type, setType] = useState(searchParams.get('type') || 'all');
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState(null);
 
@@ -31,6 +32,7 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
       if (params.search) sp.set('search', params.search);
       if (params.category && params.category !== 'all') sp.set('category', params.category);
       if (params.status && params.status !== 'all') sp.set('status', params.status);
+      if (params.type && params.type !== 'all') sp.set('type', params.type);
       if (params.page && params.page > 1) sp.set('page', String(params.page));
       router.push(`/services?${sp.toString()}`);
     },
@@ -40,7 +42,7 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      updateUrl({ search, category, status, page: 1 });
+      updateUrl({ search, category, status, type, page: 1 });
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
@@ -48,17 +50,19 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
   const handleFilterChange = (key, value) => {
     if (key === 'category') setCategory(value);
     if (key === 'status') setStatus(value);
+    if (key === 'type') setType(value);
     updateUrl({
       search,
       category: key === 'category' ? value : category,
       status: key === 'status' ? value : status,
+      type: key === 'type' ? value : type,
       page: 1,
     });
   };
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
-    updateUrl({ search, category, status, page: newPage });
+    updateUrl({ search, category, status, type, page: newPage });
   };
 
   const handleDelete = async (id, name) => {
@@ -82,25 +86,45 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
     <>
       {/* Summary Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-sm-4">
+        <div className="col-6 col-lg">
           <div className="card">
             <div className="card-body py-3 px-4">
-              <div className="text-secondary-light text-xs mb-1">Total Monthly Cost</div>
-              <div className="text-white text-lg fw-semibold" style={{ color: '#03FF00' }}>
+              <div className="text-secondary-light text-xs mb-1">Total Monthly Burn</div>
+              <div className="text-lg fw-semibold" style={{ color: '#03FF00' }}>
                 {formatCurrency(summary.totalMonthlyCost)}
               </div>
             </div>
           </div>
         </div>
-        <div className="col-sm-4">
+        <div className="col-6 col-lg">
           <div className="card">
             <div className="card-body py-3 px-4">
-              <div className="text-secondary-light text-xs mb-1">Active Services</div>
+              <div className="text-secondary-light text-xs mb-1">Internal Cost</div>
+              <div className="text-white text-lg fw-semibold">
+                {formatCurrency(summary.internalMonthlyCost)}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-6 col-lg">
+          <div className="card">
+            <div className="card-body py-3 px-4">
+              <div className="text-secondary-light text-xs mb-1">Client Cost</div>
+              <div className="text-white text-lg fw-semibold">
+                {formatCurrency(summary.clientMonthlyCost)}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-6 col-lg">
+          <div className="card">
+            <div className="card-body py-3 px-4">
+              <div className="text-secondary-light text-xs mb-1">Active</div>
               <div className="text-white text-lg fw-semibold">{summary.activeCount}</div>
             </div>
           </div>
         </div>
-        <div className="col-sm-4">
+        <div className="col-6 col-lg">
           <div className="card">
             <div className="card-body py-3 px-4">
               <div className="text-secondary-light text-xs mb-1">Expiring Soon</div>
@@ -125,6 +149,16 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <select
+              className="form-select bg-base text-white"
+              style={{ maxWidth: '200px' }}
+              value={type}
+              onChange={(e) => handleFilterChange('type', e.target.value)}
+            >
+              {SERVICE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
             <select
               className="form-select bg-base text-white"
               style={{ maxWidth: '180px' }}
@@ -194,6 +228,7 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
                   {services.map((svc) => {
                     const statusObj = SERVICE_STATUSES.find((s) => s.value === svc.status) || SERVICE_STATUSES[0];
                     const catObj = SERVICE_CATEGORIES.find((c) => c.value === svc.category);
+                    const isInternalSvc = !svc.clientId;
                     return (
                       <tr key={svc.id}>
                         <td>
@@ -203,9 +238,18 @@ const ServiceTable = ({ initialData, summary, clients = [] }) => {
                           </div>
                         </td>
                         <td>
-                          <span className="text-white text-sm">{svc.clientName}</span>
-                          {svc.projectName && (
-                            <span className="text-secondary-light text-xs d-block">{svc.projectName}</span>
+                          {isInternalSvc ? (
+                            <span className="badge fw-medium d-inline-flex align-items-center gap-1" style={{ background: '#03FF0022', color: '#03FF00' }}>
+                              <Icon icon="mdi:office-building-outline" style={{ fontSize: '12px' }} />
+                              BotMakers
+                            </span>
+                          ) : (
+                            <>
+                              <span className="text-white text-sm">{svc.clientName}</span>
+                              {svc.projectName && (
+                                <span className="text-secondary-light text-xs d-block">{svc.projectName}</span>
+                              )}
+                            </>
                           )}
                         </td>
                         <td>

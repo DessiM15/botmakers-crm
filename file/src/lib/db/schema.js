@@ -537,7 +537,7 @@ export const systemSettings = pgTable('system_settings', {
 
 export const clientServices = pgTable('client_services', {
   id: uuid('id').primaryKey().defaultRandom(),
-  clientId: uuid('client_id').notNull().references(() => clients.id),
+  clientId: uuid('client_id').references(() => clients.id),
   projectId: uuid('project_id').references(() => projects.id),
   serviceName: text('service_name').notNull(),
   provider: text('provider').notNull(),
