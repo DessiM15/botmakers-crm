@@ -571,8 +571,8 @@ export default function EmailGenerator({ teamUser }) {
           <div className="card-body">
             {selectedRecipient ? (
               <div className="d-flex align-items-center gap-2 mb-12">
-                <span className={`badge ${selectedRecipient.type === 'client' ? 'bg-success-600' : 'bg-info-600'} text-sm`}>
-                  {selectedRecipient.type === 'client' ? 'Client' : 'Lead'}
+                <span className={`badge ${selectedRecipient.type === 'client' ? 'bg-success-600' : selectedRecipient.type === 'teammate' ? 'bg-warning-600' : 'bg-info-600'} text-sm`}>
+                  {selectedRecipient.type === 'client' ? 'Client' : selectedRecipient.type === 'teammate' ? 'Teammate' : 'Lead'}
                 </span>
                 <span className="text-white fw-medium">{selectedRecipient.name}</span>
                 <span className="text-secondary-light">&lt;{selectedRecipient.email}&gt;</span>
@@ -626,10 +626,37 @@ export default function EmailGenerator({ teamUser }) {
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Search leads & clients by name, email, or company..."
+                      placeholder="Search contacts by name/email, or type an email and press Enter..."
                       value={recipientSearch}
                       onChange={(e) => setRecipientSearch(e.target.value)}
                       onFocus={() => recipients.length > 0 && setShowDropdown(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = recipientSearch.trim();
+                          if (!val) return;
+                          // If there are dropdown results, select the first one
+                          if (showDropdown && recipients.length > 0) {
+                            selectRecipient(recipients[0]);
+                            return;
+                          }
+                          // If it looks like an email, switch to manual mode with it pre-filled
+                          if (val.includes('@') && val.includes('.')) {
+                            setShowManual(true);
+                            setManualEmail(val);
+                            setManualName('');
+                            setRecipientSearch('');
+                            setShowDropdown(false);
+                          } else {
+                            // Treat as a name — switch to manual with name pre-filled
+                            setShowManual(true);
+                            setManualName(val);
+                            setManualEmail('');
+                            setRecipientSearch('');
+                            setShowDropdown(false);
+                          }
+                        }
+                      }}
                     />
                   </div>
                   <button
@@ -655,8 +682,8 @@ export default function EmailGenerator({ teamUser }) {
                         onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
-                        <span className={`badge ${r.type === 'client' ? 'bg-success-600' : 'bg-info-600'} text-xs`}>
-                          {r.type === 'client' ? 'Client' : 'Lead'}
+                        <span className={`badge ${r.type === 'client' ? 'bg-success-600' : r.type === 'teammate' ? 'bg-warning-600' : 'bg-info-600'} text-xs`}>
+                          {r.type === 'client' ? 'Client' : r.type === 'teammate' ? 'Teammate' : 'Lead'}
                         </span>
                         <span className="fw-medium text-white">{r.name}</span>
                         <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{r.email}</span>

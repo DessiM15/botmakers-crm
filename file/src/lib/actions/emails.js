@@ -296,6 +296,34 @@ export async function getRecipients(search) {
           type: 'client',
         });
       });
+
+      const matchedTeam = await db
+        .select({
+          id: teamUsers.id,
+          fullName: teamUsers.fullName,
+          email: teamUsers.email,
+        })
+        .from(teamUsers)
+        .where(
+          and(
+            eq(teamUsers.isActive, true),
+            or(
+              ilike(teamUsers.fullName, pattern),
+              ilike(teamUsers.email, pattern)
+            )
+          )
+        )
+        .limit(10);
+
+      matchedTeam.forEach((t) => {
+        results.push({
+          id: t.id,
+          name: t.fullName,
+          email: t.email,
+          company: null,
+          type: 'teammate',
+        });
+      });
     }
 
     return { success: true, recipients: results };
