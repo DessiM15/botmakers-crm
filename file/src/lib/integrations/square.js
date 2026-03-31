@@ -1,16 +1,16 @@
-import { Client, Environment } from 'square';
+import { SquareClient, SquareEnvironment } from 'square';
 
 let squareClient = null;
 
 function getSquareClient() {
   if (!process.env.SQUARE_ACCESS_TOKEN) return null;
   if (!squareClient) {
-    squareClient = new Client({
-      accessToken: process.env.SQUARE_ACCESS_TOKEN,
+    squareClient = new SquareClient({
+      token: process.env.SQUARE_ACCESS_TOKEN,
       environment:
         process.env.SQUARE_ENVIRONMENT === 'sandbox'
-          ? Environment.Sandbox
-          : Environment.Production,
+          ? SquareEnvironment.Sandbox
+          : SquareEnvironment.Production,
     });
   }
   return squareClient;
@@ -47,7 +47,7 @@ export async function createSquareInvoice(clientEmail, title, lineItems, dueDate
 
     // Search for or create customer
     let customerId;
-    const { result: searchResult } = await client.customersApi.searchCustomers({
+    const searchResult = await client.customers.search({
       query: {
         filter: {
           emailAddress: { exact: clientEmail },
@@ -58,7 +58,7 @@ export async function createSquareInvoice(clientEmail, title, lineItems, dueDate
     if (searchResult.customers && searchResult.customers.length > 0) {
       customerId = searchResult.customers[0].id;
     } else {
-      const { result: createResult } = await client.customersApi.createCustomer({
+      const createResult = await client.customers.create({
         emailAddress: clientEmail,
       });
       customerId = createResult.customer.id;
@@ -75,7 +75,7 @@ export async function createSquareInvoice(clientEmail, title, lineItems, dueDate
     }));
 
     // Create order
-    const { result: orderResult } = await client.ordersApi.createOrder({
+    const orderResult = await client.orders.create({
       order: {
         locationId,
         customerId,
@@ -116,17 +116,15 @@ export async function createSquareInvoice(clientEmail, title, lineItems, dueDate
       idempotencyKey: crypto.randomUUID(),
     };
 
-    const { result: invoiceResult } = await client.invoicesApi.createInvoice(invoiceData);
+    const invoiceResult = await client.invoices.create(invoiceData);
     const squareInvoice = invoiceResult.invoice;
 
     // Publish (send) the invoice
-    const { result: publishResult } = await client.invoicesApi.publishInvoice(
-      squareInvoice.id,
-      {
-        version: squareInvoice.version,
-        idempotencyKey: crypto.randomUUID(),
-      }
-    );
+    const publishResult = await client.invoices.publish({
+      invoiceId: squareInvoice.id,
+      version: squareInvoice.version,
+      idempotencyKey: crypto.randomUUID(),
+    });
 
     const publishedInvoice = publishResult.invoice;
     const paymentUrl = publishedInvoice.publicUrl || null;
@@ -155,7 +153,7 @@ export async function createSquareCheckoutLink(title, amount) {
       return null;
     }
 
-    const { result } = await client.checkoutApi.createPaymentLink({
+    const result = await client.checkout.paymentLinks.create({
       idempotencyKey: crypto.randomUUID(),
       order: {
         locationId,
@@ -192,12 +190,12 @@ export async function getSquareInvoices(limit = 100) {
     const locationId = process.env.SQUARE_LOCATION_ID;
     if (!locationId) return [];
 
-    const { result } = await client.invoicesApi.listInvoices({
+    const page = await client.invoices.list({
       locationId,
       limit,
     });
 
-    return result.invoices || [];
+    return page.data || [];
   } catch (error) {
     return [];
   }
@@ -211,12 +209,12 @@ export async function getSquarePayments(limit = 100) {
   if (!client) return [];
 
   try {
-    const { result } = await client.paymentsApi.listPayments({
+    const page = await client.payments.list({
       limit,
       sortOrder: 'DESC',
     });
 
-    return result.payments || [];
+    return page.data || [];
   } catch (error) {
     return [];
   }

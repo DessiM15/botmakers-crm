@@ -190,6 +190,6 @@ export async function backfillSquareHistory() {
     if (error.message?.startsWith('CB-')) {
       return { error: error.message };
     }
-    return { error: 'CB-INT-003: Failed to backfill Square history' };
+    return { error: `CB-INT-003: Failed to backfill Square history — ${error.message || 'Unknown error'}` };
   }
 }
