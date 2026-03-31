@@ -313,25 +313,25 @@ const ContactsTable = ({ initialData }) => {
                                 {detailHref ? (
                                   <Link
                                     href={detailHref}
-                                    className="fw-medium text-sm contact-name-link"
-                                    style={{ color: '#000', textDecoration: 'none' }}
+                                    className="fw-medium text-sm text-white contact-name-link"
+                                    style={{ textDecoration: 'none' }}
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {contact.fullName}
                                   </Link>
                                 ) : (
-                                  <span className="fw-medium text-sm" style={{ color: '#000' }}>
+                                  <span className="fw-medium text-sm text-white">
                                     {contact.fullName}
                                   </span>
                                 )}
                               </td>
-                              <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                              <td className="px-3 py-3 text-secondary-light text-sm">
                                 {contact.email}
                               </td>
-                              <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                              <td className="px-3 py-3 text-secondary-light text-sm">
                                 {contact.company || '—'}
                               </td>
-                              <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                              <td className="px-3 py-3 text-secondary-light text-sm">
                                 {contact.phone || '—'}
                               </td>
                               <td className="px-3 py-3">

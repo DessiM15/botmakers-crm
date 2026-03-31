@@ -279,26 +279,26 @@ const ClientTable = ({ initialData }) => {
                             <td className="px-3 py-3">
                               <Link
                                 href={`/clients/${client.id}`}
-                                className="fw-medium text-sm client-name-link"
-                                style={{ color: '#000', textDecoration: 'none' }}
+                                className="fw-medium text-sm text-white client-name-link"
+                                style={{ textDecoration: 'none' }}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {client.fullName}
                               </Link>
                             </td>
-                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                            <td className="px-3 py-3 text-white text-sm">
                               {client.company || '—'}
                             </td>
-                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                            <td className="px-3 py-3 text-white text-sm">
                               {client.email}
                             </td>
-                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                            <td className="px-3 py-3 text-secondary-light text-sm">
                               {String(client.projectCount)}
                             </td>
-                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                            <td className="px-3 py-3 text-secondary-light text-sm">
                               {formatCurrency(client.openInvoiceTotal)}
                             </td>
-                            <td className="px-3 py-3 text-sm" style={{ color: '#000' }}>
+                            <td className="px-3 py-3 text-secondary-light text-sm">
                               {client.lastContact
                                 ? formatRelativeTime(client.lastContact)
                                 : 'Never'}

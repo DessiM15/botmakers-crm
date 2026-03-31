@@ -328,7 +328,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases, onProgressChange })
                                       ? 'text-decoration-line-through'
                                       : ''
                                   }`}
-                                  style={{ color: '#000' }}
+                                  style={{ color: '#e2e8f0' }}
                                 >
                                   {ms.title}
                                 </span>
@@ -359,7 +359,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases, onProgressChange })
                                 style={{ fontSize: '12px' }}
                               />
                             </td>
-                            <td className="align-middle" style={{ color: '#000' }}>
+                            <td className="align-middle text-white">
                               <div className="d-flex align-items-center gap-1">
                                 <input
                                   type="checkbox"
@@ -380,7 +380,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases, onProgressChange })
                                     onBlur={(e) =>
                                       handleInvoiceAmountChange(ms.id, e.target.value)
                                     }
-                                    style={{ fontSize: '12px', width: '80px', color: '#000' }}
+                                    style={{ fontSize: '12px', width: '80px', color: '#e2e8f0' }}
                                   />
                                 )}
                               </div>
@@ -390,7 +390,7 @@ const MilestoneEditor = ({ projectId, phases: initialPhases, onProgressChange })
                                 className="btn btn-sm p-0"
                                 onClick={() => handleDeleteMilestone(ms.id)}
                                 title="Delete"
-                                style={{ color: '#000' }}
+                                style={{ color: '#94a3b8' }}
                               >
                                 <Icon icon="mdi:delete-outline" style={{ fontSize: '14px' }} />
                               </button>
