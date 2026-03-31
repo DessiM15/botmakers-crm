@@ -350,25 +350,25 @@ const LeadTable = ({ initialData, teamMembers }) => {
                 <table className="table table-hover mb-0">
                   <thead>
                     <tr>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Name
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Email
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Source
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Score
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Stage
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Assigned To
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Created
                       </th>
                     </tr>
@@ -406,7 +406,7 @@ const LeadTable = ({ initialData, teamMembers }) => {
                               <a
                                 href={`/leads/${lead.id}`}
                                 className="fw-medium text-sm text-decoration-none"
-                                style={{ color: '#fff' }}
+                                style={{ color: '#1a1a2e' }}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   router.push(`/leads/${lead.id}`);
@@ -414,13 +414,13 @@ const LeadTable = ({ initialData, teamMembers }) => {
                               >
                                 {lead.fullName}
                                 {lead.companyName && (
-                                  <span className="text-secondary-light text-xs d-block mt-1">
+                                  <span className="text-xs d-block mt-1" style={{ color: '#555' }}>
                                     {lead.companyName}
                                   </span>
                                 )}
                               </a>
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#333' }}>
                               {lead.email}
                             </td>
                             <td className="px-3 py-3">
@@ -431,8 +431,8 @@ const LeadTable = ({ initialData, teamMembers }) => {
                             </td>
                             <td className="px-3 py-3">
                               <select
-                                className="form-select form-select-sm bg-base text-white text-xs border-0"
-                                style={{ width: '150px', padding: '4px 24px 4px 8px' }}
+                                className="form-select form-select-sm text-xs"
+                                style={{ width: '150px', padding: '4px 24px 4px 8px', color: '#333', backgroundColor: '#f0f0f0', border: '1px solid #ddd' }}
                                 value={lead.pipelineStage || 'new_lead'}
                                 onChange={(e) => {
                                   e.stopPropagation();
@@ -447,10 +447,10 @@ const LeadTable = ({ initialData, teamMembers }) => {
                                 ))}
                               </select>
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#333' }}>
                               {lead.assignedName || '—'}
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-sm" style={{ color: '#333' }}>
                               {formatRelativeTime(lead.createdAt)}
                             </td>
                           </tr>

@@ -154,7 +154,7 @@ const ContactsTable = ({ initialData }) => {
 
   return (
     <>
-      <style>{`.contact-name-link:hover { color: #03FF00 !important; }`}</style>
+      <style>{`.contact-name-link:hover { color: #026b3d !important; }`}</style>
 
       {/* Search & Filters Bar */}
       <div className="card p-3 mb-4">
@@ -242,22 +242,22 @@ const ContactsTable = ({ initialData }) => {
                 <table className="table table-hover mb-0">
                   <thead>
                     <tr>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Name
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Email
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Company
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Phone
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111' }}>
                         Type
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2" style={{ width: '120px' }}>
+                      <th className="text-xs fw-semibold px-3 py-2" style={{ color: '#111', width: '120px' }}>
                         Actions
                       </th>
                     </tr>
@@ -313,25 +313,25 @@ const ContactsTable = ({ initialData }) => {
                                 {detailHref ? (
                                   <Link
                                     href={detailHref}
-                                    className="fw-medium text-sm text-white contact-name-link"
-                                    style={{ textDecoration: 'none' }}
+                                    className="fw-medium text-sm contact-name-link"
+                                    style={{ textDecoration: 'none', color: '#1a1a2e' }}
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {contact.fullName}
                                   </Link>
                                 ) : (
-                                  <span className="fw-medium text-sm text-white">
+                                  <span className="fw-medium text-sm" style={{ color: '#1a1a2e' }}>
                                     {contact.fullName}
                                   </span>
                                 )}
                               </td>
-                              <td className="px-3 py-3 text-secondary-light text-sm">
+                              <td className="px-3 py-3 text-sm" style={{ color: '#333' }}>
                                 {contact.email}
                               </td>
-                              <td className="px-3 py-3 text-secondary-light text-sm">
+                              <td className="px-3 py-3 text-sm" style={{ color: '#333' }}>
                                 {contact.company || '—'}
                               </td>
-                              <td className="px-3 py-3 text-secondary-light text-sm">
+                              <td className="px-3 py-3 text-sm" style={{ color: '#333' }}>
                                 {contact.phone || '—'}
                               </td>
                               <td className="px-3 py-3">
