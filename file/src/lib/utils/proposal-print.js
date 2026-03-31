@@ -126,14 +126,28 @@ export function printProposal({
 </body>
 </html>`;
 
-  const printWindow = window.open('', '_blank');
+  // Use a Blob URL so the window has a real URL (not about:blank)
+  // and auto-prints once rendered, then closes itself
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const printWindow = window.open(url, '_blank');
   if (!printWindow) {
+    URL.revokeObjectURL(url);
     return false;
   }
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.onload = () => {
-    printWindow.print();
-  };
+
+  // Clean up blob URL after the window loads
+  printWindow.addEventListener('load', () => {
+    URL.revokeObjectURL(url);
+    // Small delay to let CSS/layout finalize before print
+    setTimeout(() => {
+      printWindow.print();
+      // Close the window after printing (or cancel)
+      printWindow.addEventListener('afterprint', () => {
+        printWindow.close();
+      });
+    }, 300);
+  });
+
   return true;
 }
