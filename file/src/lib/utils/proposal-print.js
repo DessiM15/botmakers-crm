@@ -71,7 +71,7 @@ export function printProposal({
       </div>
       <div style="border-top: 1px solid rgba(255,255,255,0.15); margin: 0 0 24px;"></div>
       <h2 style="font-size: 28px; font-weight: 800; margin: 0 0 8px; line-height: 1.2; word-wrap: break-word;">${title || ''}</h2>
-      ${recipientName ? `<div style="font-size: 15px; opacity: 0.8;">Prepared for: <strong style="opacity: 1;">${recipientName}</strong></div>` : ''}
+      ${recipientName ? `<div style="font-size: 15px; opacity: 0.8;">Prepared for: <strong style="opacity: 1; color: #fff;">${recipientName}</strong></div>` : ''}
     </div>
 
     <!-- Body -->

@@ -889,7 +889,7 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null, ed
 
                   <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 8px', lineHeight: 1.2, wordWrap: 'break-word' }}>{title}</h2>
                   {recipientName && (
-                    <div style={{ fontSize: '15px', opacity: 0.8 }}>Prepared for: <strong style={{ opacity: 1 }}>{recipientName}</strong></div>
+                    <div style={{ fontSize: '15px', opacity: 0.8 }}>Prepared for: <strong style={{ opacity: 1, color: '#fff' }}>{recipientName}</strong></div>
                   )}
                 </div>
 
