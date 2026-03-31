@@ -182,10 +182,10 @@ body,
 .proposal-preview-content li { color: #333 !important; line-height: 1.7; font-size: 15px; }
 .proposal-preview-content strong { color: #222 !important; }
 
-/* Lead Sources table — force dark text on white table background */
-.lead-sources-table th { color: #666 !important; }
-.lead-sources-table td { color: #333 !important; }
-.lead-sources-table td .text-muted-force { color: #888 !important; }
+/* Lead Sources table — dark theme */
+.lead-sources-table th { color: #94a3b8 !important; }
+.lead-sources-table td { color: #e2e8f0 !important; }
+.lead-sources-table td .text-muted-force { color: #94a3b8 !important; }
 
 /* Quill editor dark theme overrides */
 .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1) !important; background: rgba(255,255,255,0.03); }

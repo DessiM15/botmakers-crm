@@ -405,7 +405,8 @@ const LeadTable = ({ initialData, teamMembers }) => {
                             <td className="px-3 py-3">
                               <a
                                 href={`/leads/${lead.id}`}
-                                className="text-white fw-medium text-sm text-decoration-none"
+                                className="fw-medium text-sm text-decoration-none"
+                                style={{ color: '#fff' }}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   router.push(`/leads/${lead.id}`);

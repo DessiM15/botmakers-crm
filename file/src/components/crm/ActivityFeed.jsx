@@ -83,7 +83,8 @@ const ActivityFeed = ({ activity }) => {
         <h6 className="text-lg fw-semibold mb-0">Recent Activity</h6>
         <Link
           href="/activity"
-          className="text-primary-600 text-sm fw-medium text-decoration-none"
+          className="text-sm fw-medium text-decoration-none"
+          style={{ color: '#03FF00' }}
         >
           View All
         </Link>
@@ -101,7 +102,7 @@ const ActivityFeed = ({ activity }) => {
               className="d-flex align-items-start gap-12 px-24 py-12 border-bottom"
             >
               <div className="w-40-px h-40-px bg-primary-50 rounded-circle d-flex justify-content-center align-items-center flex-shrink-0">
-                <Icon icon={icon} className="text-primary-600 text-lg" />
+                <Icon icon={icon} className="text-lg" style={{ color: '#94a3b8' }} />
               </div>
               <div className="flex-grow-1 min-w-0">
                 <p className="text-primary-light text-sm mb-4">
@@ -111,7 +112,8 @@ const ActivityFeed = ({ activity }) => {
                 {href && (
                   <Link
                     href={href}
-                    className="text-primary-600 text-xs text-decoration-none"
+                    className="text-xs text-decoration-none"
+                    style={{ color: '#03FF00' }}
                   >
                     View {entry.entityType}
                   </Link>

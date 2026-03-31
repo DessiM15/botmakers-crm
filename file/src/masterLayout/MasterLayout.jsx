@@ -228,7 +228,7 @@ const MasterLayout = ({ children }) => {
                     <ul className='to-top-list'>
                       <li>
                         <Link
-                          className='dropdown-item text-black px-0 py-8 hover-bg-transparent hover-text-primary d-flex align-items-center gap-3'
+                          className='dropdown-item text-secondary-light px-0 py-8 hover-bg-transparent hover-text-primary d-flex align-items-center gap-3'
                           href='/settings'
                         >
                           <Icon
@@ -242,7 +242,7 @@ const MasterLayout = ({ children }) => {
                         <form action={signOutAction}>
                           <button
                             type='submit'
-                            className='dropdown-item text-black px-0 py-8 hover-bg-transparent hover-text-danger d-flex align-items-center gap-3 bg-transparent border-0 w-100'
+                            className='dropdown-item text-secondary-light px-0 py-8 hover-bg-transparent hover-text-danger d-flex align-items-center gap-3 bg-transparent border-0 w-100'
                           >
                             <Icon icon='lucide:power' className='icon text-xl' />
                             Log Out
