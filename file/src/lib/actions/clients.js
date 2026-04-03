@@ -421,17 +421,6 @@ export async function sendPortalInvite(clientId) {
       return { error: 'CB-API-001: Client has no email address' };
     }
 
-    // Check if email belongs to a team member
-    const [teamMatch] = await db
-      .select({ id: teamUsers.id })
-      .from(teamUsers)
-      .where(eq(teamUsers.email, client.email.toLowerCase()))
-      .limit(1);
-
-    if (teamMatch) {
-      return { error: 'This email belongs to a team member. Portal invites are for clients only.' };
-    }
-
     // Rate limit: max 3 invites per 24 hours
     if (client.portalInviteCount > 0 && client.portalInvitedAt) {
       const hoursSinceLastInvite = (Date.now() - new Date(client.portalInvitedAt).getTime()) / (1000 * 60 * 60);
