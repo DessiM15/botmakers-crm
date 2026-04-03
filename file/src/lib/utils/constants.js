@@ -202,6 +202,27 @@ export const SERVICE_DETECTION_RULES = [
   { provider: 'Auth0', category: 'api', npmPackages: ['@auth0/nextjs-auth0'], envPrefixes: ['AUTH0_'], configFiles: [] },
 ];
 
+export const DEFAULT_SERVICE_PRICING = {
+  'Supabase':    { plan: 'Pro',        monthlyCost: 25 },
+  'Vercel':      { plan: 'Pro',        monthlyCost: 20 },
+  'Anthropic':   { plan: 'Usage',      monthlyCost: 50 },
+  'Resend':      { plan: 'Pro',        monthlyCost: 20 },
+  'Square':      { plan: 'Plus',       monthlyCost: 29 },
+  'Upstash':     { plan: 'Pro',        monthlyCost: 10 },
+  'GitHub':      { plan: 'Team',       monthlyCost: 4 },
+  'Stripe':      { plan: 'Usage',      monthlyCost: 0 },
+  'OpenAI':      { plan: 'Usage',      monthlyCost: 50 },
+  'SendGrid':    { plan: 'Essentials', monthlyCost: 20 },
+  'Google APIs': { plan: 'Usage',      monthlyCost: 0 },
+  'Twilio':      { plan: 'Usage',      monthlyCost: 15 },
+  'AWS':         { plan: 'Usage',      monthlyCost: 25 },
+  'Cloudflare':  { plan: 'Pro',        monthlyCost: 20 },
+  'Prisma':      { plan: 'Free',       monthlyCost: 0 },
+  'PlanetScale': { plan: 'Scaler',     monthlyCost: 29 },
+  'Clerk':       { plan: 'Pro',        monthlyCost: 25 },
+  'Auth0':       { plan: 'Essentials', monthlyCost: 35 },
+};
+
 export const CALENDAR_CATEGORIES = [
   { key: 'meeting', label: 'Meetings', icon: 'mdi:calendar-clock-outline' },
   { key: 'calcom', label: 'Cal.com', icon: 'mdi:calendar-check-outline' },

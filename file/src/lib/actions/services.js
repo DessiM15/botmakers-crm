@@ -8,7 +8,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { serviceCreateSchema, serviceUpdateSchema } from '@/lib/utils/validators';
 import { scanRepoForServices } from '@/lib/integrations/repo-scanner';
-import { SERVICE_DETECTION_RULES } from '@/lib/utils/constants';
+import { SERVICE_DETECTION_RULES, DEFAULT_SERVICE_PRICING } from '@/lib/utils/constants';
 
 /**
  * Create a new client or internal service.
@@ -314,17 +314,25 @@ export async function confirmDetectedServices(projectId, selectedProviders) {
         (r) => r.provider.toLowerCase() === provider.toLowerCase()
       );
 
+      const pricing = DEFAULT_SERVICE_PRICING[provider];
+      const monthlyCost = pricing ? String(pricing.monthlyCost) : '0';
+      const planLabel = pricing ? pricing.plan : null;
+      const serviceName = planLabel ? `${provider} ${planLabel}` : `${provider} (auto-detected)`;
+      const notes = pricing
+        ? `Auto-detected · Default pricing $${pricing.monthlyCost}/mo`
+        : 'Auto-detected from GitHub repo scan';
+
       const [newService] = await db
         .insert(clientServices)
         .values({
           clientId: project.clientId,
           projectId,
-          serviceName: `${provider} (auto-detected)`,
+          serviceName,
           provider,
           category: rule?.category || 'other',
           status: 'active',
-          monthlyCost: '0',
-          notes: 'Auto-detected from GitHub repo scan',
+          monthlyCost,
+          notes,
         })
         .returning();
 

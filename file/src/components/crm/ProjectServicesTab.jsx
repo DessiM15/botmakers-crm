@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
-import { confirmDetectedServices, addManualProjectService, removeProjectService } from '@/lib/actions/services';
+import { confirmDetectedServices, addManualProjectService, removeProjectService, updateService } from '@/lib/actions/services';
 import { formatCurrency, formatDate } from '@/lib/utils/formatters';
-import { SERVICE_CATEGORIES, SERVICE_STATUSES, COST_PROVIDERS } from '@/lib/utils/constants';
+import { SERVICE_CATEGORIES, SERVICE_STATUSES, COST_PROVIDERS, DEFAULT_SERVICE_PRICING } from '@/lib/utils/constants';
 
 const CONFIDENCE_BADGES = {
   high: { label: 'High', color: '#198754', bg: 'rgba(25,135,84,0.15)' },
@@ -36,6 +36,24 @@ const ProjectServicesTab = ({ projectId, services = [], hasRepos = false }) => {
   const [addForm, setAddForm] = useState({ serviceName: '', provider: '', category: 'other', monthlyCost: '0' });
   const [addSaving, setAddSaving] = useState(false);
   const [removingId, setRemovingId] = useState(null);
+  const [editingCostId, setEditingCostId] = useState(null);
+  const [editingCostValue, setEditingCostValue] = useState('');
+
+  const handleCostSave = async (serviceId) => {
+    const val = parseFloat(editingCostValue);
+    if (isNaN(val) || val < 0) {
+      toast.error('Enter a valid cost');
+      return;
+    }
+    const res = await updateService(serviceId, { monthlyCost: val });
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Cost updated');
+      router.refresh();
+    }
+    setEditingCostId(null);
+  };
 
   const handleScan = async () => {
     setScanning(true);
@@ -186,6 +204,7 @@ const ProjectServicesTab = ({ projectId, services = [], hasRepos = false }) => {
                 const conf = CONFIDENCE_BADGES[svc.confidence];
                 const selected = selectedProviders.includes(svc.provider);
                 const catObj = SERVICE_CATEGORIES.find((c) => c.value === svc.category);
+                const pricing = DEFAULT_SERVICE_PRICING[svc.provider];
 
                 return (
                   <div key={svc.provider} className="col-sm-6 col-lg-4">
@@ -221,6 +240,11 @@ const ProjectServicesTab = ({ projectId, services = [], hasRepos = false }) => {
                               <span className="text-secondary-light text-xs d-flex align-items-center gap-1 mt-1">
                                 <Icon icon={catObj.icon} style={{ fontSize: '12px' }} />
                                 {catObj.label}
+                              </span>
+                            )}
+                            {pricing && (
+                              <span className="text-xs mt-1 d-block" style={{ color: pricing.monthlyCost > 0 ? '#03FF00' : '#6c757d' }}>
+                                {pricing.monthlyCost > 0 ? `$${pricing.monthlyCost}/mo (${pricing.plan} plan)` : `Usage-based (${pricing.plan})`}
                               </span>
                             )}
                           </div>
@@ -311,7 +335,35 @@ const ProjectServicesTab = ({ projectId, services = [], hasRepos = false }) => {
                           </span>
                         </td>
                         <td>
-                          <span className="text-white text-sm">{formatCurrency(svc.monthlyCost)}</span>
+                          {editingCostId === svc.id ? (
+                            <input
+                              type="number"
+                              className="form-control form-control-sm bg-base text-white"
+                              style={{ width: '100px' }}
+                              min="0"
+                              step="0.01"
+                              autoFocus
+                              value={editingCostValue}
+                              onChange={(e) => setEditingCostValue(e.target.value)}
+                              onBlur={() => handleCostSave(svc.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleCostSave(svc.id);
+                                if (e.key === 'Escape') setEditingCostId(null);
+                              }}
+                            />
+                          ) : (
+                            <span
+                              className="text-white text-sm"
+                              style={{ cursor: 'pointer', borderBottom: '1px dashed rgba(255,255,255,0.3)' }}
+                              title="Click to edit"
+                              onClick={() => {
+                                setEditingCostId(svc.id);
+                                setEditingCostValue(svc.monthlyCost || '0');
+                              }}
+                            >
+                              {formatCurrency(svc.monthlyCost)}
+                            </span>
+                          )}
                         </td>
                         <td>
                           <span
