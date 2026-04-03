@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db/client';
-import { clientServices, activityLog, projectRepos, projects } from '@/lib/db/schema';
+import { clientServices, activityLog, projectRepos, projects, costEntries } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
@@ -9,6 +9,69 @@ import { revalidatePath } from 'next/cache';
 import { serviceCreateSchema, serviceUpdateSchema } from '@/lib/utils/validators';
 import { scanRepoForServices } from '@/lib/integrations/repo-scanner';
 import { SERVICE_DETECTION_RULES, DEFAULT_SERVICE_PRICING } from '@/lib/utils/constants';
+
+const PROVIDER_SOURCE_MAP = {
+  supabase: 'supabase',
+  github: 'github',
+  resend: 'resend',
+  upstash: 'upstash',
+  vercel: 'vercel',
+};
+
+/**
+ * Create or update a cost_entry for the current month for a given service.
+ * Uses the same externalId pattern as the pull-costs cron to avoid duplicates.
+ */
+async function syncServiceCostEntry(service) {
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const periodYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const externalId = `svc-${service.id}-${periodYM}`;
+  const source = PROVIDER_SOURCE_MAP[(service.provider || '').toLowerCase()] || 'other';
+  const cost = Number(service.monthlyCost) || 0;
+  const inactiveStatus = service.status === 'cancelled' || service.status === 'expired';
+
+  // Find existing entry for this service + period
+  const [existing] = await db
+    .select({ id: costEntries.id })
+    .from(costEntries)
+    .where(and(eq(costEntries.serviceId, service.id), eq(costEntries.externalId, externalId)))
+    .limit(1);
+
+  if (cost <= 0 || inactiveStatus) {
+    // Remove entry if cost is 0 or service is inactive
+    if (existing) {
+      await db.delete(costEntries).where(eq(costEntries.id, existing.id));
+    }
+    return;
+  }
+
+  if (existing) {
+    // Update existing entry with new amount
+    await db
+      .update(costEntries)
+      .set({ amount: String(cost), description: `${service.serviceName} — monthly service cost`, updatedAt: new Date() })
+      .where(eq(costEntries.id, existing.id));
+  } else {
+    // Create new entry
+    await db
+      .insert(costEntries)
+      .values({
+        serviceId: service.id,
+        clientId: service.clientId || null,
+        projectId: service.projectId || null,
+        source,
+        provider: service.provider,
+        description: `${service.serviceName} — monthly service cost`,
+        amount: String(cost),
+        periodStart: periodStart.toISOString().split('T')[0],
+        periodEnd: periodEnd.toISOString().split('T')[0],
+        externalId,
+      })
+      .onConflictDoNothing();
+  }
+}
 
 /**
  * Create a new client or internal service.
@@ -108,6 +171,11 @@ export async function updateService(id, formData) {
       return { error: 'CB-DB-002: Service not found' };
     }
 
+    // Sync cost_entry for current month when cost or status changes
+    if (data.monthlyCost !== undefined || data.status !== undefined) {
+      await syncServiceCostEntry(updated);
+    }
+
     const isInternal = !updated.clientId;
 
     await db.insert(activityLog).values({
@@ -120,6 +188,7 @@ export async function updateService(id, formData) {
     });
 
     revalidatePath('/services');
+    revalidatePath('/costs');
     if (updated.clientId) revalidatePath(`/clients/${updated.clientId}`);
     if (updated.projectId) revalidatePath(`/projects/${updated.projectId}`);
 
@@ -336,6 +405,9 @@ export async function confirmDetectedServices(projectId, selectedProviders) {
         })
         .returning();
 
+      // Create cost_entry for current month immediately
+      await syncServiceCostEntry(newService);
+
       await db.insert(activityLog).values({
         actorId: teamUser.id,
         actorType: 'team',
@@ -349,6 +421,7 @@ export async function confirmDetectedServices(projectId, selectedProviders) {
     }
 
     revalidatePath(`/projects/${projectId}`);
+    revalidatePath('/costs');
 
     return { success: true, created };
   } catch (error) {
