@@ -232,6 +232,32 @@ export async function getProjectTrackingApiKeyRaw() {
   }
 }
 
+/**
+ * Remove the current user's avatar from storage and clear avatar_url.
+ */
+export async function removeAvatar() {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireTeam(cookieStore);
+
+    if (teamUser.avatarUrl) {
+      const { getStorageClient } = await import('@/lib/db/client');
+      const storage = getStorageClient();
+      await storage.remove([teamUser.avatarUrl]).catch(() => {});
+    }
+
+    await db
+      .update(teamUsers)
+      .set({ avatarUrl: null, updatedAt: new Date() })
+      .where(eq(teamUsers.id, teamUser.id));
+
+    revalidatePath('/settings');
+    return { success: true };
+  } catch {
+    return { error: 'Failed to remove avatar.' };
+  }
+}
+
 function maskApiKey(key) {
   if (!key || key.length < 12) return '****';
   return key.slice(0, 9) + '...' + key.slice(-4);
