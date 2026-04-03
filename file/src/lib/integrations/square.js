@@ -17,6 +17,22 @@ function getSquareClient() {
 }
 
 /**
+ * Calculate Square processing fees for a payment amount.
+ * Online: 2.9% + $0.30, In-person: 2.6% + $0.10
+ * @param {number} amount - Payment amount in USD
+ * @param {boolean} isOnline - Whether the payment was online (default true)
+ * @returns {number} Fee amount in USD
+ */
+export function calculateSquareFees(amount, isOnline = true) {
+  const num = Number(amount) || 0;
+  if (num <= 0) return 0;
+  if (isOnline) {
+    return Math.round((num * 0.029 + 0.30) * 100) / 100;
+  }
+  return Math.round((num * 0.026 + 0.10) * 100) / 100;
+}
+
+/**
  * Check if Square is configured.
  */
 export function isSquareConfigured() {

@@ -10,6 +10,7 @@ import { getInvoicesByClientId } from '@/lib/db/queries/invoices';
 import { getServicesByClientId } from '@/lib/db/queries/services';
 import { getDocumentsByClientId } from '@/lib/db/queries/documents';
 import { getEditableDocsByClientId } from '@/lib/db/queries/editable-docs';
+import { getCostsByClientId, getClientPnL } from '@/lib/db/queries/costs';
 
 export async function generateMetadata({ params }) {
   try {
@@ -36,9 +37,9 @@ const Page = async ({ params }) => {
 
   const { id } = await params;
 
-  let client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments, clientEditableDocs;
+  let client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments, clientEditableDocs, clientCosts, clientPnL;
   try {
-    [client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments, clientEditableDocs] = await Promise.all([
+    [client, clientProjects, clientProposals, clientInvoices, clientServices, clientDocuments, clientEditableDocs, clientCosts, clientPnL] = await Promise.all([
       getClientById(id),
       getProjectsByClientId(id).catch(() => []),
       getProposalsByClientId(id).catch(() => []),
@@ -46,6 +47,8 @@ const Page = async ({ params }) => {
       getServicesByClientId(id).catch(() => []),
       getDocumentsByClientId(id).catch(() => []),
       getEditableDocsByClientId(id).catch(() => []),
+      getCostsByClientId(id).catch(() => []),
+      getClientPnL(id).catch(() => ({ revenue: 0, costs: 0, profit: 0, margin: 0 })),
     ]);
   } catch {
     client = await getClientById(id).catch(() => null);
@@ -55,6 +58,8 @@ const Page = async ({ params }) => {
     clientServices = [];
     clientDocuments = [];
     clientEditableDocs = [];
+    clientCosts = [];
+    clientPnL = { revenue: 0, costs: 0, profit: 0, margin: 0 };
   }
 
   if (!client) {
@@ -63,7 +68,7 @@ const Page = async ({ params }) => {
 
   return (
     <MasterLayout>
-      <ClientDetail client={client} clientProjects={clientProjects} clientProposals={clientProposals} clientInvoices={clientInvoices} clientServices={clientServices} clientDocuments={clientDocuments} clientEditableDocs={clientEditableDocs} />
+      <ClientDetail client={client} clientProjects={clientProjects} clientProposals={clientProposals} clientInvoices={clientInvoices} clientServices={clientServices} clientDocuments={clientDocuments} clientEditableDocs={clientEditableDocs} clientCosts={clientCosts} clientPnL={clientPnL} />
     </MasterLayout>
   );
 };

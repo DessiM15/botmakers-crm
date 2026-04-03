@@ -28,6 +28,9 @@ const optionalVars = [
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
   'GOOGLE_REDIRECT_URI',
+  'VERCEL_API_TOKEN',
+  'VERCEL_TEAM_ID',
+  'ANTHROPIC_ADMIN_API_KEY',
 ];
 
 function validateEnv() {

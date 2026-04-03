@@ -20,11 +20,12 @@ const TABS = [
   { key: 'repos', label: 'Repos & Demos', icon: 'mdi:github' },
   { key: 'questions', label: 'Questions', icon: 'mdi:help-circle-outline' },
   { key: 'invoices', label: 'Invoices', icon: 'mdi:receipt-text-outline' },
+  { key: 'pnl', label: 'P&L', icon: 'mdi:chart-box-outline' },
   { key: 'services', label: 'Services', icon: 'mdi:server-network' },
   { key: 'documents', label: 'Documents', icon: 'mdi:folder-file-outline' },
 ];
 
-const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQuestions = [], projectServices = [], projectDocuments = [], projectEditableDocs = [] }) => {
+const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQuestions = [], projectServices = [], projectDocuments = [], projectEditableDocs = [], projectCosts = [], projectPnL = {} }) => {
   const router = useRouter();
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState('overview');
@@ -654,6 +655,128 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                 >
                   <Icon icon="mdi:plus" className="me-1" style={{ fontSize: '16px' }} />
                   New Invoice
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* P&L Tab */}
+      {activeTab === 'pnl' && (
+        <>
+          <div className="row g-3 mb-4">
+            <div className="col-sm-6 col-lg-3">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:cash-multiple" style={{ fontSize: '18px', color: '#198754' }} />
+                    <span className="text-secondary-light text-xs">Revenue</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: '#198754' }}>
+                    {formatCurrency(projectPnL.revenue || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-sm-6 col-lg-3">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:trending-down" style={{ fontSize: '18px', color: '#dc3545' }} />
+                    <span className="text-secondary-light text-xs">Costs</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: '#dc3545' }}>
+                    {formatCurrency(projectPnL.costs || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-sm-6 col-lg-3">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:chart-line" style={{ fontSize: '18px', color: (projectPnL.profit || 0) >= 0 ? '#0d6efd' : '#dc3545' }} />
+                    <span className="text-secondary-light text-xs">Profit</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: (projectPnL.profit || 0) >= 0 ? '#0d6efd' : '#dc3545' }}>
+                    {formatCurrency(projectPnL.profit || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-sm-6 col-lg-3">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:percent-outline" style={{ fontSize: '18px', color: '#6f42c1' }} />
+                    <span className="text-secondary-light text-xs">Margin</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: '#6f42c1' }}>
+                    {(projectPnL.margin || 0).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {projectCosts.length === 0 ? (
+            <div className="card">
+              <div className="card-body d-flex flex-column justify-content-center align-items-center py-5">
+                <Icon icon="mdi:chart-box-outline" className="text-secondary-light mb-2" style={{ fontSize: '36px' }} />
+                <p className="text-secondary-light text-sm mb-2">No costs tracked for this project.</p>
+                <Link
+                  href={`/costs`}
+                  className="btn btn-primary btn-sm"
+                >
+                  <Icon icon="mdi:plus" className="me-1" style={{ fontSize: '16px' }} />
+                  Add Cost
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="card">
+              <div className="card-body p-0">
+                <div className="table-responsive">
+                  <table className="table table-dark table-hover mb-0">
+                    <thead>
+                      <tr className="text-secondary-light text-xs">
+                        <th>Provider</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Period</th>
+                        <th>Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {projectCosts.map((cost) => (
+                        <tr key={cost.id}>
+                          <td><span className="text-white text-sm fw-medium">{cost.provider}</span></td>
+                          <td><span className="text-secondary-light text-sm">{cost.description}</span></td>
+                          <td><span className="text-white text-sm fw-medium">{formatCurrency(cost.amount)}</span></td>
+                          <td>
+                            <span className="text-secondary-light text-xs">
+                              {formatDate(cost.periodStart)} — {formatDate(cost.periodEnd)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge fw-medium ${cost.source !== 'manual' ? '' : ''}`} style={{
+                              background: cost.source !== 'manual' ? 'rgba(25,135,84,0.15)' : 'rgba(108,117,125,0.15)',
+                              color: cost.source !== 'manual' ? '#198754' : '#6c757d',
+                            }}>
+                              {cost.source}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="card-footer">
+                <Link href="/costs" className="btn btn-outline-secondary btn-sm">
+                  <Icon icon="mdi:plus" className="me-1" style={{ fontSize: '16px' }} />
+                  Add Cost
                 </Link>
               </div>
             </div>

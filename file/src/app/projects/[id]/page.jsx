@@ -9,6 +9,7 @@ import { getProjectQuestions } from '@/lib/db/queries/portal';
 import { getServicesByProjectId } from '@/lib/db/queries/services';
 import { getDocumentsByProjectId } from '@/lib/db/queries/documents';
 import { getEditableDocsByProjectId } from '@/lib/db/queries/editable-docs';
+import { getCostsByProjectId, getProjectPnL } from '@/lib/db/queries/costs';
 
 export async function generateMetadata({ params }) {
   try {
@@ -34,15 +35,17 @@ const Page = async ({ params }) => {
   }
 
   const { id } = await params;
-  let project, projectInvoices = [], projectQuestions = [], projectServices = [], projectDocuments = [], projectEditableDocs = [];
+  let project, projectInvoices = [], projectQuestions = [], projectServices = [], projectDocuments = [], projectEditableDocs = [], projectCosts = [], projectPnL = { revenue: 0, costs: 0, profit: 0, margin: 0 };
   try {
-    [project, projectInvoices, projectQuestions, projectServices, projectDocuments, projectEditableDocs] = await Promise.all([
+    [project, projectInvoices, projectQuestions, projectServices, projectDocuments, projectEditableDocs, projectCosts, projectPnL] = await Promise.all([
       getProjectById(id),
       getInvoicesByProjectId(id).catch(() => []),
       getProjectQuestions(id).catch(() => []),
       getServicesByProjectId(id).catch(() => []),
       getDocumentsByProjectId(id).catch(() => []),
       getEditableDocsByProjectId(id).catch(() => []),
+      getCostsByProjectId(id).catch(() => []),
+      getProjectPnL(id).catch(() => ({ revenue: 0, costs: 0, profit: 0, margin: 0 })),
     ]);
   } catch (err) {
     console.error('[ProjectDetail] Data fetch error:', err.message);
@@ -54,7 +57,7 @@ const Page = async ({ params }) => {
 
   return (
     <MasterLayout>
-      <ProjectDetail project={project} projectInvoices={projectInvoices} projectQuestions={projectQuestions} projectServices={projectServices} projectDocuments={projectDocuments} projectEditableDocs={projectEditableDocs} />
+      <ProjectDetail project={project} projectInvoices={projectInvoices} projectQuestions={projectQuestions} projectServices={projectServices} projectDocuments={projectDocuments} projectEditableDocs={projectEditableDocs} projectCosts={projectCosts} projectPnL={projectPnL} />
     </MasterLayout>
   );
 };

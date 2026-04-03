@@ -3,7 +3,10 @@ import SettingsPage from "@/components/crm/SettingsPage";
 import { isGitHubConfigured } from "@/lib/integrations/github";
 import { isSquareConfigured, getSquareEnvironment } from "@/lib/integrations/square";
 import { isGoogleCalendarConfigured } from "@/lib/integrations/google-calendar";
+import { isVercelBillingConfigured } from "@/lib/integrations/vercel-billing";
+import { isAnthropicBillingConfigured } from "@/lib/integrations/anthropic-billing";
 import { db } from "@/lib/db/client";
+import { getStorageClient } from "@/lib/db/client";
 import { teamUsers, systemSettings } from "@/lib/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
@@ -14,20 +17,35 @@ export const metadata = {
   title: "Settings — Botmakers CRM",
 };
 
+async function getSignedAvatarUrl(storagePath) {
+  if (!storagePath) return null;
+  try {
+    const storage = getStorageClient();
+    const { data } = await storage.createSignedUrl(storagePath, 86400);
+    return data?.signedUrl || null;
+  } catch {
+    return null;
+  }
+}
+
 const Page = async () => {
   const cookieStore = await cookies();
-  let teamUser;
+  let authResult;
   try {
-    teamUser = await requireTeam(cookieStore);
+    authResult = await requireTeam(cookieStore);
   } catch {
     redirect('/sign-in');
   }
+
+  const currentTeamUser = authResult.teamUser;
 
   const githubConfigured = isGitHubConfigured();
   const squareConfigured = isSquareConfigured();
   const squareEnvironment = getSquareEnvironment();
   const googleCalendarConfigured = isGoogleCalendarConfigured();
   const calConfigured = !!process.env.CAL_WEBHOOK_SECRET;
+  const vercelBillingConfigured = isVercelBillingConfigured();
+  const anthropicBillingConfigured = isAnthropicBillingConfigured();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : 'http://localhost:3000');
@@ -42,7 +60,7 @@ const Page = async () => {
         email: teamUsers.googleCalendarEmail,
       })
       .from(teamUsers)
-      .where(eq(teamUsers.id, teamUser.id))
+      .where(eq(teamUsers.id, currentTeamUser.id))
       .limit(1);
     if (row) {
       googleCalendarConnected = row.connected || false;
@@ -60,6 +78,17 @@ const Page = async () => {
   } catch (err) {
     console.error('[Settings] Failed to fetch team members:', err.message);
   }
+
+  // Generate signed avatar URLs for team members
+  const membersWithAvatars = await Promise.all(
+    members.map(async (m) => ({
+      ...m,
+      signedAvatarUrl: await getSignedAvatarUrl(m.avatarUrl),
+    }))
+  );
+
+  // Get current user's signed avatar URL
+  const currentUserAvatarUrl = await getSignedAvatarUrl(currentTeamUser.avatarUrl);
 
   // Fetch project tracking API key status
   let trackingKeyConfigured = false;
@@ -96,6 +125,13 @@ const Page = async () => {
   return (
     <MasterLayout>
       <SettingsPage
+        currentUser={{
+          id: currentTeamUser.id,
+          fullName: currentTeamUser.fullName,
+          email: currentTeamUser.email,
+          role: currentTeamUser.role,
+          avatarUrl: currentUserAvatarUrl,
+        }}
         githubConfigured={githubConfigured}
         squareConfigured={squareConfigured}
         squareEnvironment={squareEnvironment}
@@ -104,13 +140,15 @@ const Page = async () => {
         googleCalendarConnected={googleCalendarConnected}
         googleCalendarEmail={googleCalendarEmail}
         siteUrl={siteUrl}
-        teamMembers={members}
+        teamMembers={membersWithAvatars}
         staleDays={staleDays}
         defaultProposalTerms={defaultProposalTerms}
         defaultProjectPhases={defaultProjectPhases}
         calendarColors={calendarColors}
         trackingKeyConfigured={trackingKeyConfigured}
         trackingKeyMasked={trackingKeyMasked}
+        vercelBillingConfigured={vercelBillingConfigured}
+        anthropicBillingConfigured={anthropicBillingConfigured}
       />
     </MasterLayout>
   );

@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import { backfillSquareHistory } from '@/lib/actions/square-backfill';
 import { generateProjectTrackingApiKey } from '@/lib/actions/settings';
+import { pullVercelCosts, pullAnthropicCosts } from '@/lib/actions/costs';
 
 const SettingsIntegrations = ({
   githubConfigured,
@@ -18,6 +19,8 @@ const SettingsIntegrations = ({
   siteUrl,
   trackingKeyConfigured: initialTrackingConfigured,
   trackingKeyMasked: initialTrackingMasked,
+  vercelBillingConfigured,
+  anthropicBillingConfigured,
 }) => {
   const searchParams = useSearchParams();
   const [backfilling, setBackfilling] = useState(false);
@@ -28,6 +31,10 @@ const SettingsIntegrations = ({
   const [trackingConfigured, setTrackingConfigured] = useState(initialTrackingConfigured);
   const [trackingMasked, setTrackingMasked] = useState(initialTrackingMasked);
   const [generatingKey, setGeneratingKey] = useState(false);
+  const [pullingVercel, setPullingVercel] = useState(false);
+  const [vercelPullResult, setVercelPullResult] = useState(null);
+  const [pullingAnthropic, setPullingAnthropic] = useState(false);
+  const [anthropicPullResult, setAnthropicPullResult] = useState(null);
 
   // Handle OAuth redirect params
   useEffect(() => {
@@ -90,6 +97,42 @@ const SettingsIntegrations = ({
       setTrackingConfigured(true);
       setTrackingMasked(res.maskedKey);
       toast.success('API key generated successfully');
+    }
+  };
+
+  const handlePullVercel = async () => {
+    setPullingVercel(true);
+    setVercelPullResult(null);
+    const now = new Date();
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    const startDate = prevMonth.toISOString().split('T')[0];
+    const endDate = prevMonthEnd.toISOString().split('T')[0];
+    const res = await pullVercelCosts(startDate, endDate);
+    setPullingVercel(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      setVercelPullResult(res);
+      toast.success(`Pulled ${res.inserted} Vercel cost entries`);
+    }
+  };
+
+  const handlePullAnthropic = async () => {
+    setPullingAnthropic(true);
+    setAnthropicPullResult(null);
+    const now = new Date();
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    const startDate = prevMonth.toISOString().split('T')[0];
+    const endDate = prevMonthEnd.toISOString().split('T')[0];
+    const res = await pullAnthropicCosts(startDate, endDate);
+    setPullingAnthropic(false);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      setAnthropicPullResult(res);
+      toast.success(`Pulled ${res.inserted} Anthropic cost entries`);
     }
   };
 
@@ -602,6 +645,124 @@ const SettingsIntegrations = ({
                   <li className="mb-1">Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to env vars</li>
                   <li>Set GOOGLE_REDIRECT_URI to <code>{siteUrl}/api/auth/google/callback</code></li>
                 </ol>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Vercel Billing */}
+      <div className="col-xl-6">
+        <div className="card">
+          <div className="card-header d-flex align-items-center gap-2">
+            <Icon icon="mdi:triangle" className="text-white" style={{ fontSize: '24px' }} />
+            <h6 className="text-white fw-semibold mb-0">Vercel Billing</h6>
+          </div>
+          <div className="card-body">
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <span className="text-secondary-light text-sm">API Token:</span>
+              {vercelBillingConfigured ? (
+                <span className="badge bg-success bg-opacity-25 text-success">
+                  <Icon icon="mdi:check-circle" className="me-1" style={{ fontSize: '14px' }} />
+                  Configured
+                </span>
+              ) : (
+                <span className="badge bg-secondary bg-opacity-25 text-secondary-light">
+                  Not Configured
+                </span>
+              )}
+            </div>
+
+            {vercelBillingConfigured && (
+              <>
+                <button
+                  className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 mb-3"
+                  onClick={handlePullVercel}
+                  disabled={pullingVercel}
+                >
+                  {pullingVercel ? (
+                    <span className="spinner-border spinner-border-sm" />
+                  ) : (
+                    <Icon icon="mdi:cloud-download-outline" style={{ fontSize: '16px' }} />
+                  )}
+                  {pullingVercel ? 'Pulling...' : 'Pull Last Month Costs'}
+                </button>
+
+                {vercelPullResult && (
+                  <div className="p-3 rounded" style={{ background: 'rgba(3,255,0,0.05)' }}>
+                    <p className="text-white text-xs fw-semibold mb-1">Pull Complete</p>
+                    <p className="text-secondary-light text-xs mb-0">
+                      Entries created: {vercelPullResult.inserted}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!vercelBillingConfigured && (
+              <div className="p-3 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <p className="text-secondary-light text-xs mb-0">
+                  Set <code>VERCEL_API_TOKEN</code> and optionally <code>VERCEL_TEAM_ID</code> in your environment variables to enable automatic cost pulling from Vercel.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Anthropic Billing */}
+      <div className="col-xl-6">
+        <div className="card">
+          <div className="card-header d-flex align-items-center gap-2">
+            <Icon icon="mdi:robot-outline" className="text-white" style={{ fontSize: '24px' }} />
+            <h6 className="text-white fw-semibold mb-0">Anthropic Billing</h6>
+          </div>
+          <div className="card-body">
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <span className="text-secondary-light text-sm">Admin API Key:</span>
+              {anthropicBillingConfigured ? (
+                <span className="badge bg-success bg-opacity-25 text-success">
+                  <Icon icon="mdi:check-circle" className="me-1" style={{ fontSize: '14px' }} />
+                  Configured
+                </span>
+              ) : (
+                <span className="badge bg-secondary bg-opacity-25 text-secondary-light">
+                  Not Configured
+                </span>
+              )}
+            </div>
+
+            {anthropicBillingConfigured && (
+              <>
+                <button
+                  className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 mb-3"
+                  onClick={handlePullAnthropic}
+                  disabled={pullingAnthropic}
+                >
+                  {pullingAnthropic ? (
+                    <span className="spinner-border spinner-border-sm" />
+                  ) : (
+                    <Icon icon="mdi:cloud-download-outline" style={{ fontSize: '16px' }} />
+                  )}
+                  {pullingAnthropic ? 'Pulling...' : 'Pull Last Month Costs'}
+                </button>
+
+                {anthropicPullResult && (
+                  <div className="p-3 rounded" style={{ background: 'rgba(3,255,0,0.05)' }}>
+                    <p className="text-white text-xs fw-semibold mb-1">Pull Complete</p>
+                    <p className="text-secondary-light text-xs mb-0">
+                      Entries created: {anthropicPullResult.inserted}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!anthropicBillingConfigured && (
+              <div className="p-3 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <p className="text-secondary-light text-xs mb-0">
+                  Set <code>ANTHROPIC_ADMIN_API_KEY</code> in your environment variables to enable automatic cost pulling from Anthropic. This is separate from the regular ANTHROPIC_API_KEY used for AI features.
+                </p>
               </div>
             )}
           </div>

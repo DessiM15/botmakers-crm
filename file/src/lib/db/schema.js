@@ -180,6 +180,18 @@ export const meetingStatusEnum = pgEnum('meeting_status', [
   'no_show',
 ]);
 
+export const costSourceEnum = pgEnum('cost_source', [
+  'manual',
+  'vercel',
+  'anthropic',
+  'square_fees',
+  'supabase',
+  'github',
+  'resend',
+  'upstash',
+  'other',
+]);
+
 // ── Tables ─────────────────────────────────────────────────────────────────────
 
 export const teamUsers = pgTable('team_users', {
@@ -635,6 +647,24 @@ export const calendarEvents = pgTable('calendar_events', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const costEntries = pgTable('cost_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clientId: uuid('client_id').references(() => clients.id),
+  projectId: uuid('project_id').references(() => projects.id),
+  serviceId: uuid('service_id').references(() => clientServices.id),
+  source: costSourceEnum('source').notNull().default('manual'),
+  provider: text('provider').notNull(),
+  description: text('description').notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull().default('0'),
+  periodStart: date('period_start').notNull(),
+  periodEnd: date('period_end').notNull(),
+  externalId: text('external_id'),
+  metadata: jsonb('metadata'),
+  createdBy: uuid('created_by').references(() => teamUsers.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Relations ──────────────────────────────────────────────────────────────────
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -932,6 +962,25 @@ export const meetingsRelations = relations(meetings, ({ one }) => ({
   }),
   createdByUser: one(teamUsers, {
     fields: [meetings.createdBy],
+    references: [teamUsers.id],
+  }),
+}));
+
+export const costEntriesRelations = relations(costEntries, ({ one }) => ({
+  client: one(clients, {
+    fields: [costEntries.clientId],
+    references: [clients.id],
+  }),
+  project: one(projects, {
+    fields: [costEntries.projectId],
+    references: [projects.id],
+  }),
+  service: one(clientServices, {
+    fields: [costEntries.serviceId],
+    references: [clientServices.id],
+  }),
+  createdByUser: one(teamUsers, {
+    fields: [costEntries.createdBy],
     references: [teamUsers.id],
   }),
 }));

@@ -155,6 +155,32 @@ export const ALLOWED_MIME_TYPES = [
 
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
+export const COST_SOURCES = [
+  { value: 'manual', label: 'Manual', icon: 'mdi:pencil-outline', color: '#6c757d' },
+  { value: 'vercel', label: 'Vercel', icon: 'mdi:triangle-outline', color: '#000' },
+  { value: 'anthropic', label: 'Anthropic', icon: 'mdi:robot-outline', color: '#d4a574' },
+  { value: 'square_fees', label: 'Square Fees', icon: 'mdi:square-outline', color: '#006aff' },
+  { value: 'supabase', label: 'Supabase', icon: 'mdi:database-outline', color: '#3ecf8e' },
+  { value: 'github', label: 'GitHub', icon: 'mdi:github', color: '#fff' },
+  { value: 'resend', label: 'Resend', icon: 'mdi:email-fast-outline', color: '#000' },
+  { value: 'upstash', label: 'Upstash', icon: 'mdi:server-outline', color: '#00e9a3' },
+  { value: 'other', label: 'Other', icon: 'mdi:dots-horizontal-circle-outline', color: '#6c757d' },
+];
+
+export const COST_PROVIDERS = [
+  'Vercel',
+  'Anthropic',
+  'Square',
+  'Supabase',
+  'GitHub',
+  'Resend',
+  'Upstash',
+  'Google',
+  'AWS',
+  'Cloudflare',
+  'Other',
+];
+
 export const CALENDAR_CATEGORIES = [
   { key: 'meeting', label: 'Meetings', icon: 'mdi:calendar-clock-outline' },
   { key: 'calcom', label: 'Cal.com', icon: 'mdi:calendar-check-outline' },

@@ -6,13 +6,15 @@ import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import SettingsIntegrations from './SettingsIntegrations';
-import { inviteTeamMember, toggleTeamMemberActive, saveSetting, saveCalendarColors, saveNotificationPreferences } from '@/lib/actions/settings';
+import Avatar from './Avatar';
+import { inviteTeamMember, toggleTeamMemberActive, saveSetting, saveCalendarColors, saveNotificationPreferences, removeAvatar } from '@/lib/actions/settings';
 import { NOTIFICATION_CATEGORIES, typeLabel } from '@/lib/utils/notification-helpers';
 import { DEFAULT_CALENDAR_COLORS, CALENDAR_PRESET_COLORS } from '@/lib/utils/constants';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
 const TABS = [
+  { key: 'profile', label: 'Profile', icon: 'mdi:account-circle-outline' },
   { key: 'integrations', label: 'Integrations', icon: 'mdi:puzzle-outline' },
   { key: 'team', label: 'Team', icon: 'mdi:account-group-outline' },
   { key: 'notifications', label: 'Notifications', icon: 'mdi:bell-outline' },
@@ -21,6 +23,7 @@ const TABS = [
 ];
 
 const SettingsPage = ({
+  currentUser,
   githubConfigured,
   squareConfigured,
   squareEnvironment,
@@ -36,9 +39,11 @@ const SettingsPage = ({
   calendarColors: initialCalendarColors,
   trackingKeyConfigured,
   trackingKeyMasked,
+  vercelBillingConfigured,
+  anthropicBillingConfigured,
 }) => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('integrations');
+  const [activeTab, setActiveTab] = useState('profile');
 
   return (
     <>
@@ -67,6 +72,10 @@ const SettingsPage = ({
         ))}
       </ul>
 
+      {activeTab === 'profile' && (
+        <ProfileTab currentUser={currentUser} onUpdate={() => router.refresh()} />
+      )}
+
       {activeTab === 'integrations' && (
         <SettingsIntegrations
           githubConfigured={githubConfigured}
@@ -79,6 +88,8 @@ const SettingsPage = ({
           siteUrl={siteUrl}
           trackingKeyConfigured={trackingKeyConfigured}
           trackingKeyMasked={trackingKeyMasked}
+          vercelBillingConfigured={vercelBillingConfigured}
+          anthropicBillingConfigured={anthropicBillingConfigured}
         />
       )}
 
@@ -103,6 +114,136 @@ const SettingsPage = ({
     </>
   );
 };
+
+function ProfileTab({ currentUser, onUpdate }) {
+  const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl || null);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      toast.error('Invalid file type. Use JPG, PNG, or WebP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File too large. Maximum size is 2MB.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/avatar/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Upload failed.');
+      } else {
+        toast.success('Profile photo updated.');
+        setAvatarUrl(data.avatarUrl);
+        onUpdate();
+      }
+    } catch {
+      toast.error('Upload failed.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    const result = await removeAvatar();
+    setRemoving(false);
+
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success('Profile photo removed.');
+      setAvatarUrl(null);
+      onUpdate();
+    }
+  };
+
+  return (
+    <div>
+      <div className="card">
+        <div className="card-header">
+          <h6 className="text-white fw-semibold mb-0">Your Profile</h6>
+        </div>
+        <div className="card-body">
+          <div className="d-flex align-items-center gap-4">
+            {/* Avatar with camera overlay */}
+            <div className="position-relative" style={{ width: 80, height: 80 }}>
+              <Avatar src={avatarUrl} name={currentUser?.fullName} size={80} />
+              <label
+                className="position-absolute d-flex align-items-center justify-content-center rounded-circle"
+                style={{
+                  bottom: 0,
+                  right: 0,
+                  width: 28,
+                  height: 28,
+                  background: '#03FF00',
+                  cursor: uploading ? 'wait' : 'pointer',
+                  border: '2px solid #1a1d21',
+                }}
+              >
+                {uploading ? (
+                  <span className="spinner-border spinner-border-sm" style={{ width: 12, height: 12, color: '#033457' }} />
+                ) : (
+                  <Icon icon="mdi:camera" style={{ fontSize: 14, color: '#033457' }} />
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                  className="d-none"
+                />
+              </label>
+            </div>
+
+            <div className="flex-grow-1">
+              <h5 className="text-white fw-semibold mb-1">{currentUser?.fullName}</h5>
+              <p className="text-secondary-light text-sm mb-1">{currentUser?.email}</p>
+              <span
+                className="badge fw-medium"
+                style={{
+                  background: currentUser?.role === 'admin' ? '#03FF0022' : '#6c757d22',
+                  color: currentUser?.role === 'admin' ? '#03FF00' : '#6c757d',
+                }}
+              >
+                {currentUser?.role}
+              </span>
+            </div>
+          </div>
+
+          {avatarUrl && (
+            <div className="mt-3">
+              <button
+                className="btn btn-outline-danger btn-sm"
+                onClick={handleRemove}
+                disabled={removing}
+              >
+                {removing ? (
+                  <span className="spinner-border spinner-border-sm me-1" />
+                ) : (
+                  <Icon icon="mdi:delete-outline" className="me-1" style={{ fontSize: 14 }} />
+                )}
+                Remove Photo
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TeamTab({ members, onUpdate }) {
   const [showInvite, setShowInvite] = useState(false);
@@ -220,7 +361,12 @@ function TeamTab({ members, onUpdate }) {
               <tbody>
                 {members.map((m) => (
                   <tr key={m.id}>
-                    <td className="text-white text-sm fw-medium">{m.fullName}</td>
+                    <td className="text-white text-sm fw-medium">
+                      <div className="d-flex align-items-center gap-2">
+                        <Avatar src={m.signedAvatarUrl} name={m.fullName} size={28} />
+                        {m.fullName}
+                      </div>
+                    </td>
                     <td className="text-secondary-light text-sm">{m.email}</td>
                     <td>
                       <span

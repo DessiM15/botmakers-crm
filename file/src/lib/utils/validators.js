@@ -227,6 +227,31 @@ export const editableDocUpdateSchema = z.object({
   isPortalVisible: z.boolean().optional(),
 });
 
+export const costEntryCreateSchema = z.object({
+  clientId: z.string().uuid().optional().nullable(),
+  projectId: z.string().uuid().optional().nullable(),
+  serviceId: z.string().uuid().optional().nullable(),
+  source: z.enum(['manual', 'vercel', 'anthropic', 'square_fees', 'supabase', 'github', 'resend', 'upstash', 'other']).default('manual'),
+  provider: z.string().min(1, 'Provider is required'),
+  description: z.string().min(1, 'Description is required'),
+  amount: z.coerce.number().min(0, 'Amount must be positive'),
+  periodStart: z.string().min(1, 'Period start is required'),
+  periodEnd: z.string().min(1, 'Period end is required'),
+  externalId: z.string().optional().nullable(),
+  metadata: z.any().optional().nullable(),
+});
+
+export const costEntryUpdateSchema = z.object({
+  clientId: z.string().uuid().optional().nullable(),
+  projectId: z.string().uuid().optional().nullable(),
+  serviceId: z.string().uuid().optional().nullable(),
+  provider: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  amount: z.coerce.number().min(0).optional(),
+  periodStart: z.string().optional(),
+  periodEnd: z.string().optional(),
+});
+
 export const documentUploadSchema = z.object({
   clientId: z.string().uuid().optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),

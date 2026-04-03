@@ -8,6 +8,7 @@ import NotificationBell from "@/components/crm/NotificationBell";
 import VoiceCommand from "@/components/crm/VoiceCommand";
 import RealtimeNotificationProvider from "@/components/crm/RealtimeNotificationProvider";
 import GlobalSearch from "@/components/crm/GlobalSearch";
+import Avatar from "@/components/crm/Avatar";
 
 const sidebarItems = [
   { label: "Dashboard", icon: "solar:home-smile-angle-outline", href: "/" },
@@ -19,6 +20,7 @@ const sidebarItems = [
   { label: "Projects", icon: "solar:folder-with-files-outline", href: "/projects" },
   { label: "Proposals", icon: "mdi:file-document-edit-outline", href: "/proposals" },
   { label: "Invoices", icon: "mdi:receipt-text-outline", href: "/invoices" },
+  { label: "Costs & P&L", icon: "mdi:chart-box-outline", href: "/costs" },
   { label: "Services", icon: "mdi:server-network", href: "/services" },
   { label: "Email Generator", icon: "solar:letter-outline", href: "/email-generator" },
   { label: "Docs", icon: "mdi:notebook-edit-outline", href: "/docs" },
@@ -34,11 +36,16 @@ const MasterLayout = ({ children }) => {
   const pathname = usePathname();
   const [sidebarActive, setSidebarActive] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       document.documentElement.setAttribute("data-theme", "dark");
     }
+    fetch('/api/auth/me')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (data) setCurrentUser(data); })
+      .catch(() => {});
   }, []);
 
   const isActive = (href) => {
@@ -204,18 +211,20 @@ const MasterLayout = ({ children }) => {
                     type='button'
                     data-bs-toggle='dropdown'
                   >
-                    <span className='w-40-px h-40-px bg-primary-600 rounded-circle d-flex justify-content-center align-items-center text-white fw-semibold'>
-                      <Icon icon='solar:user-bold' className='text-xl' />
-                    </span>
+                    <Avatar
+                      src={currentUser?.avatarUrl}
+                      name={currentUser?.fullName}
+                      size={40}
+                    />
                   </button>
                   <div className='dropdown-menu to-top dropdown-menu-sm'>
                     <div className='py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2'>
                       <div>
                         <h6 className='text-lg text-primary-light fw-semibold mb-2'>
-                          Botmakers CRM
+                          {currentUser?.fullName || 'Botmakers CRM'}
                         </h6>
                         <span className='text-secondary-light fw-medium text-sm'>
-                          Admin
+                          {currentUser?.fullName ? 'Team Member' : 'Admin'}
                         </span>
                       </div>
                       <button type='button' className='hover-text-danger'>
