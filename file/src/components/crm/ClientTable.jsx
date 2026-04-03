@@ -226,25 +226,25 @@ const ClientTable = ({ initialData }) => {
                 <table className="table table-hover mb-0">
                   <thead>
                     <tr>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-dark text-xs fw-semibold px-3 py-2">
                         Name
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-dark text-xs fw-semibold px-3 py-2">
                         Company
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-dark text-xs fw-semibold px-3 py-2">
                         Email
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-dark text-xs fw-semibold px-3 py-2">
                         Projects
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-dark text-xs fw-semibold px-3 py-2">
                         Open Invoices
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2">
+                      <th className="text-dark text-xs fw-semibold px-3 py-2">
                         Last Contact
                       </th>
-                      <th className="text-secondary-light text-xs fw-semibold px-3 py-2" style={{ width: '50px' }}>
+                      <th className="text-dark text-xs fw-semibold px-3 py-2" style={{ width: '50px' }}>
                       </th>
                     </tr>
                   </thead>
@@ -279,26 +279,26 @@ const ClientTable = ({ initialData }) => {
                             <td className="px-3 py-3">
                               <Link
                                 href={`/clients/${client.id}`}
-                                className="fw-medium text-sm text-white client-name-link"
+                                className="fw-medium text-sm text-dark client-name-link"
                                 style={{ textDecoration: 'none' }}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {client.fullName}
                               </Link>
                             </td>
-                            <td className="px-3 py-3 text-white text-sm">
+                            <td className="px-3 py-3 text-dark text-sm">
                               {client.company || '—'}
                             </td>
-                            <td className="px-3 py-3 text-white text-sm">
+                            <td className="px-3 py-3 text-dark text-sm">
                               {client.email}
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-muted text-sm">
                               {String(client.projectCount)}
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-muted text-sm">
                               {formatCurrency(client.openInvoiceTotal)}
                             </td>
-                            <td className="px-3 py-3 text-secondary-light text-sm">
+                            <td className="px-3 py-3 text-muted text-sm">
                               {client.lastContact
                                 ? formatRelativeTime(client.lastContact)
                                 : 'Never'}
@@ -306,7 +306,7 @@ const ClientTable = ({ initialData }) => {
                             <td className="px-3 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                               <div className="position-relative d-inline-block">
                                 <button
-                                  className="btn btn-sm p-1 text-secondary-light"
+                                  className="btn btn-sm p-1 text-muted"
                                   onClick={() => setOpenMenuId(openMenuId === client.id ? null : client.id)}
                                   title="Actions"
                                 >
