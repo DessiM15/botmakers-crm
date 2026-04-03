@@ -66,7 +66,7 @@ export default async function PortalPreviewPage({ searchParams }) {
       .limit(1);
     client = row;
   } catch (err) {
-    console.error('[PortalPreview] Client fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[PortalPreview] Client fetch error:', err.message);
   }
 
   if (!client) notFound();

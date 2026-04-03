@@ -156,7 +156,7 @@ export async function submitQuestion(projectId, questionText) {
 
     return { success: true, question };
   } catch (err) {
-    console.error('submitQuestion error:', err);
+    if (process.env.NODE_ENV === 'development') console.error('submitQuestion error:', err);
     return { error: 'Failed to submit question. Please try again.' };
   }
 }

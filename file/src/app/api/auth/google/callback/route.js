@@ -81,7 +81,7 @@ export async function GET(request) {
 
     return htmlRedirect(`${baseUrl}/settings?google_success=true`);
   } catch (err) {
-    console.error('[Google Callback] Error:', err);
+    if (process.env.NODE_ENV === 'development') console.error('[Google Callback] Error:', err);
     const message = err.message?.includes('CB-AUTH') ? 'auth_required' : 'exchange_failed';
     return htmlRedirect(`${baseUrl}/settings?google_error=${message}`);
   }

@@ -31,7 +31,7 @@ const Page = async ({ searchParams }) => {
     });
   } catch (err) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('[Contacts] Data fetch error:', err.message);
+      if (process.env.NODE_ENV === 'development') console.error('[Contacts] Data fetch error:', err.message);
     }
   }
 

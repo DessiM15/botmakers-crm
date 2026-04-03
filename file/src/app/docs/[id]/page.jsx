@@ -33,7 +33,7 @@ const Page = async ({ params }) => {
   try {
     doc = await getEditableDocById(id);
   } catch (err) {
-    console.error('[DocDetail] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[DocDetail] Data fetch error:', err.message);
   }
 
   if (!doc) {

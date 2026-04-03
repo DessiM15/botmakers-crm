@@ -60,7 +60,7 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, analysis });
   } catch (err) {
-    console.error('AI analyze-lead error:', err?.message || err);
+    if (process.env.NODE_ENV === 'development') console.error('AI analyze-lead error:', err?.message || err);
     return NextResponse.json(
       { error: 'CB-INT-002: AI analysis failed' },
       { status: 500 }

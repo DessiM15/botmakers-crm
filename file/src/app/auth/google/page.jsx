@@ -21,7 +21,7 @@ export default async function GoogleAuthPage() {
     if (err?.digest?.startsWith('NEXT_REDIRECT')) {
       throw err;
     }
-    console.error('[Google Auth] Error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Google Auth] Error:', err.message);
     redirect('/settings?google_error=auth_required');
   }
 }

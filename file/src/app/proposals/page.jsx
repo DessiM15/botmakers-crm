@@ -26,7 +26,7 @@ const Page = async ({ searchParams }) => {
   try {
     data = await getProposals({ status, page, search });
   } catch (err) {
-    console.error('[Proposals] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Proposals] Data fetch error:', err.message);
   }
 
   return (

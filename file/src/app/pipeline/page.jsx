@@ -25,7 +25,7 @@ const Page = async () => {
       getTeamMembers(),
     ]);
   } catch (err) {
-    console.error('[Pipeline] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Pipeline] Data fetch error:', err.message);
   }
 
   return (

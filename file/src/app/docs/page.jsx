@@ -44,7 +44,7 @@ const Page = async ({ searchParams }) => {
         : Promise.resolve({ docs: [], total: 0 }),
     ]);
   } catch (err) {
-    console.error('[docs page] Failed to fetch documents:', err);
+    if (process.env.NODE_ENV === 'development') console.error('[docs page] Failed to fetch documents:', err);
   }
 
   return (

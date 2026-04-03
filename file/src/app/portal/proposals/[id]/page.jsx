@@ -25,7 +25,7 @@ export default async function PortalProposalPage({ params }) {
   try {
     proposal = await getPortalProposal(id, client.id);
   } catch (err) {
-    console.error('[PortalProposal] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[PortalProposal] Data fetch error:', err.message);
   }
 
   if (!proposal) notFound();

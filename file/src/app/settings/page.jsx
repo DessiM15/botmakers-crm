@@ -76,7 +76,7 @@ const Page = async () => {
       .from(teamUsers)
       .orderBy(asc(teamUsers.fullName));
   } catch (err) {
-    console.error('[Settings] Failed to fetch team members:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Settings] Failed to fetch team members:', err.message);
   }
 
   // Generate signed avatar URLs for team members

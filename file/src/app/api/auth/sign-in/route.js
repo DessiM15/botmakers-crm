@@ -12,7 +12,7 @@ function getRatelimit() {
     });
     _ratelimit = new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(50, '15 m'), // TODO: revert to 5 after login testing
+      limiter: Ratelimit.slidingWindow(5, '15 m'),
       analytics: true,
       prefix: 'ratelimit:signin',
     });

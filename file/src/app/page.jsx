@@ -50,7 +50,7 @@ const Page = async () => {
       getMonthlyRevenue().catch(() => []),
     ]);
   } catch (err) {
-    console.error('[Dashboard] Data fetch error:', err.message, err.stack);
+    if (process.env.NODE_ENV === 'development') console.error('[Dashboard] Data fetch error:', err.message, err.stack);
     // Fallback to empty data so the page still renders
     metrics = { leadsThisWeek: 0, leadsDelta: 0, pipelineValue: 0, activeProjects: 0, revenueThisMonth: 0 };
     alerts = { staleLeads: [], overdueMilestones: [], pendingQuestions: [] };

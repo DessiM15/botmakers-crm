@@ -48,7 +48,7 @@ const Page = async ({ params }) => {
       getProjectPnL(id).catch(() => ({ revenue: 0, costs: 0, profit: 0, margin: 0 })),
     ]);
   } catch (err) {
-    console.error('[ProjectDetail] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[ProjectDetail] Data fetch error:', err.message);
   }
 
   if (!project) {

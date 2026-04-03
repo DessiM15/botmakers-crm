@@ -28,7 +28,7 @@ const Page = async ({ searchParams }) => {
       perPage: parseInt(params?.perPage || '25', 10),
     });
   } catch (err) {
-    console.error('[Clients] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Clients] Data fetch error:', err.message);
   }
 
   return (

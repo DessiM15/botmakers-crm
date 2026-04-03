@@ -40,7 +40,7 @@ const Page = async () => {
       if (s.key === 'calendar_colors') savedColors = s.value;
     }
   } catch (err) {
-    console.error('[Calendar] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Calendar] Data fetch error:', err.message);
   }
 
   return (

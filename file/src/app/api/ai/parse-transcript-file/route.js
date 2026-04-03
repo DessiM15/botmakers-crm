@@ -57,7 +57,7 @@ export async function POST(request) {
     return NextResponse.json({ success: true, text: text.trim() });
   } catch (err) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('File parse error:', err?.message || err);
+      if (process.env.NODE_ENV === 'development') console.error('File parse error:', err?.message || err);
     }
     return NextResponse.json(
       { error: 'Failed to parse file. Please try a different format.' },

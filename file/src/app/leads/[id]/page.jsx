@@ -44,7 +44,7 @@ const Page = async ({ params }) => {
       getLeadFollowUps(id).catch(() => []),
     ]);
   } catch (err) {
-    console.error('[LeadDetail] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[LeadDetail] Data fetch error:', err.message);
   }
 
   if (!lead) {

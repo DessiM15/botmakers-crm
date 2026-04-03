@@ -24,7 +24,7 @@ export default async function PortalInvoiceDetailPage({ params }) {
   try {
     invoice = await getPortalInvoice(id, client.id);
   } catch (err) {
-    console.error('[PortalInvoiceDetail] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[PortalInvoiceDetail] Data fetch error:', err.message);
   }
 
   if (!invoice) notFound();

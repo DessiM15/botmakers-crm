@@ -18,7 +18,7 @@ export async function GET() {
     const authUrl = await getGoogleAuthUrl(teamUser.id);
     return NextResponse.redirect(authUrl);
   } catch (error) {
-    console.error('[Google Auth] Error:', error.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Google Auth] Error:', error.message);
     return NextResponse.redirect(
       new URL('/settings?google_error=auth_required', process.env.NEXT_PUBLIC_SITE_URL || 'https://crm.botmakers.ai')
     );

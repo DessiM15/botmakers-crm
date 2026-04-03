@@ -36,7 +36,7 @@ const Page = async ({ searchParams }) => {
       getTeamMembers(),
     ]);
   } catch (err) {
-    console.error('[Leads] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Leads] Data fetch error:', err.message);
   }
 
   return (

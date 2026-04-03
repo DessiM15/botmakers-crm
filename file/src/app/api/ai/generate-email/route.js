@@ -116,7 +116,7 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, email: result });
   } catch (error) {
-    console.error('AI generate-email error:', error);
+    if (process.env.NODE_ENV === 'development') console.error('AI generate-email error:', error);
     if (error.message?.startsWith('CB-')) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }

@@ -73,7 +73,7 @@ export async function POST(request) {
     });
   } catch (err) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Discovery call processing error:', err?.message || err);
+      if (process.env.NODE_ENV === 'development') console.error('Discovery call processing error:', err?.message || err);
     }
     return NextResponse.json(
       { error: 'CB-INT-002: AI processing failed' },

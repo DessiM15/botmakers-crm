@@ -32,7 +32,7 @@ export default async function PortalProjectPage({ params }) {
       getPortalDocumentsByProjectId(id).catch(() => []),
     ]);
   } catch (err) {
-    console.error('[PortalProject] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[PortalProject] Data fetch error:', err.message);
   }
 
   if (!project) notFound();

@@ -59,7 +59,7 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, proposal });
   } catch (error) {
-    console.error('AI generate-proposal error:', error?.message || error);
+    if (process.env.NODE_ENV === 'development') console.error('AI generate-proposal error:', error?.message || error);
     if (error.message?.startsWith('CB-')) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }

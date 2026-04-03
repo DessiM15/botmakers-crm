@@ -35,7 +35,7 @@ const Page = async ({ searchParams }) => {
       getClientsForServiceDropdown(),
     ]);
   } catch (err) {
-    console.error('[Services] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Services] Data fetch error:', err.message);
   }
 
   return (

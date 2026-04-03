@@ -31,7 +31,7 @@ const Page = async ({ searchParams }) => {
       getInvoiceSummary(),
     ]);
   } catch (err) {
-    console.error('[Invoices] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Invoices] Data fetch error:', err.message);
   }
 
   return (

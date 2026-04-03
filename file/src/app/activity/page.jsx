@@ -37,7 +37,7 @@ const Page = async ({ searchParams }) => {
       dateTo,
     });
   } catch (err) {
-    console.error('[Activity] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Activity] Data fetch error:', err.message);
   }
 
   return (

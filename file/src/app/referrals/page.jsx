@@ -28,7 +28,7 @@ const Page = async () => {
       })
     );
   } catch (err) {
-    console.error('[Referrals] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[Referrals] Data fetch error:', err.message);
   }
 
   return (

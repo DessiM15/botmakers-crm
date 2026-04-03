@@ -22,7 +22,7 @@ const Page = async ({ params }) => {
   try {
     proposal = await getProposalById(id);
   } catch (err) {
-    console.error('[ProposalDetail] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[ProposalDetail] Data fetch error:', err.message);
   }
 
   if (!proposal) {

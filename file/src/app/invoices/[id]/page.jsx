@@ -34,7 +34,7 @@ const Page = async ({ params }) => {
   try {
     invoice = await getInvoiceById(id);
   } catch (err) {
-    console.error('[InvoiceDetail] Data fetch error:', err.message);
+    if (process.env.NODE_ENV === 'development') console.error('[InvoiceDetail] Data fetch error:', err.message);
   }
 
   if (!invoice) {

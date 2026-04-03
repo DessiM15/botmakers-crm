@@ -79,7 +79,7 @@ export default async function GoogleCallbackPage({ searchParams }) {
     if (err?.digest?.startsWith('NEXT_REDIRECT')) {
       throw err;
     }
-    console.error('[Google Callback] Error:', err);
+    if (process.env.NODE_ENV === 'development') console.error('[Google Callback] Error:', err);
     redirect('/settings?google_error=exchange_failed');
   }
 }
