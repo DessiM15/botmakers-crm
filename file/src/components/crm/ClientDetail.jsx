@@ -285,7 +285,7 @@ const PortalAccessCard = ({ client, setClient }) => {
   );
 };
 
-const ClientDetail = ({ client: initialClient, clientProjects = [], clientProposals = [], clientInvoices = [], clientServices = [], clientDocuments = [], clientEditableDocs = [], clientCosts = [], clientPnL = {} }) => {
+const ClientDetail = ({ client: initialClient, clientProjects = [], clientProposals = [], clientInvoices = [], clientServices = [], clientDocuments = [], clientEditableDocs = [], clientCosts = [], clientPnL = {}, monthlyServiceCost = {} }) => {
   const router = useRouter();
   const [client, setClient] = useState(initialClient);
   const [activeTab, setActiveTab] = useState('overview');
@@ -402,6 +402,28 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
           </div>
         </div>
       </div>
+
+      {/* Monthly 3rd Party Costs */}
+      {(monthlyServiceCost.monthlyTotal || 0) > 0 && (
+        <div className="row g-3 mb-4">
+          <div className="col-sm-6 col-lg-3">
+            <div className="card" style={{ borderLeft: '3px solid #fd7e14' }}>
+              <div className="card-body py-3 px-4">
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <Icon icon="mdi:server-network" style={{ fontSize: '18px', color: '#fd7e14' }} />
+                  <span className="text-secondary-light text-xs">Monthly 3rd Party Costs</span>
+                </div>
+                <div className="text-lg fw-semibold" style={{ color: '#fd7e14' }}>
+                  {formatCurrency(monthlyServiceCost.monthlyTotal)}
+                </div>
+                <span className="text-secondary-light text-xs">
+                  {monthlyServiceCost.activeCount} active service{monthlyServiceCost.activeCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <ul className="nav nav-tabs border-secondary-subtle mb-4">
@@ -887,8 +909,8 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
 
       {activeTab === 'pnl' && (
         <>
-          <div className="row g-3 mb-4">
-            <div className="col-sm-6 col-lg-3">
+          <div className="row g-3 mb-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
@@ -901,12 +923,40 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
                     <Icon icon="mdi:trending-down" style={{ fontSize: '18px', color: '#dc3545' }} />
-                    <span className="text-secondary-light text-xs">Costs</span>
+                    <span className="text-secondary-light text-xs">Other Costs</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: '#dc3545' }}>
+                    {formatCurrency(clientPnL.otherCosts || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-sm-6 col-lg-4">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:server-network" style={{ fontSize: '18px', color: '#fd7e14' }} />
+                    <span className="text-secondary-light text-xs">3rd Party Services</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: '#fd7e14' }}>
+                    {formatCurrency(clientPnL.serviceCosts || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="row g-3 mb-4">
+            <div className="col-sm-6 col-lg-4">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:sigma" style={{ fontSize: '18px', color: '#dc3545' }} />
+                    <span className="text-secondary-light text-xs">Total Costs</span>
                   </div>
                   <div className="text-lg fw-semibold" style={{ color: '#dc3545' }}>
                     {formatCurrency(clientPnL.costs || 0)}
@@ -914,7 +964,7 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
@@ -927,7 +977,7 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
@@ -971,7 +1021,12 @@ const ClientDetail = ({ client: initialClient, clientProjects = [], clientPropos
                     <tbody>
                       {clientCosts.map((cost) => (
                         <tr key={cost.id}>
-                          <td><span className="text-white text-sm fw-medium">{cost.provider}</span></td>
+                          <td>
+                            <span className="text-white text-sm fw-medium">{cost.provider}</span>
+                            {cost.serviceId && (
+                              <Icon icon="mdi:server-network" className="ms-1" style={{ fontSize: '13px', color: '#fd7e14' }} title="3rd Party Service" />
+                            )}
+                          </td>
                           <td><span className="text-secondary-light text-sm">{cost.description}</span></td>
                           <td><span className="text-white text-sm fw-medium">{formatCurrency(cost.amount)}</span></td>
                           <td>

@@ -666,8 +666,8 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
       {/* P&L Tab */}
       {activeTab === 'pnl' && (
         <>
-          <div className="row g-3 mb-4">
-            <div className="col-sm-6 col-lg-3">
+          <div className="row g-3 mb-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
@@ -680,12 +680,40 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
                     <Icon icon="mdi:trending-down" style={{ fontSize: '18px', color: '#dc3545' }} />
-                    <span className="text-secondary-light text-xs">Costs</span>
+                    <span className="text-secondary-light text-xs">Other Costs</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: '#dc3545' }}>
+                    {formatCurrency(projectPnL.otherCosts || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-sm-6 col-lg-4">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:server-network" style={{ fontSize: '18px', color: '#fd7e14' }} />
+                    <span className="text-secondary-light text-xs">3rd Party Services</span>
+                  </div>
+                  <div className="text-lg fw-semibold" style={{ color: '#fd7e14' }}>
+                    {formatCurrency(projectPnL.serviceCosts || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="row g-3 mb-4">
+            <div className="col-sm-6 col-lg-4">
+              <div className="card">
+                <div className="card-body py-3 px-4">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Icon icon="mdi:sigma" style={{ fontSize: '18px', color: '#dc3545' }} />
+                    <span className="text-secondary-light text-xs">Total Costs</span>
                   </div>
                   <div className="text-lg fw-semibold" style={{ color: '#dc3545' }}>
                     {formatCurrency(projectPnL.costs || 0)}
@@ -693,7 +721,7 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
@@ -706,7 +734,7 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-lg-3">
+            <div className="col-sm-6 col-lg-4">
               <div className="card">
                 <div className="card-body py-3 px-4">
                   <div className="d-flex align-items-center gap-2 mb-1">
@@ -752,7 +780,12 @@ const ProjectDetail = ({ project: initialProject, projectInvoices = [], projectQ
                     <tbody>
                       {projectCosts.map((cost) => (
                         <tr key={cost.id}>
-                          <td><span className="text-white text-sm fw-medium">{cost.provider}</span></td>
+                          <td>
+                            <span className="text-white text-sm fw-medium">{cost.provider}</span>
+                            {cost.serviceId && (
+                              <Icon icon="mdi:server-network" className="ms-1" style={{ fontSize: '13px', color: '#fd7e14' }} title="3rd Party Service" />
+                            )}
+                          </td>
                           <td><span className="text-secondary-light text-sm">{cost.description}</span></td>
                           <td><span className="text-white text-sm fw-medium">{formatCurrency(cost.amount)}</span></td>
                           <td>

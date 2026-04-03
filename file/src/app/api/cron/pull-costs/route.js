@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
-import { costEntries, activityLog } from '@/lib/db/schema';
-import { sql } from 'drizzle-orm';
+import { costEntries, activityLog, clientServices } from '@/lib/db/schema';
+import { sql, and, eq, or } from 'drizzle-orm';
 
 export async function GET(request) {
   try {
@@ -24,7 +24,7 @@ export async function GET(request) {
     const startDate = prevMonth.toISOString().split('T')[0];
     const endDate = prevMonthEnd.toISOString().split('T')[0];
 
-    const results = { vercel: null, anthropic: null, squareFees: null };
+    const results = { vercel: null, anthropic: null, squareFees: null, serviceCosts: null };
 
     // Pull Vercel costs
     try {
@@ -134,6 +134,68 @@ export async function GET(request) {
       results.squareFees = { payments: paymentRows.length, totalFees: Math.round(totalFees * 100) / 100 };
     } catch {
       results.squareFees = { error: 'Failed to calculate Square fees' };
+    }
+
+    // Generate cost entries from tracked 3rd party services
+    try {
+      const providerSourceMap = {
+        supabase: 'supabase',
+        github: 'github',
+        resend: 'resend',
+        upstash: 'upstash',
+        vercel: 'vercel',
+      };
+
+      const activeServices = await db
+        .select({
+          id: clientServices.id,
+          clientId: clientServices.clientId,
+          projectId: clientServices.projectId,
+          serviceName: clientServices.serviceName,
+          provider: clientServices.provider,
+          monthlyCost: clientServices.monthlyCost,
+        })
+        .from(clientServices)
+        .where(
+          and(
+            sql`${clientServices.status} IN ('active', 'expiring_soon')`,
+            sql`${clientServices.monthlyCost}::numeric > 0`
+          )
+        );
+
+      let inserted = 0;
+      const periodYM = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
+
+      for (const svc of activeServices) {
+        const providerLower = (svc.provider || '').toLowerCase();
+        const source = providerSourceMap[providerLower] || 'other';
+        const externalId = `svc-${svc.id}-${periodYM}`;
+
+        try {
+          await db
+            .insert(costEntries)
+            .values({
+              serviceId: svc.id,
+              clientId: svc.clientId,
+              projectId: svc.projectId,
+              source,
+              provider: svc.provider,
+              description: `${svc.serviceName} — monthly service cost`,
+              amount: String(svc.monthlyCost),
+              periodStart: startDate,
+              periodEnd: endDate,
+              externalId,
+            })
+            .onConflictDoNothing();
+          inserted++;
+        } catch {
+          // Duplicate
+        }
+      }
+
+      results.serviceCosts = { found: activeServices.length, inserted };
+    } catch {
+      results.serviceCosts = { error: 'Failed to generate service cost entries' };
     }
 
     // Log activity

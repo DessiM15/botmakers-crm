@@ -6,8 +6,9 @@ import {
   payments,
   invoices,
   teamUsers,
+  clientServices,
 } from '@/lib/db/schema';
-import { eq, desc, and, count, sql, ilike, or, sum, between } from 'drizzle-orm';
+import { eq, desc, and, count, sql, ilike, or, sum, between, isNotNull } from 'drizzle-orm';
 
 /**
  * Fetch paginated, filterable cost entries.
@@ -97,6 +98,7 @@ export async function getCostsByProjectId(projectId) {
   return db
     .select({
       id: costEntries.id,
+      serviceId: costEntries.serviceId,
       source: costEntries.source,
       provider: costEntries.provider,
       description: costEntries.description,
@@ -119,6 +121,7 @@ export async function getCostsByClientId(clientId) {
     .select({
       id: costEntries.id,
       projectId: costEntries.projectId,
+      serviceId: costEntries.serviceId,
       source: costEntries.source,
       provider: costEntries.provider,
       description: costEntries.description,
@@ -190,12 +193,19 @@ export async function getProjectPnL(projectId) {
     .from(costEntries)
     .where(eq(costEntries.projectId, projectId));
 
+  const [serviceCostResult] = await db
+    .select({ total: sum(costEntries.amount) })
+    .from(costEntries)
+    .where(and(eq(costEntries.projectId, projectId), isNotNull(costEntries.serviceId)));
+
   const revenue = Number(revenueResult?.total) || 0;
   const costs = Number(costResult?.total) || 0;
+  const serviceCosts = Number(serviceCostResult?.total) || 0;
+  const otherCosts = costs - serviceCosts;
   const profit = revenue - costs;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-  return { revenue, costs, profit, margin };
+  return { revenue, costs, serviceCosts, otherCosts, profit, margin };
 }
 
 /**
@@ -212,12 +222,19 @@ export async function getClientPnL(clientId) {
     .from(costEntries)
     .where(eq(costEntries.clientId, clientId));
 
+  const [serviceCostResult] = await db
+    .select({ total: sum(costEntries.amount) })
+    .from(costEntries)
+    .where(and(eq(costEntries.clientId, clientId), isNotNull(costEntries.serviceId)));
+
   const revenue = Number(revenueResult?.total) || 0;
   const costs = Number(costResult?.total) || 0;
+  const serviceCosts = Number(serviceCostResult?.total) || 0;
+  const otherCosts = costs - serviceCosts;
   const profit = revenue - costs;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-  return { revenue, costs, profit, margin };
+  return { revenue, costs, serviceCosts, otherCosts, profit, margin };
 }
 
 /**
@@ -246,12 +263,20 @@ export async function getGlobalPnL(startDate = null, endDate = null) {
     .from(costEntries)
     .where(costConditions.length > 0 ? and(...costConditions) : undefined);
 
+  const serviceCostConditions = [...costConditions, isNotNull(costEntries.serviceId)];
+  const [serviceCostResult] = await db
+    .select({ total: sum(costEntries.amount) })
+    .from(costEntries)
+    .where(and(...serviceCostConditions));
+
   const revenue = Number(revenueResult?.total) || 0;
   const costs = Number(costResult?.total) || 0;
+  const serviceCosts = Number(serviceCostResult?.total) || 0;
+  const otherCosts = costs - serviceCosts;
   const profit = revenue - costs;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-  return { revenue, costs, profit, margin };
+  return { revenue, costs, serviceCosts, otherCosts, profit, margin };
 }
 
 /**
@@ -398,4 +423,27 @@ export async function getProjectsForCostDropdown(clientId = null) {
     .from(projects)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(projects.name);
+}
+
+/**
+ * Get total monthly cost of active services for a client (live value, not from cost_entries).
+ */
+export async function getActiveServiceCostByClientId(clientId) {
+  const [result] = await db
+    .select({
+      total: sum(clientServices.monthlyCost),
+      count: count(),
+    })
+    .from(clientServices)
+    .where(
+      and(
+        eq(clientServices.clientId, clientId),
+        sql`${clientServices.status} IN ('active', 'expiring_soon')`
+      )
+    );
+
+  return {
+    monthlyTotal: Number(result?.total) || 0,
+    activeCount: Number(result?.count) || 0,
+  };
 }

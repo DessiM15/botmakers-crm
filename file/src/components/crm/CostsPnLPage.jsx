@@ -347,8 +347,8 @@ const CostsPnLPage = ({
       </div>
 
       {/* P&L Summary Cards */}
-      <div className="row g-3 mb-4">
-        <div className="col-sm-6 col-lg-3">
+      <div className="row g-3 mb-3">
+        <div className="col-sm-6 col-lg-4">
           <div className="card">
             <div className="card-body py-3 px-4">
               <div className="d-flex align-items-center gap-2 mb-1">
@@ -361,11 +361,39 @@ const CostsPnLPage = ({
             </div>
           </div>
         </div>
-        <div className="col-sm-6 col-lg-3">
+        <div className="col-sm-6 col-lg-4">
           <div className="card">
             <div className="card-body py-3 px-4">
               <div className="d-flex align-items-center gap-2 mb-1">
                 <Icon icon="mdi:trending-down" style={{ fontSize: '20px', color: '#dc3545' }} />
+                <span className="text-secondary-light text-xs">Other Costs</span>
+              </div>
+              <div className="text-lg fw-semibold" style={{ color: '#dc3545' }}>
+                {formatCurrency(pnl.otherCosts || 0)}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-sm-6 col-lg-4">
+          <div className="card">
+            <div className="card-body py-3 px-4">
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <Icon icon="mdi:server-network" style={{ fontSize: '20px', color: '#fd7e14' }} />
+                <span className="text-secondary-light text-xs">3rd Party Services</span>
+              </div>
+              <div className="text-lg fw-semibold" style={{ color: '#fd7e14' }}>
+                {formatCurrency(pnl.serviceCosts || 0)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="row g-3 mb-4">
+        <div className="col-sm-6 col-lg-4">
+          <div className="card">
+            <div className="card-body py-3 px-4">
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <Icon icon="mdi:sigma" style={{ fontSize: '20px', color: '#dc3545' }} />
                 <span className="text-secondary-light text-xs">Total Costs</span>
               </div>
               <div className="text-lg fw-semibold" style={{ color: '#dc3545' }}>
@@ -374,7 +402,7 @@ const CostsPnLPage = ({
             </div>
           </div>
         </div>
-        <div className="col-sm-6 col-lg-3">
+        <div className="col-sm-6 col-lg-4">
           <div className="card">
             <div className="card-body py-3 px-4">
               <div className="d-flex align-items-center gap-2 mb-1">
@@ -387,7 +415,7 @@ const CostsPnLPage = ({
             </div>
           </div>
         </div>
-        <div className="col-sm-6 col-lg-3">
+        <div className="col-sm-6 col-lg-4">
           <div className="card">
             <div className="card-body py-3 px-4">
               <div className="d-flex align-items-center gap-2 mb-1">
