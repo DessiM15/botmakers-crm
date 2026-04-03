@@ -181,6 +181,27 @@ export const COST_PROVIDERS = [
   'Other',
 ];
 
+export const SERVICE_DETECTION_RULES = [
+  { provider: 'Supabase', category: 'hosting', npmPackages: ['@supabase/supabase-js', '@supabase/ssr', '@supabase/auth-helpers-nextjs'], envPrefixes: ['SUPABASE_', 'NEXT_PUBLIC_SUPABASE_'], configFiles: [] },
+  { provider: 'Anthropic', category: 'api', npmPackages: ['@anthropic-ai/sdk'], envPrefixes: ['ANTHROPIC_'], configFiles: [] },
+  { provider: 'Resend', category: 'email', npmPackages: ['resend'], envPrefixes: ['RESEND_'], configFiles: [] },
+  { provider: 'Square', category: 'api', npmPackages: ['square'], envPrefixes: ['SQUARE_'], configFiles: [] },
+  { provider: 'Upstash', category: 'api', npmPackages: ['@upstash/redis', '@upstash/ratelimit'], envPrefixes: ['UPSTASH_'], configFiles: [] },
+  { provider: 'GitHub', category: 'api', npmPackages: ['@octokit/rest', 'octokit'], envPrefixes: ['GITHUB_TOKEN', 'GITHUB_'], configFiles: [] },
+  { provider: 'Vercel', category: 'hosting', npmPackages: ['@vercel/analytics', '@vercel/speed-insights'], envPrefixes: ['VERCEL_'], configFiles: ['vercel.json'] },
+  { provider: 'Stripe', category: 'api', npmPackages: ['stripe', '@stripe/stripe-js'], envPrefixes: ['STRIPE_'], configFiles: [] },
+  { provider: 'OpenAI', category: 'api', npmPackages: ['openai'], envPrefixes: ['OPENAI_'], configFiles: [] },
+  { provider: 'SendGrid', category: 'email', npmPackages: ['@sendgrid/mail'], envPrefixes: ['SENDGRID_'], configFiles: [] },
+  { provider: 'Google APIs', category: 'api', npmPackages: ['googleapis', '@google-cloud/storage', 'firebase-admin'], envPrefixes: ['GOOGLE_', 'FIREBASE_'], configFiles: [] },
+  { provider: 'Twilio', category: 'api', npmPackages: ['twilio'], envPrefixes: ['TWILIO_'], configFiles: [] },
+  { provider: 'AWS', category: 'hosting', npmPackages: ['@aws-sdk/client-s3', 'aws-sdk'], envPrefixes: ['AWS_'], configFiles: [] },
+  { provider: 'Cloudflare', category: 'hosting', npmPackages: ['@cloudflare/workers-types', 'wrangler'], envPrefixes: ['CLOUDFLARE_'], configFiles: ['wrangler.toml'] },
+  { provider: 'Prisma', category: 'api', npmPackages: ['prisma', '@prisma/client'], envPrefixes: [], configFiles: ['prisma/schema.prisma'] },
+  { provider: 'PlanetScale', category: 'hosting', npmPackages: ['@planetscale/database'], envPrefixes: ['DATABASE_URL'], configFiles: [] },
+  { provider: 'Clerk', category: 'api', npmPackages: ['@clerk/nextjs'], envPrefixes: ['CLERK_', 'NEXT_PUBLIC_CLERK_'], configFiles: [] },
+  { provider: 'Auth0', category: 'api', npmPackages: ['@auth0/nextjs-auth0'], envPrefixes: ['AUTH0_'], configFiles: [] },
+];
+
 export const CALENDAR_CATEGORIES = [
   { key: 'meeting', label: 'Meetings', icon: 'mdi:calendar-clock-outline' },
   { key: 'calcom', label: 'Cal.com', icon: 'mdi:calendar-check-outline' },

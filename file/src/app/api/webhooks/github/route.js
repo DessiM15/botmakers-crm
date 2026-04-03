@@ -5,6 +5,7 @@ import { projectRepos, projectMilestones, projectPhases, activityLog } from '@/l
 import { eq, and, ilike } from 'drizzle-orm';
 import { getRepoFileContent } from '@/lib/integrations/github';
 import { completeMilestoneInternal } from '@/lib/actions/milestone-internal';
+import { scanRepoForServices } from '@/lib/integrations/repo-scanner';
 
 /**
  * Verify GitHub webhook signature (X-Hub-Signature-256).
@@ -239,6 +240,22 @@ export async function POST(request) {
               milestoneUpdates++;
             }
           }
+        }
+      }
+    }
+
+    // Re-scan for services if package.json was modified
+    const allModifiedFiles = (payload.commits || []).flatMap((c) => [
+      ...(c.modified || []),
+      ...(c.added || []),
+    ]);
+    if (allModifiedFiles.includes('package.json') || allModifiedFiles.some((f) => f.startsWith('.env'))) {
+      for (const r of matchingRepos) {
+        try {
+          const branch = payload.ref?.replace('refs/heads/', '') || r.defaultBranch;
+          await scanRepoForServices(r.githubOwner, r.githubRepo, branch);
+        } catch {
+          // Non-blocking
         }
       }
     }

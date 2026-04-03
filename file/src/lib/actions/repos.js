@@ -95,6 +95,14 @@ export async function linkRepo(projectId, repoInput, legacyRepo) {
 
     revalidatePath(`/projects/${projectId}`);
 
+    // Auto-scan for services (non-blocking)
+    try {
+      const { scanProjectServices } = await import('@/lib/actions/services');
+      await scanProjectServices(projectId);
+    } catch {
+      // Scan failure should not block repo linking
+    }
+
     return { success: true, repo: newRepo };
   } catch (error) {
     if (error.message?.startsWith('CB-')) {
