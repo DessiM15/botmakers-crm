@@ -8,7 +8,7 @@ import {
   teamUsers,
   clientServices,
 } from '@/lib/db/schema';
-import { eq, desc, and, count, sql, ilike, or, sum, between, isNotNull } from 'drizzle-orm';
+import { eq, desc, and, count, sql, ilike, or, sum, between } from 'drizzle-orm';
 
 /**
  * Fetch paginated, filterable cost entries.
@@ -180,28 +180,39 @@ export async function getCostSummary(startDate = null, endDate = null) {
 
 /**
  * Calculate P&L for a specific project.
+ * serviceCosts comes from live client_services (current monthly burn),
+ * otherCosts comes from cost_entries without a serviceId.
  */
 export async function getProjectPnL(projectId) {
-  const [revenueResult] = await db
-    .select({ total: sum(payments.amount) })
-    .from(payments)
-    .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
-    .where(eq(invoices.projectId, projectId));
-
-  const [costResult] = await db
-    .select({ total: sum(costEntries.amount) })
-    .from(costEntries)
-    .where(eq(costEntries.projectId, projectId));
-
-  const [serviceCostResult] = await db
-    .select({ total: sum(costEntries.amount) })
-    .from(costEntries)
-    .where(and(eq(costEntries.projectId, projectId), isNotNull(costEntries.serviceId)));
+  const [revenueResult, otherCostResult, serviceCostResult] = await Promise.all([
+    db
+      .select({ total: sum(payments.amount) })
+      .from(payments)
+      .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
+      .where(eq(invoices.projectId, projectId))
+      .then((r) => r[0]),
+    db
+      .select({ total: sum(costEntries.amount) })
+      .from(costEntries)
+      .where(and(eq(costEntries.projectId, projectId), sql`${costEntries.serviceId} IS NULL`))
+      .then((r) => r[0]),
+    db
+      .select({ total: sum(clientServices.monthlyCost) })
+      .from(clientServices)
+      .where(
+        and(
+          eq(clientServices.projectId, projectId),
+          sql`${clientServices.status} IN ('active', 'expiring_soon')`,
+          sql`${clientServices.monthlyCost}::numeric > 0`
+        )
+      )
+      .then((r) => r[0]),
+  ]);
 
   const revenue = Number(revenueResult?.total) || 0;
-  const costs = Number(costResult?.total) || 0;
   const serviceCosts = Number(serviceCostResult?.total) || 0;
-  const otherCosts = costs - serviceCosts;
+  const otherCosts = Number(otherCostResult?.total) || 0;
+  const costs = serviceCosts + otherCosts;
   const profit = revenue - costs;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
@@ -210,27 +221,38 @@ export async function getProjectPnL(projectId) {
 
 /**
  * Calculate P&L for a specific client.
+ * serviceCosts comes from live client_services (current monthly burn),
+ * otherCosts comes from cost_entries without a serviceId.
  */
 export async function getClientPnL(clientId) {
-  const [revenueResult] = await db
-    .select({ total: sum(payments.amount) })
-    .from(payments)
-    .where(eq(payments.clientId, clientId));
-
-  const [costResult] = await db
-    .select({ total: sum(costEntries.amount) })
-    .from(costEntries)
-    .where(eq(costEntries.clientId, clientId));
-
-  const [serviceCostResult] = await db
-    .select({ total: sum(costEntries.amount) })
-    .from(costEntries)
-    .where(and(eq(costEntries.clientId, clientId), isNotNull(costEntries.serviceId)));
+  const [revenueResult, otherCostResult, serviceCostResult] = await Promise.all([
+    db
+      .select({ total: sum(payments.amount) })
+      .from(payments)
+      .where(eq(payments.clientId, clientId))
+      .then((r) => r[0]),
+    db
+      .select({ total: sum(costEntries.amount) })
+      .from(costEntries)
+      .where(and(eq(costEntries.clientId, clientId), sql`${costEntries.serviceId} IS NULL`))
+      .then((r) => r[0]),
+    db
+      .select({ total: sum(clientServices.monthlyCost) })
+      .from(clientServices)
+      .where(
+        and(
+          eq(clientServices.clientId, clientId),
+          sql`${clientServices.status} IN ('active', 'expiring_soon')`,
+          sql`${clientServices.monthlyCost}::numeric > 0`
+        )
+      )
+      .then((r) => r[0]),
+  ]);
 
   const revenue = Number(revenueResult?.total) || 0;
-  const costs = Number(costResult?.total) || 0;
   const serviceCosts = Number(serviceCostResult?.total) || 0;
-  const otherCosts = costs - serviceCosts;
+  const otherCosts = Number(otherCostResult?.total) || 0;
+  const costs = serviceCosts + otherCosts;
   const profit = revenue - costs;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
@@ -239,10 +261,12 @@ export async function getClientPnL(clientId) {
 
 /**
  * Calculate global P&L.
+ * serviceCosts comes from live client_services (current monthly burn),
+ * otherCosts comes from cost_entries without a serviceId.
  */
 export async function getGlobalPnL(startDate = null, endDate = null) {
   const revConditions = [];
-  const costConditions = [];
+  const costConditions = [sql`${costEntries.serviceId} IS NULL`];
 
   if (startDate) {
     revConditions.push(sql`${payments.paidAt} >= ${startDate}::timestamptz`);
@@ -253,26 +277,33 @@ export async function getGlobalPnL(startDate = null, endDate = null) {
     costConditions.push(sql`${costEntries.periodEnd} <= ${endDate}`);
   }
 
-  const [revenueResult] = await db
-    .select({ total: sum(payments.amount) })
-    .from(payments)
-    .where(revConditions.length > 0 ? and(...revConditions) : undefined);
-
-  const [costResult] = await db
-    .select({ total: sum(costEntries.amount) })
-    .from(costEntries)
-    .where(costConditions.length > 0 ? and(...costConditions) : undefined);
-
-  const serviceCostConditions = [...costConditions, isNotNull(costEntries.serviceId)];
-  const [serviceCostResult] = await db
-    .select({ total: sum(costEntries.amount) })
-    .from(costEntries)
-    .where(and(...serviceCostConditions));
+  const [revenueResult, otherCostResult, serviceCostResult] = await Promise.all([
+    db
+      .select({ total: sum(payments.amount) })
+      .from(payments)
+      .where(revConditions.length > 0 ? and(...revConditions) : undefined)
+      .then((r) => r[0]),
+    db
+      .select({ total: sum(costEntries.amount) })
+      .from(costEntries)
+      .where(and(...costConditions))
+      .then((r) => r[0]),
+    db
+      .select({ total: sum(clientServices.monthlyCost) })
+      .from(clientServices)
+      .where(
+        and(
+          sql`${clientServices.status} IN ('active', 'expiring_soon')`,
+          sql`${clientServices.monthlyCost}::numeric > 0`
+        )
+      )
+      .then((r) => r[0]),
+  ]);
 
   const revenue = Number(revenueResult?.total) || 0;
-  const costs = Number(costResult?.total) || 0;
   const serviceCosts = Number(serviceCostResult?.total) || 0;
-  const otherCosts = costs - serviceCosts;
+  const otherCosts = Number(otherCostResult?.total) || 0;
+  const costs = serviceCosts + otherCosts;
   const profit = revenue - costs;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
