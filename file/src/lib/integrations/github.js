@@ -108,6 +108,26 @@ export async function getRepoFileContent(owner, repo, path, branch = 'main') {
 }
 
 /**
+ * List top-level directory entries of a repo.
+ * Returns array of { name, type } where type is 'file' or 'dir'.
+ */
+export async function listRepoRoot(owner, repo, branch = 'main') {
+  try {
+    const octokit = getOctokit();
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: '',
+      ref: branch,
+    });
+    if (!Array.isArray(data)) return [];
+    return data.map((entry) => ({ name: entry.name, type: entry.type }));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Fetch branches for a repo.
  */
 export async function getRepoBranches(owner, repo) {
