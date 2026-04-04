@@ -919,7 +919,6 @@ export default function EmailGenerator({ teamUser }) {
                     style={{ background: '#f0f0f0', maxWidth: '100%', overflowX: 'auto' }}
                   >
                     <div
-                      style={{ maxWidth: 640, margin: '0 auto', overflowWrap: 'break-word', wordWrap: 'break-word' }}
                       dangerouslySetInnerHTML={{ __html: getFullBrandedHtml() }}
                     />
                   </div>

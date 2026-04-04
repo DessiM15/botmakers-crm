@@ -37,7 +37,7 @@ export function wrapInBrandedTemplate({
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin:0; padding:0; background-color:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif;">
-<div style="max-width:600px; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff; overflow-wrap:break-word; word-wrap:break-word;">
+<div style="max-width:600px; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff;">
 
   <div style="background-color:#033457; padding:30px 40px; text-align:center;">
     <img src="https://botmakers.ai/assets/botmakers-white-green-logo.png"
@@ -45,7 +45,7 @@ export function wrapInBrandedTemplate({
          style="height:40px;" />
   </div>
 
-  <div style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7; word-wrap:break-word; overflow-wrap:break-word;">
+  <div style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7;">
     <p style="margin:0 0 16px;">${greeting}</p>
 
     ${bodyHtml}
