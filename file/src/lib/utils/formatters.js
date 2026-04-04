@@ -39,6 +39,20 @@ export function formatRelativeTime(date) {
   return formatDate(d);
 }
 
+export function generateUnsubscribeUrl(type, id) {
+  const crypto = require('crypto');
+  const secret = process.env.CRON_SECRET || 'fallback-secret';
+  const payload = `${type}:${id}`;
+  const token = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000';
+  return `${baseUrl}/api/unsubscribe?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&token=${token}`;
+}
+
 export function formatPhoneNumber(phone) {
   if (!phone) return '—';
   const digits = phone.replace(/\D/g, '');

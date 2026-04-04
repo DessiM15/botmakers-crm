@@ -23,6 +23,7 @@ const sidebarItems = [
   { label: "Costs & P&L", icon: "mdi:chart-box-outline", href: "/costs" },
   { label: "Services", icon: "mdi:server-network", href: "/services" },
   { label: "Email Generator", icon: "solar:letter-outline", href: "/email-generator" },
+  { label: "Campaigns", icon: "mdi:email-newsletter", href: "/campaigns" },
   { label: "Docs", icon: "mdi:notebook-edit-outline", href: "/docs" },
   { label: "Meetings", icon: "mdi:calendar-check-outline", href: "/meetings" },
   { label: "Calendar", icon: "mdi:calendar-month-outline", href: "/calendar" },

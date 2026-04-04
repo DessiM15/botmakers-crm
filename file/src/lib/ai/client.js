@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT, VOICE_COMMAND_PROMPT, LEAD_RESPONSE_PROMPT, DISCOVERY_CALL_PROMPT } from './prompts';
+import { LEAD_ANALYSIS_SYSTEM_PROMPT, PROPOSAL_GENERATION_PROMPT, REPLY_POLISH_PROMPT, EMAIL_GENERATION_PROMPT, FOLLOW_UP_EMAIL_PROMPT, VOICE_COMMAND_PROMPT, LEAD_RESPONSE_PROMPT, DISCOVERY_CALL_PROMPT, CAMPAIGN_EMAIL_PROMPT } from './prompts';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -264,6 +264,69 @@ ${transcript}
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 6144,
     system: DISCOVERY_CALL_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const text = response.content[0].text;
+  return safeParseJSON(text);
+}
+
+/**
+ * Generate a personalized campaign email using Claude.
+ * @param {Object} params
+ * @param {string} params.recipientName
+ * @param {string} params.recipientCompany
+ * @param {string} params.audienceType - 'client' or 'lead'
+ * @param {Object} params.context - Rich context data (projects, milestones, etc.)
+ * @param {string} params.promptContext - Campaign-specific instructions
+ * @param {string} params.subjectTemplate - Subject line hint
+ * @returns {Object} - { subject, body_html }
+ */
+export async function generateCampaignEmailWithAI({
+  recipientName,
+  recipientCompany,
+  audienceType,
+  context,
+  promptContext,
+  subjectTemplate,
+}) {
+  let contextSummary = '';
+
+  if (audienceType === 'client' && context) {
+    const projectList = context.projects?.map(p => `- ${p.name} (${p.status})`).join('\n') || 'None';
+    const milestoneList = context.milestones?.map(m => `- ${m.title} (${m.status})`).join('\n') || 'None';
+    const proposalList = context.proposals?.map(p => `- ${p.title} (${p.status})`).join('\n') || 'None';
+    const invoiceList = context.invoices?.map(i => `- ${i.title}: $${i.amount} (${i.status})`).join('\n') || 'None';
+
+    contextSummary = `CLIENT DATA:
+Projects:\n${projectList}
+Recent Milestones:\n${milestoneList}
+Proposals:\n${proposalList}
+Invoices:\n${invoiceList}`;
+  } else if (audienceType === 'lead' && context) {
+    contextSummary = `LEAD DATA:
+Pipeline Stage: ${context.pipelineStage || 'Unknown'}
+Score: ${context.score || 'Unscored'}
+Company: ${context.companyName || 'Unknown'}
+Project Type: ${context.projectType || 'Not specified'}
+Last Contacted: ${context.lastContactedAt || 'Never'}`;
+  }
+
+  const userMessage = `Generate a personalized campaign email.
+
+Recipient: ${recipientName}
+Company: ${recipientCompany || 'Not specified'}
+Audience: ${audienceType}
+Subject Template: ${subjectTemplate}
+
+Campaign Instructions: ${promptContext || 'Send a helpful, personalized update.'}
+
+${contextSummary}`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 2048,
+    system: CAMPAIGN_EMAIL_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
   });
 

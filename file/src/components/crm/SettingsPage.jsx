@@ -20,6 +20,7 @@ const TABS = [
   { key: 'notifications', label: 'Notifications', icon: 'mdi:bell-outline' },
   { key: 'calendar', label: 'Calendar', icon: 'mdi:calendar-outline' },
   { key: 'defaults', label: 'Defaults', icon: 'mdi:cog-outline' },
+  { key: 'campaigns', label: 'Campaigns', icon: 'mdi:email-newsletter' },
   { key: 'demo', label: 'Demo Data', icon: 'mdi:play-circle-outline', adminOnly: true },
 ];
 
@@ -111,6 +112,10 @@ const SettingsPage = ({
           initialProposalTerms={initialProposalTerms}
           initialProjectPhases={initialProjectPhases}
         />
+      )}
+
+      {activeTab === 'campaigns' && (
+        <CampaignsSettingsTab />
       )}
 
       {activeTab === 'demo' && currentUser?.role === 'admin' && (
@@ -916,6 +921,154 @@ function CalendarTab({ initialColors }) {
               Reset to Defaults
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const HOLIDAYS = [
+  { key: 'new_year', label: "New Year's Day" },
+  { key: 'valentines', label: "Valentine's Day" },
+  { key: 'easter', label: 'Easter' },
+  { key: 'july_4th', label: 'Independence Day (July 4th)' },
+  { key: 'thanksgiving', label: 'Thanksgiving' },
+  { key: 'christmas', label: 'Christmas' },
+];
+
+function CampaignsSettingsTab() {
+  const [paused, setPaused] = useState(false);
+  const [sendHour, setSendHour] = useState(15);
+  const [holidays, setHolidays] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // Load current settings
+    Promise.all([
+      fetch('/api/settings/get?key=campaigns_paused').then(r => r.json()).catch(() => ({})),
+      fetch('/api/settings/get?key=campaigns_default_send_hour').then(r => r.json()).catch(() => ({})),
+      fetch('/api/settings/get?key=campaigns_holidays').then(r => r.json()).catch(() => ({})),
+    ]).then(([pausedRes, hourRes, holidaysRes]) => {
+      if (pausedRes.value === true) setPaused(true);
+      if (hourRes.value) setSendHour(Number(hourRes.value) || 15);
+      if (holidaysRes.value && typeof holidaysRes.value === 'object') setHolidays(holidaysRes.value);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const results = await Promise.all([
+      saveSetting('campaigns_paused', paused),
+      saveSetting('campaigns_default_send_hour', sendHour),
+      saveSetting('campaigns_holidays', holidays),
+    ]);
+
+    setSaving(false);
+    const hasError = results.find(r => r.error);
+    if (hasError) {
+      toast.error(hasError.error);
+    } else {
+      toast.success('Campaign settings saved.');
+    }
+  };
+
+  const toggleHoliday = (key) => {
+    setHolidays(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <span className="spinner-border spinner-border-sm text-secondary-light" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="card mb-4">
+        <div className="card-header">
+          <h6 className="text-white fw-semibold mb-0">Campaign Settings</h6>
+        </div>
+        <div className="card-body">
+          {/* Global Pause */}
+          <div className="d-flex align-items-center justify-content-between mb-4 p-3 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div>
+              <h6 className="text-white text-sm fw-semibold mb-1">Global Pause</h6>
+              <p className="text-secondary-light text-xs mb-0">
+                When enabled, all campaign emails will be paused. The cron job will skip processing.
+              </p>
+            </div>
+            <div className="form-check form-switch mb-0">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={paused}
+                onChange={(e) => setPaused(e.target.checked)}
+                style={{ width: 48, height: 24 }}
+              />
+            </div>
+          </div>
+
+          {/* Default Send Hour */}
+          <div className="mb-4">
+            <label className="form-label text-secondary-light text-xs">Default Send Hour (UTC)</label>
+            <div className="d-flex align-items-center gap-2">
+              <select
+                className="form-select form-select-sm bg-base text-white"
+                value={sendHour}
+                onChange={(e) => setSendHour(Number(e.target.value))}
+                style={{ width: 200 }}
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i}>
+                    {String(i).padStart(2, '0')}:00 UTC{i === 15 ? ' (9am CST)' : ''}
+                  </option>
+                ))}
+              </select>
+              <span className="text-secondary-light text-xs">
+                New campaigns will default to this time.
+              </span>
+            </div>
+          </div>
+
+          {/* Holiday Calendar */}
+          <div className="mb-3">
+            <label className="form-label text-secondary-light text-xs">Holiday Calendar</label>
+            <p className="text-secondary-light text-xs mb-2">
+              Select holidays for event-triggered campaigns to automatically send greetings.
+            </p>
+            <div className="d-flex flex-column gap-2">
+              {HOLIDAYS.map((h) => (
+                <div
+                  key={h.key}
+                  className="d-flex align-items-center justify-content-between p-2 rounded"
+                  style={{ background: 'rgba(255,255,255,0.03)' }}
+                >
+                  <span className="text-white text-sm">{h.label}</span>
+                  <div className="form-check form-switch mb-0">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={!!holidays[h.key]}
+                      onChange={() => toggleHoliday(h.key)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+            Save Campaign Settings
+          </button>
         </div>
       </div>
     </div>

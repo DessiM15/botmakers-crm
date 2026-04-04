@@ -10,6 +10,7 @@ export function wrapInBrandedTemplate({
   senderTitle = 'Co-Founder',
   ctaUrl = null,
   ctaText = null,
+  unsubscribeUrl = null,
 }) {
   const firstName = recipientName ? recipientName.split(' ')[0] : '';
   const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
@@ -38,16 +39,17 @@ export function wrapInBrandedTemplate({
   <style>
     html, body { margin:0; padding:0; background-color:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif; }
     * { box-sizing:border-box; }
+    img { max-width:100%; height:auto; }
   </style>
 </head>
 <body>
-<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px; max-width:600px; table-layout:fixed; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff;">
   <tr><td style="background-color:#033457; padding:30px 40px; text-align:center;">
     <img src="https://botmakers.ai/assets/botmakers-white-green-logo.png"
          alt="Botmakers"
-         style="height:40px;" />
+         style="height:40px; max-width:100%;" />
   </td></tr>
-  <tr><td style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7;">
+  <tr><td style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7; word-break:break-word; overflow-wrap:break-word;">
     <p style="margin:0 0 16px;">${greeting}</p>
 
     ${bodyHtml}
@@ -63,7 +65,10 @@ export function wrapInBrandedTemplate({
     <p style="margin:0;">&copy; 2026 BotMakers Inc. All Rights Reserved.</p>
     <p style="margin:4px 0 0;">
       <a href="https://botmakers.ai" style="color:#033457; text-decoration:none;">botmakers.ai</a>
-    </p>
+    </p>${unsubscribeUrl ? `
+    <p style="margin:8px 0 0;">
+      <a href="${unsubscribeUrl}" style="color:#999; text-decoration:underline; font-size:11px;">Unsubscribe from marketing emails</a>
+    </p>` : ''}
   </td></tr>
 </table>
 </body>

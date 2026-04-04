@@ -252,6 +252,32 @@ export const costEntryUpdateSchema = z.object({
   periodEnd: z.string().optional(),
 });
 
+export const campaignCreateSchema = z.object({
+  name: z.string().min(1, 'Campaign name is required'),
+  audienceType: z.enum(['clients', 'leads', 'all']).default('clients'),
+  type: z.enum(['recurring', 'event']).default('recurring'),
+  frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).default('weekly'),
+  sendDay: z.coerce.number().min(0).max(6).default(1),
+  sendHour: z.coerce.number().min(0).max(23).default(15),
+  subjectTemplate: z.string().min(1, 'Subject template is required'),
+  promptContext: z.string().optional(),
+  triggerType: z.enum(['anniversary', 'holiday', 'dormant']).optional().nullable(),
+  triggerConfig: z.any().optional().nullable(),
+});
+
+export const campaignUpdateSchema = z.object({
+  name: z.string().min(1, 'Campaign name is required').optional(),
+  audienceType: z.enum(['clients', 'leads', 'all']).optional(),
+  type: z.enum(['recurring', 'event']).optional(),
+  frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional(),
+  sendDay: z.coerce.number().min(0).max(6).optional(),
+  sendHour: z.coerce.number().min(0).max(23).optional(),
+  subjectTemplate: z.string().min(1).optional(),
+  promptContext: z.string().optional().nullable(),
+  triggerType: z.enum(['anniversary', 'holiday', 'dormant']).optional().nullable(),
+  triggerConfig: z.any().optional().nullable(),
+});
+
 export const documentUploadSchema = z.object({
   clientId: z.string().uuid().optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),

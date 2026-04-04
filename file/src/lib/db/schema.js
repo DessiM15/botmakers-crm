@@ -180,6 +180,38 @@ export const meetingStatusEnum = pgEnum('meeting_status', [
   'no_show',
 ]);
 
+export const campaignAudienceTypeEnum = pgEnum('campaign_audience_type', [
+  'clients',
+  'leads',
+  'all',
+]);
+
+export const campaignTypeEnum = pgEnum('campaign_type', [
+  'recurring',
+  'event',
+]);
+
+export const campaignStatusEnum = pgEnum('campaign_status', [
+  'active',
+  'paused',
+  'archived',
+]);
+
+export const campaignSendStatusEnum = pgEnum('campaign_send_status', [
+  'queued',
+  'sent',
+  'delivered',
+  'opened',
+  'bounced',
+  'complained',
+]);
+
+export const campaignTriggerTypeEnum = pgEnum('campaign_trigger_type', [
+  'anniversary',
+  'holiday',
+  'dormant',
+]);
+
 export const costSourceEnum = pgEnum('cost_source', [
   'manual',
   'vercel',
@@ -222,6 +254,8 @@ export const clients = pgTable('clients', {
   portalFirstLoginAt: timestamp('portal_first_login_at', { withTimezone: true }),
   portalOnboardingComplete: boolean('portal_onboarding_complete').notNull().default(false),
   portalAccessRevoked: boolean('portal_access_revoked').notNull().default(false),
+  emailCampaignsOptedOut: boolean('email_campaigns_opted_out').notNull().default(false),
+  companyAnniversary: date('company_anniversary'),
   isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -261,6 +295,7 @@ export const leads = pgTable('leads', {
   discoveryTranscript: text('discovery_transcript'),
   discoveryCallSummary: jsonb('discovery_call_summary'),
   discoveryCallProcessedAt: timestamp('discovery_call_processed_at', { withTimezone: true }),
+  emailCampaignsOptedOut: boolean('email_campaigns_opted_out').notNull().default(false),
   isDemo: boolean('is_demo').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -676,6 +711,42 @@ export const costEntries = pgTable('cost_entries', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const campaigns = pgTable('campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  audienceType: campaignAudienceTypeEnum('audience_type').notNull().default('clients'),
+  type: campaignTypeEnum('type').notNull().default('recurring'),
+  frequency: text('frequency').notNull().default('weekly'),
+  sendDay: integer('send_day').notNull().default(1),
+  sendHour: integer('send_hour').notNull().default(15),
+  subjectTemplate: text('subject_template').notNull().default(''),
+  promptContext: text('prompt_context'),
+  triggerType: campaignTriggerTypeEnum('trigger_type'),
+  triggerConfig: jsonb('trigger_config'),
+  status: campaignStatusEnum('status').notNull().default('active'),
+  lastGeneratedAt: timestamp('last_generated_at', { withTimezone: true }),
+  nextSendAt: timestamp('next_send_at', { withTimezone: true }),
+  createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const campaignSends = pgTable('campaign_sends', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  recipientId: uuid('recipient_id').notNull(),
+  recipientType: text('recipient_type').notNull(),
+  recipientEmail: text('recipient_email').notNull(),
+  recipientName: text('recipient_name'),
+  subject: text('subject').notNull(),
+  bodyHtml: text('body_html').notNull(),
+  status: campaignSendStatusEnum('status').notNull().default('queued'),
+  resendMessageId: text('resend_message_id'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  openedAt: timestamp('opened_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Relations ──────────────────────────────────────────────────────────────────
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -993,5 +1064,20 @@ export const costEntriesRelations = relations(costEntries, ({ one }) => ({
   createdByUser: one(teamUsers, {
     fields: [costEntries.createdBy],
     references: [teamUsers.id],
+  }),
+}));
+
+export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
+  createdByUser: one(teamUsers, {
+    fields: [campaigns.createdBy],
+    references: [teamUsers.id],
+  }),
+  sends: many(campaignSends),
+}));
+
+export const campaignSendsRelations = relations(campaignSends, ({ one }) => ({
+  campaign: one(campaigns, {
+    fields: [campaignSends.campaignId],
+    references: [campaigns.id],
   }),
 }));

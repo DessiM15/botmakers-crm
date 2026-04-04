@@ -31,6 +31,7 @@ const optionalVars = [
   'VERCEL_API_TOKEN',
   'VERCEL_TEAM_ID',
   'ANTHROPIC_ADMIN_API_KEY',
+  'RESEND_WEBHOOK_SIGNING_SECRET',
 ];
 
 function validateEnv() {
