@@ -36,9 +36,8 @@ export function wrapInBrandedTemplate({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin:0; padding:0; background-color:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif; }
-    * { box-sizing:border-box; }
-    p, div, h3, h4, ul, ol, li, blockquote, span, strong, em, a { max-width:100% !important; }
+    html, body { margin:0; padding:0; width:100% !important; max-width:100% !important; overflow-x:hidden !important; background-color:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif; }
+    * { box-sizing:border-box; max-width:100% !important; }
   </style>
 </head>
 <body>
