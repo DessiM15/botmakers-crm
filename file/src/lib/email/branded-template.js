@@ -43,7 +43,7 @@ export function wrapInBrandedTemplate({
   </style>
 </head>
 <body>
-<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px; max-width:600px; table-layout:fixed; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px; max-width:600px; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff;">
   <tr><td style="background-color:#033457; padding:30px 40px; text-align:center;">
     <img src="https://botmakers.ai/assets/botmakers-white-green-logo.png"
          alt="Botmakers"
