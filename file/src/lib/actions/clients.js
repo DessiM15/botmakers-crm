@@ -11,6 +11,7 @@ import { clientCreateSchema, clientUpdateSchema } from '@/lib/utils/validators';
 import { sendEmail } from '@/lib/email/client';
 import { welcomeClient, portalInvite } from '@/lib/email/templates';
 import { sendTeamNotification } from '@/lib/notifications/notify';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Create a new client manually (not from lead conversion).
@@ -19,6 +20,7 @@ export async function createClient(formData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = clientCreateSchema.safeParse(formData);
     if (!parsed.success) {
@@ -46,6 +48,7 @@ export async function createClient(formData) {
         company: data.company || null,
         phone: data.phone || null,
         createdBy: teamUser.id,
+        isDemo,
       })
       .returning();
 
@@ -56,6 +59,7 @@ export async function createClient(formData) {
       entityType: 'client',
       entityId: newClient.id,
       metadata: { name: newClient.fullName },
+      isDemo,
     });
 
     // Team in-app notification (non-blocking)
@@ -86,6 +90,7 @@ export async function updateClient(clientId, formData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = clientUpdateSchema.safeParse(formData);
     if (!parsed.success) {
@@ -119,6 +124,7 @@ export async function updateClient(clientId, formData) {
       action: 'client.updated',
       entityType: 'client',
       entityId: clientId,
+      isDemo,
     });
 
     revalidatePath(`/clients/${clientId}`);
@@ -140,6 +146,7 @@ export async function deleteClient(clientId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [existing] = await db
       .select({ id: clients.id, fullName: clients.fullName })
@@ -217,6 +224,7 @@ export async function deleteClient(clientId) {
       entityType: 'client',
       entityId: clientId,
       metadata: { name: existing.fullName },
+      isDemo,
     });
 
     revalidatePath('/clients');
@@ -243,6 +251,8 @@ export async function deleteClient(clientId) {
  * @returns {{ success: boolean, clientId: string } | { error: string, existingClientId?: string }}
  */
 export async function convertLeadToClientInternal(lead, actorId, actorType = 'team') {
+  const isDemo = await isDemoMode();
+
   if (lead.convertedToClientId) {
     return { error: 'This lead has already been converted to a client', existingClientId: lead.convertedToClientId };
   }
@@ -269,6 +279,7 @@ export async function convertLeadToClientInternal(lead, actorId, actorType = 'te
         company: lead.companyName || null,
         phone: lead.phone || null,
         createdBy: actorId,
+        isDemo,
       })
       .returning();
 
@@ -314,6 +325,7 @@ export async function convertLeadToClientInternal(lead, actorId, actorType = 'te
       entityType: 'client',
       entityId: clientId,
       metadata: { name: lead.fullName, fromLead: lead.id },
+      isDemo,
     });
   }
 
@@ -337,6 +349,7 @@ export async function convertLeadToClientInternal(lead, actorId, actorType = 'te
     entityType: 'lead',
     entityId: lead.id,
     metadata: { clientId, clientName: lead.fullName },
+    isDemo,
   });
 
   // Team in-app notification (non-blocking)
@@ -405,6 +418,7 @@ export async function sendPortalInvite(clientId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     // Fetch client
     const [client] = await db
@@ -506,6 +520,7 @@ export async function sendPortalInvite(clientId) {
       entityType: 'client',
       entityId: clientId,
       metadata: { clientName: client.fullName, sentBy: teamUser.fullName },
+      isDemo,
     });
 
     revalidatePath(`/clients/${clientId}`);
@@ -528,6 +543,7 @@ export async function revokePortalAccess(clientId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [client] = await db
       .select({ id: clients.id, authUserId: clients.authUserId, fullName: clients.fullName })
@@ -559,6 +575,7 @@ export async function revokePortalAccess(clientId) {
       entityType: 'client',
       entityId: clientId,
       metadata: { clientName: client.fullName, revokedBy: teamUser.fullName },
+      isDemo,
     });
 
     revalidatePath(`/clients/${clientId}`);
@@ -624,6 +641,7 @@ export async function restorePortalAccess(clientId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [client] = await db
       .select({ id: clients.id, authUserId: clients.authUserId, fullName: clients.fullName })
@@ -655,6 +673,7 @@ export async function restorePortalAccess(clientId) {
       entityType: 'client',
       entityId: clientId,
       metadata: { clientName: client.fullName, restoredBy: teamUser.fullName },
+      isDemo,
     });
 
     revalidatePath(`/clients/${clientId}`);

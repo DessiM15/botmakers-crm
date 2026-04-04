@@ -7,6 +7,7 @@ import {
   teamUsers,
 } from '@/lib/db/schema';
 import { eq, desc, and, count, sql, ilike, or } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch paginated, filterable proposals list.
@@ -17,7 +18,11 @@ export async function getProposals({
   page = 1,
   perPage = 25,
 } = {}) {
+  const isDemo = await isDemoMode();
   const conditions = [];
+
+  // Filter by demo mode
+  conditions.push(eq(proposals.isDemo, isDemo));
 
   if (status !== 'all') {
     conditions.push(eq(proposals.status, status));
@@ -83,6 +88,7 @@ export async function getProposals({
  * Fetch a single proposal by ID with line items.
  */
 export async function getProposalById(id) {
+  const isDemo = await isDemoMode();
   const [proposal] = await db
     .select({
       id: proposals.id,
@@ -121,7 +127,7 @@ export async function getProposalById(id) {
     })
     .from(proposals)
     .leftJoin(teamUsers, eq(proposals.createdBy, teamUsers.id))
-    .where(eq(proposals.id, id))
+    .where(and(eq(proposals.id, id), eq(proposals.isDemo, isDemo)))
     .limit(1);
 
   if (!proposal) return null;
@@ -139,6 +145,7 @@ export async function getProposalById(id) {
  * Fetch proposals for a specific client.
  */
 export async function getProposalsByClientId(clientId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: proposals.id,
@@ -149,7 +156,7 @@ export async function getProposalsByClientId(clientId) {
       createdAt: proposals.createdAt,
     })
     .from(proposals)
-    .where(eq(proposals.clientId, clientId))
+    .where(and(eq(proposals.clientId, clientId), eq(proposals.isDemo, isDemo)))
     .orderBy(desc(proposals.createdAt));
 }
 
@@ -157,6 +164,7 @@ export async function getProposalsByClientId(clientId) {
  * Fetch leads and clients for the proposal wizard dropdown.
  */
 export async function getLeadsAndClientsForDropdown() {
+  const isDemo = await isDemoMode();
   const [leadRows, clientRows] = await Promise.all([
     db
       .select({
@@ -172,6 +180,7 @@ export async function getLeadsAndClientsForDropdown() {
         discoveryCallSummary: leads.discoveryCallSummary,
       })
       .from(leads)
+      .where(eq(leads.isDemo, isDemo))
       .orderBy(desc(leads.createdAt)),
     db
       .select({
@@ -181,6 +190,7 @@ export async function getLeadsAndClientsForDropdown() {
         company: clients.company,
       })
       .from(clients)
+      .where(eq(clients.isDemo, isDemo))
       .orderBy(desc(clients.createdAt)),
   ]);
 

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db/client';
 import { leads, teamUsers, contacts } from '@/lib/db/schema';
 import { eq, asc, desc, ilike, or, and, sql, count } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch all leads for the pipeline board.
@@ -8,6 +9,7 @@ import { eq, asc, desc, ilike, or, and, sql, count } from 'drizzle-orm';
  * Treats NULL pipeline_stage as 'new_lead'.
  */
 export async function getLeadsByStage() {
+  const isDemo = await isDemoMode();
   const allLeads = await db
     .select({
       id: leads.id,
@@ -24,6 +26,7 @@ export async function getLeadsByStage() {
     })
     .from(leads)
     .leftJoin(teamUsers, eq(leads.assignedTo, teamUsers.id))
+    .where(eq(leads.isDemo, isDemo))
     .orderBy(asc(leads.pipelineStageChangedAt));
 
   // Group by pipeline stage, defaulting NULL to 'new_lead'
@@ -65,7 +68,11 @@ export async function getLeadsFiltered({
   sortBy = 'createdAt',
   sortDir = 'desc',
 } = {}) {
+  const isDemo = await isDemoMode();
   const conditions = [];
+
+  // Filter by demo mode
+  conditions.push(eq(leads.isDemo, isDemo));
 
   // Search across name, email, company
   if (search.trim()) {
@@ -155,6 +162,7 @@ export async function getLeadsFiltered({
  * Fetch a single lead by ID with full details.
  */
 export async function getLeadById(id) {
+  const isDemo = await isDemoMode();
   const [lead] = await db
     .select({
       id: leads.id,
@@ -187,7 +195,7 @@ export async function getLeadById(id) {
     })
     .from(leads)
     .leftJoin(teamUsers, eq(leads.assignedTo, teamUsers.id))
-    .where(eq(leads.id, id))
+    .where(and(eq(leads.id, id), eq(leads.isDemo, isDemo)))
     .limit(1);
 
   return lead || null;
@@ -197,6 +205,7 @@ export async function getLeadById(id) {
  * Fetch contacts (touchpoints) for a lead, newest first.
  */
 export async function getLeadContacts(leadId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: contacts.id,
@@ -210,6 +219,6 @@ export async function getLeadContacts(leadId) {
     })
     .from(contacts)
     .leftJoin(teamUsers, eq(contacts.createdBy, teamUsers.id))
-    .where(eq(contacts.leadId, leadId))
+    .where(and(eq(contacts.leadId, leadId), eq(contacts.isDemo, isDemo)))
     .orderBy(desc(contacts.createdAt));
 }

@@ -1,12 +1,14 @@
 import { db } from '@/lib/db/client';
 import { followUpReminders, leads, teamUsers } from '@/lib/db/schema';
 import { eq, and, desc, or, isNull } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Get pending follow-up reminders for the dashboard queue.
  * Shows reminders assigned to the given user, or unassigned ones.
  */
 export async function getPendingFollowUps(teamUserId, limit = 10) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: followUpReminders.id,
@@ -32,7 +34,8 @@ export async function getPendingFollowUps(teamUserId, limit = 10) {
         or(
           eq(followUpReminders.assignedTo, teamUserId),
           isNull(followUpReminders.assignedTo)
-        )
+        ),
+        eq(leads.isDemo, isDemo)
       )
     )
     .orderBy(desc(followUpReminders.remindAt))

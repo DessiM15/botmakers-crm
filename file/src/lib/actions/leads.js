@@ -10,6 +10,7 @@ import { contactLogSchema, leadCreateSchema } from '@/lib/utils/validators';
 import { leadStageChange } from '@/lib/email/notifications';
 import { advanceLead } from '@/lib/pipeline/transitions';
 import { sendTeamNotification, sendUserNotification } from '@/lib/notifications/notify';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Update a lead's pipeline stage.
@@ -21,6 +22,7 @@ export async function updateLeadStage(leadId, newStage) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     // Get current stage for logging
     const [current] = await db
@@ -56,6 +58,7 @@ export async function updateLeadStage(leadId, newStage) {
       entityType: 'lead',
       entityId: leadId,
       metadata: { from: oldStage, to: newStage },
+      isDemo,
     });
 
     revalidatePath('/pipeline');
@@ -96,6 +99,7 @@ export async function updateLeadNotes(leadId, notes) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [current] = await db
       .select({ id: leads.id })
@@ -118,6 +122,7 @@ export async function updateLeadNotes(leadId, notes) {
       action: 'lead.notes_updated',
       entityType: 'lead',
       entityId: leadId,
+      isDemo,
     });
 
     revalidatePath(`/leads/${leadId}`);
@@ -138,6 +143,7 @@ export async function updateLeadAssignment(leadId, teamUserId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [current] = await db
       .select({ id: leads.id, assignedTo: leads.assignedTo })
@@ -163,6 +169,7 @@ export async function updateLeadAssignment(leadId, teamUserId) {
       entityType: 'lead',
       entityId: leadId,
       metadata: { from: current.assignedTo, to: assignTo },
+      isDemo,
     });
 
     // Notify the newly assigned user (non-blocking)
@@ -206,6 +213,7 @@ export async function createContact(formData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = contactLogSchema.safeParse(formData);
     if (!parsed.success) {
@@ -237,6 +245,7 @@ export async function createContact(formData) {
         body: data.body || null,
         direction: data.direction,
         createdBy: teamUser.id,
+        isDemo,
       })
       .returning();
 
@@ -254,6 +263,7 @@ export async function createContact(formData) {
         entityType: 'lead',
         entityId: data.leadId,
         metadata: { contactType: data.type, direction: data.direction },
+        isDemo,
       });
 
       revalidatePath(`/leads/${data.leadId}`);
@@ -289,6 +299,7 @@ export async function createLead(formData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = leadCreateSchema.safeParse(formData);
     if (!parsed.success) {
@@ -310,6 +321,7 @@ export async function createLead(formData) {
         projectDetails: data.projectDetails || null,
         notes: data.notes || null,
         pipelineStage: 'new_lead',
+        isDemo,
       })
       .returning();
 
@@ -320,6 +332,7 @@ export async function createLead(formData) {
       entityType: 'lead',
       entityId: inserted.id,
       metadata: { source: data.source },
+      isDemo,
     });
 
     revalidatePath('/leads');

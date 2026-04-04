@@ -1,6 +1,7 @@
 import { db } from '@/lib/db/client';
 import { clientServices, clients, projects } from '@/lib/db/schema';
 import { eq, and, sql, desc, lte, gte, ilike, or, isNull, isNotNull } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch paginated services with filters.
@@ -14,7 +15,8 @@ export async function getServices({
   page = 1,
   perPage = 10,
 } = {}) {
-  const conditions = [];
+  const isDemo = await isDemoMode();
+  const conditions = [eq(clientServices.isDemo, isDemo)];
 
   if (search) {
     conditions.push(
@@ -92,6 +94,7 @@ export async function getServices({
  * Fetch a single service by ID.
  */
 export async function getServiceById(id) {
+  const isDemo = await isDemoMode();
   const [service] = await db
     .select({
       id: clientServices.id,
@@ -114,7 +117,7 @@ export async function getServiceById(id) {
       projectName: sql`(SELECT name FROM projects WHERE projects.id = ${clientServices.projectId})`.as('project_name'),
     })
     .from(clientServices)
-    .where(eq(clientServices.id, id))
+    .where(and(eq(clientServices.id, id), eq(clientServices.isDemo, isDemo)))
     .limit(1);
 
   return service || null;
@@ -124,6 +127,7 @@ export async function getServiceById(id) {
  * Fetch services for a specific client.
  */
 export async function getServicesByClientId(clientId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: clientServices.id,
@@ -140,7 +144,7 @@ export async function getServicesByClientId(clientId) {
       projectName: sql`(SELECT name FROM projects WHERE projects.id = ${clientServices.projectId})`.as('project_name'),
     })
     .from(clientServices)
-    .where(eq(clientServices.clientId, clientId))
+    .where(and(eq(clientServices.clientId, clientId), eq(clientServices.isDemo, isDemo)))
     .orderBy(desc(clientServices.createdAt));
 }
 
@@ -148,6 +152,7 @@ export async function getServicesByClientId(clientId) {
  * Fetch services for a specific project.
  */
 export async function getServicesByProjectId(projectId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: clientServices.id,
@@ -164,7 +169,7 @@ export async function getServicesByProjectId(projectId) {
       clientName: sql`COALESCE((SELECT full_name FROM clients WHERE clients.id = ${clientServices.clientId}), 'BotMakers')`.as('client_name'),
     })
     .from(clientServices)
-    .where(eq(clientServices.projectId, projectId))
+    .where(and(eq(clientServices.projectId, projectId), eq(clientServices.isDemo, isDemo)))
     .orderBy(desc(clientServices.createdAt));
 }
 
@@ -172,6 +177,7 @@ export async function getServicesByProjectId(projectId) {
  * Summary stats for the services overview.
  */
 export async function getServiceSummary() {
+  const isDemo = await isDemoMode();
   const result = await db.execute(sql`
     SELECT
       COALESCE(SUM(CASE WHEN status = 'active' OR status = 'expiring_soon' THEN monthly_cost ELSE 0 END), 0) AS total_monthly_cost,
@@ -182,6 +188,7 @@ export async function getServiceSummary() {
       COUNT(*) FILTER (WHERE status = 'active' AND client_id IS NOT NULL) AS client_active_count,
       COUNT(*) FILTER (WHERE status = 'expiring_soon') AS expiring_count
     FROM client_services
+    WHERE is_demo = ${isDemo}
   `);
 
   const row = result.rows?.[0] || {};
@@ -200,6 +207,7 @@ export async function getServiceSummary() {
  * Fetch services with renewal_date within N days.
  */
 export async function getUpcomingRenewals(days = 7) {
+  const isDemo = await isDemoMode();
   const now = new Date();
   const future = new Date();
   future.setDate(future.getDate() + days);
@@ -223,7 +231,8 @@ export async function getUpcomingRenewals(days = 7) {
         or(
           eq(clientServices.status, 'active'),
           eq(clientServices.status, 'expiring_soon')
-        )
+        ),
+        eq(clientServices.isDemo, isDemo)
       )
     )
     .orderBy(clientServices.renewalDate);
@@ -233,8 +242,10 @@ export async function getUpcomingRenewals(days = 7) {
  * Fetch clients for the service form dropdown.
  */
 export async function getClientsForServiceDropdown() {
+  const isDemo = await isDemoMode();
   return db
     .select({ id: clients.id, fullName: clients.fullName, company: clients.company })
     .from(clients)
+    .where(eq(clients.isDemo, isDemo))
     .orderBy(clients.fullName);
 }

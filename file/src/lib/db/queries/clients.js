@@ -8,6 +8,7 @@ import {
   invoices,
 } from '@/lib/db/schema';
 import { eq, asc, desc, ilike, or, and, sql, count } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch paginated, filtered, searchable clients list.
@@ -17,7 +18,11 @@ export async function getClients({
   page = 1,
   perPage = 25,
 } = {}) {
+  const isDemo = await isDemoMode();
   const conditions = [];
+
+  // Filter by demo mode
+  conditions.push(eq(clients.isDemo, isDemo));
 
   if (search.trim()) {
     const term = `%${search.trim()}%`;
@@ -71,6 +76,7 @@ export async function getClients({
  * Fetch a single client by ID with related counts.
  */
 export async function getClientById(id) {
+  const isDemo = await isDemoMode();
   const [client] = await db
     .select({
       id: clients.id,
@@ -99,7 +105,7 @@ export async function getClientById(id) {
     })
     .from(clients)
     .leftJoin(teamUsers, eq(clients.createdBy, teamUsers.id))
-    .where(eq(clients.id, id))
+    .where(and(eq(clients.id, id), eq(clients.isDemo, isDemo)))
     .limit(1);
 
   return client || null;
@@ -109,6 +115,7 @@ export async function getClientById(id) {
  * Check if a client with the given email already exists.
  */
 export async function getClientByEmail(email) {
+  const isDemo = await isDemoMode();
   const [client] = await db
     .select({
       id: clients.id,
@@ -116,7 +123,7 @@ export async function getClientByEmail(email) {
       email: clients.email,
     })
     .from(clients)
-    .where(eq(clients.email, email.toLowerCase()))
+    .where(and(eq(clients.email, email.toLowerCase()), eq(clients.isDemo, isDemo)))
     .limit(1);
 
   return client || null;

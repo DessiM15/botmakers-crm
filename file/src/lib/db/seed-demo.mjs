@@ -34,23 +34,25 @@ function dateStr(d) { return d.toISOString().split('T')[0]; }
 
 async function resetDemoData() {
   console.log('Resetting demo data...');
-  // Delete in FK order
-  await sql`DELETE FROM cost_entries WHERE description LIKE '%demo%' OR description LIKE '%monthly service cost%'`;
-  await sql`DELETE FROM activity_log WHERE metadata->>'demo' = 'true'`;
-  await sql`DELETE FROM payments WHERE client_id IN (SELECT id FROM clients WHERE notes LIKE '%[DEMO]%')`;
-  await sql`DELETE FROM invoice_line_items WHERE invoice_id IN (SELECT id FROM invoices WHERE description LIKE '%[DEMO]%')`;
-  await sql`DELETE FROM invoices WHERE description LIKE '%[DEMO]%'`;
-  await sql`DELETE FROM proposal_line_items WHERE proposal_id IN (SELECT id FROM proposals WHERE scope_of_work LIKE '%[DEMO]%')`;
-  await sql`DELETE FROM proposals WHERE scope_of_work LIKE '%[DEMO]%'`;
-  await sql`DELETE FROM project_milestones WHERE project_id IN (SELECT id FROM projects WHERE description LIKE '%[DEMO]%')`;
-  await sql`DELETE FROM project_phases WHERE project_id IN (SELECT id FROM projects WHERE description LIKE '%[DEMO]%')`;
-  await sql`DELETE FROM client_services WHERE notes LIKE '%[DEMO]%'`;
-  await sql`DELETE FROM project_repos WHERE project_id IN (SELECT id FROM projects WHERE description LIKE '%[DEMO]%')`;
-  await sql`DELETE FROM project_questions WHERE project_id IN (SELECT id FROM projects WHERE description LIKE '%[DEMO]%')`;
-  await sql`DELETE FROM projects WHERE description LIKE '%[DEMO]%'`;
-  await sql`DELETE FROM contacts WHERE subject LIKE '%[DEMO]%'`;
-  await sql`DELETE FROM leads WHERE notes LIKE '%[DEMO]%'`;
-  await sql`DELETE FROM clients WHERE notes LIKE '%[DEMO]%'`;
+  // Delete in FK order using is_demo flag (indexed, fast)
+  await sql`DELETE FROM cost_entries WHERE is_demo = true`;
+  await sql`DELETE FROM activity_log WHERE is_demo = true`;
+  await sql`DELETE FROM meetings WHERE is_demo = true`;
+  await sql`DELETE FROM payments WHERE is_demo = true`;
+  await sql`DELETE FROM invoice_line_items WHERE invoice_id IN (SELECT id FROM invoices WHERE is_demo = true)`;
+  await sql`DELETE FROM invoices WHERE is_demo = true`;
+  await sql`DELETE FROM proposal_line_items WHERE proposal_id IN (SELECT id FROM proposals WHERE is_demo = true)`;
+  await sql`DELETE FROM proposals WHERE is_demo = true`;
+  await sql`DELETE FROM project_milestones WHERE project_id IN (SELECT id FROM projects WHERE is_demo = true)`;
+  await sql`DELETE FROM project_phases WHERE project_id IN (SELECT id FROM projects WHERE is_demo = true)`;
+  await sql`DELETE FROM project_repos WHERE project_id IN (SELECT id FROM projects WHERE is_demo = true)`;
+  await sql`DELETE FROM project_demos WHERE project_id IN (SELECT id FROM projects WHERE is_demo = true)`;
+  await sql`DELETE FROM project_questions WHERE project_id IN (SELECT id FROM projects WHERE is_demo = true)`;
+  await sql`DELETE FROM client_services WHERE is_demo = true`;
+  await sql`DELETE FROM contacts WHERE is_demo = true`;
+  await sql`DELETE FROM projects WHERE is_demo = true`;
+  await sql`DELETE FROM leads WHERE is_demo = true`;
+  await sql`DELETE FROM clients WHERE is_demo = true`;
   console.log('Demo data cleared.\n');
 }
 
@@ -92,8 +94,8 @@ async function seedDemo() {
 
   for (const lead of leads) {
     await sql`
-      INSERT INTO leads (id, full_name, email, phone, company_name, project_type, project_timeline, source, score, pipeline_stage, project_details, assigned_to, notes, pipeline_stage_changed_at, created_at, updated_at)
-      VALUES (${lead.id}, ${lead.fullName}, ${lead.email}, ${lead.phone}, ${lead.companyName}, ${lead.projectType}, ${lead.projectTimeline}, ${lead.source}, ${lead.score}, ${lead.pipelineStage}, ${lead.projectDetails}, ${lead.assignedTo || null}, ${lead.notes}, ${daysAgo(2)}, ${daysAgo(14)}, ${daysAgo(1)})
+      INSERT INTO leads (id, full_name, email, phone, company_name, project_type, project_timeline, source, score, pipeline_stage, project_details, assigned_to, notes, pipeline_stage_changed_at, is_demo, created_at, updated_at)
+      VALUES (${lead.id}, ${lead.fullName}, ${lead.email}, ${lead.phone}, ${lead.companyName}, ${lead.projectType}, ${lead.projectTimeline}, ${lead.source}, ${lead.score}, ${lead.pipelineStage}, ${lead.projectDetails}, ${lead.assignedTo || null}, ${lead.notes}, ${daysAgo(2)}, true, ${daysAgo(14)}, ${daysAgo(1)})
       ON CONFLICT (id) DO NOTHING
     `;
   }
@@ -112,8 +114,8 @@ async function seedDemo() {
 
   for (const c of contactEntries) {
     await sql`
-      INSERT INTO contacts (id, lead_id, type, subject, body, direction, created_by, created_at)
-      VALUES (${uuid()}, ${c.leadId}, ${c.type}, ${c.subject}, ${c.body}, ${c.direction}, ${creatorId}, ${daysAgo(Math.floor(Math.random() * 10) + 1)})
+      INSERT INTO contacts (id, lead_id, type, subject, body, direction, is_demo, created_by, created_at)
+      VALUES (${uuid()}, ${c.leadId}, ${c.type}, ${c.subject}, ${c.body}, ${c.direction}, true, ${creatorId}, ${daysAgo(Math.floor(Math.random() * 10) + 1)})
     `;
   }
   console.log(`  ✓ ${contactEntries.length} contact log entries created`);
@@ -130,8 +132,8 @@ async function seedDemo() {
 
   for (const client of clients) {
     await sql`
-      INSERT INTO clients (id, email, full_name, company, phone, notes, created_by, portal_invite_count, portal_onboarding_complete, portal_access_revoked, created_at, updated_at)
-      VALUES (${client.id}, ${client.email}, ${client.fullName}, ${client.company}, ${client.phone}, ${client.notes}, ${creatorId}, 0, false, false, ${daysAgo(45)}, ${daysAgo(1)})
+      INSERT INTO clients (id, email, full_name, company, phone, notes, created_by, portal_invite_count, portal_onboarding_complete, portal_access_revoked, is_demo, created_at, updated_at)
+      VALUES (${client.id}, ${client.email}, ${client.fullName}, ${client.company}, ${client.phone}, ${client.notes}, ${creatorId}, 0, false, false, true, ${daysAgo(45)}, ${daysAgo(1)})
       ON CONFLICT (id) DO NOTHING
     `;
   }
@@ -218,8 +220,8 @@ async function seedDemo() {
 
   for (const proj of projectData) {
     await sql`
-      INSERT INTO projects (id, name, client_id, description, status, total_value, project_type, pricing_type, start_date, target_end_date, actual_end_date, created_by, created_at, updated_at)
-      VALUES (${proj.id}, ${proj.name}, ${proj.clientId}, ${proj.description}, ${proj.status}, ${proj.totalValue}, ${proj.projectType}, 'phased', ${proj.startDate}, ${proj.targetEndDate}, ${proj.actualEndDate || null}, ${creatorId}, ${daysAgo(60)}, ${daysAgo(1)})
+      INSERT INTO projects (id, name, client_id, description, status, total_value, project_type, pricing_type, start_date, target_end_date, actual_end_date, is_demo, created_by, created_at, updated_at)
+      VALUES (${proj.id}, ${proj.name}, ${proj.clientId}, ${proj.description}, ${proj.status}, ${proj.totalValue}, ${proj.projectType}, 'phased', ${proj.startDate}, ${proj.targetEndDate}, ${proj.actualEndDate || null}, true, ${creatorId}, ${daysAgo(60)}, ${daysAgo(1)})
       ON CONFLICT (id) DO NOTHING
     `;
 
@@ -288,8 +290,8 @@ async function seedDemo() {
 
   for (const prop of proposalData) {
     await sql`
-      INSERT INTO proposals (id, lead_id, client_id, title, scope_of_work, deliverables, terms_and_conditions, pricing_type, total_amount, status, sent_at, viewed_at, accepted_at, ai_generated, created_by, created_at, updated_at)
-      VALUES (${prop.id}, ${prop.leadId || null}, ${prop.clientId || null}, ${prop.title}, ${prop.scopeOfWork}, ${prop.deliverables}, ${prop.terms}, 'phased', ${prop.totalAmount}, ${prop.status}, ${prop.sentAt || null}, ${prop.viewedAt || null}, ${prop.acceptedAt || null}, true, ${creatorId}, ${daysAgo(70)}, ${daysAgo(1)})
+      INSERT INTO proposals (id, lead_id, client_id, title, scope_of_work, deliverables, terms_and_conditions, pricing_type, total_amount, status, sent_at, viewed_at, accepted_at, ai_generated, is_demo, created_by, created_at, updated_at)
+      VALUES (${prop.id}, ${prop.leadId || null}, ${prop.clientId || null}, ${prop.title}, ${prop.scopeOfWork}, ${prop.deliverables}, ${prop.terms}, 'phased', ${prop.totalAmount}, ${prop.status}, ${prop.sentAt || null}, ${prop.viewedAt || null}, ${prop.acceptedAt || null}, true, true, ${creatorId}, ${daysAgo(70)}, ${daysAgo(1)})
       ON CONFLICT (id) DO NOTHING
     `;
 
@@ -345,8 +347,8 @@ async function seedDemo() {
     const invId = uuid();
     const totalAmount = inv.lineItems.reduce((sum, li) => sum + li.qty * li.price, 0);
     await sql`
-      INSERT INTO invoices (id, client_id, project_id, title, description, amount, status, sent_at, paid_at, due_date, created_by, created_at, updated_at)
-      VALUES (${invId}, ${inv.clientId}, ${inv.projectId}, ${inv.title}, ${inv.description}, ${String(totalAmount)}, ${inv.status}, ${inv.sentAt || null}, ${inv.paidAt || null}, ${inv.dueDate || null}, ${creatorId}, ${daysAgo(90)}, ${daysAgo(1)})
+      INSERT INTO invoices (id, client_id, project_id, title, description, amount, status, sent_at, paid_at, due_date, is_demo, created_by, created_at, updated_at)
+      VALUES (${invId}, ${inv.clientId}, ${inv.projectId}, ${inv.title}, ${inv.description}, ${String(totalAmount)}, ${inv.status}, ${inv.sentAt || null}, ${inv.paidAt || null}, ${inv.dueDate || null}, true, ${creatorId}, ${daysAgo(90)}, ${daysAgo(1)})
     `;
 
     for (let i = 0; i < inv.lineItems.length; i++) {
@@ -360,8 +362,8 @@ async function seedDemo() {
     // Create payment for paid invoices
     if (inv.status === 'paid' && inv.paidAt) {
       await sql`
-        INSERT INTO payments (id, invoice_id, client_id, amount, method, paid_at, created_at)
-        VALUES (${uuid()}, ${invId}, ${inv.clientId}, ${String(totalAmount)}, 'square_invoice', ${inv.paidAt}, ${inv.paidAt})
+        INSERT INTO payments (id, invoice_id, client_id, amount, method, is_demo, paid_at, created_at)
+        VALUES (${uuid()}, ${invId}, ${inv.clientId}, ${String(totalAmount)}, 'square_invoice', true, ${inv.paidAt}, ${inv.paidAt})
       `;
     }
   }
@@ -382,8 +384,8 @@ async function seedDemo() {
 
   for (const svc of serviceData) {
     await sql`
-      INSERT INTO client_services (id, client_id, project_id, service_name, provider, category, monthly_cost, status, notes, created_at, updated_at)
-      VALUES (${uuid()}, ${svc.clientId}, ${svc.projectId}, ${svc.serviceName}, ${svc.provider}, ${svc.category}, ${svc.monthlyCost}, 'active', ${svc.notes}, ${daysAgo(30)}, ${daysAgo(1)})
+      INSERT INTO client_services (id, client_id, project_id, service_name, provider, category, monthly_cost, status, notes, is_demo, created_at, updated_at)
+      VALUES (${uuid()}, ${svc.clientId}, ${svc.projectId}, ${svc.serviceName}, ${svc.provider}, ${svc.category}, ${svc.monthlyCost}, 'active', ${svc.notes}, true, ${daysAgo(30)}, ${daysAgo(1)})
     `;
   }
   console.log(`  ✓ ${serviceData.length} tracked services created`);
@@ -406,8 +408,8 @@ async function seedDemo() {
 
   for (const act of activities) {
     await sql`
-      INSERT INTO activity_log (id, actor_id, actor_type, action, entity_type, entity_id, metadata, created_at)
-      VALUES (${uuid()}, ${creatorId}, 'team', ${act.action}, ${act.entityType}, ${act.entityId}, ${JSON.stringify(act.metadata)}, ${daysAgo(act.ago)})
+      INSERT INTO activity_log (id, actor_id, actor_type, action, entity_type, entity_id, metadata, is_demo, created_at)
+      VALUES (${uuid()}, ${creatorId}, 'team', ${act.action}, ${act.entityType}, ${act.entityId}, ${JSON.stringify(act.metadata)}, true, ${daysAgo(act.ago)})
     `;
   }
   console.log(`  ✓ ${activities.length} activity log entries created`);

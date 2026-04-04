@@ -28,8 +28,10 @@ import {
   isNull,
   ne,
 } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 export async function getMetrics() {
+  const isDemo = await isDemoMode();
   const now = new Date();
 
   const weekAgo = new Date(now);
@@ -46,14 +48,14 @@ export async function getMetrics() {
       db
         .select({ value: count() })
         .from(leads)
-        .where(gte(leads.createdAt, weekAgo)),
+        .where(and(gte(leads.createdAt, weekAgo), eq(leads.isDemo, isDemo))),
 
       // Leads created last week (for delta)
       db
         .select({ value: count() })
         .from(leads)
         .where(
-          and(gte(leads.createdAt, twoWeeksAgo), lt(leads.createdAt, weekAgo))
+          and(gte(leads.createdAt, twoWeeksAgo), lt(leads.createdAt, weekAgo), eq(leads.isDemo, isDemo))
         ),
 
       // Pipeline value — proposals linked to leads in stages 5-7
@@ -68,7 +70,8 @@ export async function getMetrics() {
               'negotiation',
               'contract_signed',
             ]),
-            notInArray(proposals.status, ['declined', 'expired'])
+            notInArray(proposals.status, ['declined', 'expired']),
+            eq(proposals.isDemo, isDemo)
           )
         ),
 
@@ -76,13 +79,13 @@ export async function getMetrics() {
       db
         .select({ value: count() })
         .from(projects)
-        .where(eq(projects.status, 'in_progress')),
+        .where(and(eq(projects.status, 'in_progress'), eq(projects.isDemo, isDemo))),
 
       // Revenue this month
       db
         .select({ value: sum(payments.amount) })
         .from(payments)
-        .where(gte(payments.paidAt, monthStart)),
+        .where(and(gte(payments.paidAt, monthStart), eq(payments.isDemo, isDemo))),
     ]);
 
   return {
@@ -96,6 +99,7 @@ export async function getMetrics() {
 }
 
 export async function getAlerts(staleDays = 7) {
+  const isDemo = await isDemoMode();
   const now = new Date();
 
   const staleDate = new Date(now);
@@ -126,7 +130,8 @@ export async function getAlerts(staleDays = 7) {
           or(
             and(isNull(leads.lastContactedAt), lte(leads.createdAt, staleDate)),
             lte(leads.lastContactedAt, staleDate)
-          )
+          ),
+          eq(leads.isDemo, isDemo)
         )
       )
       .limit(10),
@@ -146,7 +151,8 @@ export async function getAlerts(staleDays = 7) {
         and(
           sql`${projectMilestones.dueDate} < CURRENT_DATE`,
           ne(projectMilestones.status, 'completed'),
-          eq(projects.status, 'in_progress')
+          eq(projects.status, 'in_progress'),
+          eq(projects.isDemo, isDemo)
         )
       )
       .limit(10),
@@ -165,7 +171,8 @@ export async function getAlerts(staleDays = 7) {
       .where(
         and(
           eq(projectQuestions.status, 'pending'),
-          lte(projectQuestions.createdAt, oneDayAgo)
+          lte(projectQuestions.createdAt, oneDayAgo),
+          eq(projects.isDemo, isDemo)
         )
       )
       .limit(10),
@@ -178,6 +185,7 @@ export async function getAlerts(staleDays = 7) {
  * Upcoming milestones — due within N days, not completed.
  */
 export async function getUpcomingMilestones(days = 7, limit = 10) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: projectMilestones.id,
@@ -194,7 +202,8 @@ export async function getUpcomingMilestones(days = 7, limit = 10) {
         ne(projectMilestones.status, 'completed'),
         sql`${projectMilestones.dueDate} IS NOT NULL`,
         sql`${projectMilestones.dueDate} <= CURRENT_DATE + interval '${sql.raw(String(days))} days'`,
-        eq(projects.status, 'in_progress')
+        eq(projects.status, 'in_progress'),
+        eq(projects.isDemo, isDemo)
       )
     )
     .orderBy(asc(projectMilestones.dueDate))
@@ -202,9 +211,11 @@ export async function getUpcomingMilestones(days = 7, limit = 10) {
 }
 
 export async function getRecentActivity(limit = 15) {
+  const isDemo = await isDemoMode();
   const activities = await db
     .select()
     .from(activityLog)
+    .where(eq(activityLog.isDemo, isDemo))
     .orderBy(desc(activityLog.createdAt))
     .limit(limit);
 
@@ -238,6 +249,7 @@ export async function getRecentActivity(limit = 15) {
  * Revenue dashboard metrics.
  */
 export async function getRevenueMetrics() {
+  const isDemo = await isDemoMode();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -256,20 +268,24 @@ export async function getRevenueMetrics() {
       .where(
         and(
           gte(invoices.createdAt, monthStart),
-          ne(invoices.status, 'draft')
+          ne(invoices.status, 'draft'),
+          eq(invoices.isDemo, isDemo)
         )
       ),
     // Total paid this month
     db
       .select({ value: sum(payments.amount) })
       .from(payments)
-      .where(gte(payments.paidAt, monthStart)),
+      .where(and(gte(payments.paidAt, monthStart), eq(payments.isDemo, isDemo))),
     // Outstanding (sent but not paid)
     db
       .select({ value: sum(invoices.amount) })
       .from(invoices)
       .where(
-        inArray(invoices.status, ['sent', 'viewed', 'overdue'])
+        and(
+          inArray(invoices.status, ['sent', 'viewed', 'overdue']),
+          eq(invoices.isDemo, isDemo)
+        )
       ),
     // Total paid last month (for MoM)
     db
@@ -278,7 +294,8 @@ export async function getRevenueMetrics() {
       .where(
         and(
           gte(payments.paidAt, lastMonthStart),
-          lte(payments.paidAt, lastMonthEnd)
+          lte(payments.paidAt, lastMonthEnd),
+          eq(payments.isDemo, isDemo)
         )
       ),
   ]);
@@ -305,6 +322,7 @@ export async function getRevenueMetrics() {
  */
 export async function getUnassignedLeads(limit = 10) {
   try {
+    const isDemo = await isDemoMode();
     return await db
       .select({
         id: leads.id,
@@ -320,7 +338,8 @@ export async function getUnassignedLeads(limit = 10) {
       .where(
         and(
           isNull(leads.assignedTo),
-          notInArray(leads.pipelineStage, ['lost'])
+          notInArray(leads.pipelineStage, ['lost']),
+          eq(leads.isDemo, isDemo)
         )
       )
       .orderBy(desc(leads.createdAt))
@@ -352,6 +371,7 @@ export async function getTeamMembersForAssignment() {
  * Monthly revenue for the last 12 months — invoiced vs collected.
  */
 export async function getMonthlyRevenue() {
+  const isDemo = await isDemoMode();
   const rows = await db.execute(sql`
     WITH months AS (
       SELECT generate_series(
@@ -367,11 +387,13 @@ export async function getMonthlyRevenue() {
         FROM invoices i
         WHERE i.status != 'draft'
           AND date_trunc('month', i.created_at) = m.month_start
+          AND i.is_demo = ${isDemo}
       ), 0)::int AS invoiced,
       COALESCE((
-        SELECT SUM(p.amount::numeric)
-        FROM payments p
-        WHERE date_trunc('month', p.paid_at) = m.month_start
+        SELECT SUM(p2.amount::numeric)
+        FROM payments p2
+        WHERE date_trunc('month', p2.paid_at) = m.month_start
+          AND p2.is_demo = ${isDemo}
       ), 0)::int AS collected
     FROM months m
     ORDER BY m.month_start ASC
@@ -381,6 +403,7 @@ export async function getMonthlyRevenue() {
 }
 
 export async function getLeadSourceAnalytics() {
+  const isDemo = await isDemoMode();
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -391,7 +414,7 @@ export async function getLeadSourceAnalytics() {
       total: count(),
     })
     .from(leads)
-    .where(gte(leads.createdAt, ninetyDaysAgo))
+    .where(and(gte(leads.createdAt, ninetyDaysAgo), eq(leads.isDemo, isDemo)))
     .groupBy(leads.source);
 
   // Count converted leads by source in last 90 days
@@ -404,7 +427,8 @@ export async function getLeadSourceAnalytics() {
     .where(
       and(
         gte(leads.createdAt, ninetyDaysAgo),
-        sql`${leads.convertedToClientId} IS NOT NULL`
+        sql`${leads.convertedToClientId} IS NOT NULL`,
+        eq(leads.isDemo, isDemo)
       )
     )
     .groupBy(leads.source);

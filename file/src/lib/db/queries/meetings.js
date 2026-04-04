@@ -1,11 +1,13 @@
 import { db } from '@/lib/db/client';
 import { meetings, clients, leads, projects } from '@/lib/db/schema';
 import { eq, and, gte, lte, ne, or, asc, desc, sql, ilike } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Get meetings for a specific date (for dashboard "today" widget).
  */
 export async function getMeetingsForDate(date) {
+  const isDemo = await isDemoMode();
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(date);
@@ -31,7 +33,8 @@ export async function getMeetingsForDate(date) {
       and(
         gte(meetings.startTime, dayStart),
         lte(meetings.startTime, dayEnd),
-        ne(meetings.status, 'cancelled')
+        ne(meetings.status, 'cancelled'),
+        eq(meetings.isDemo, isDemo)
       )
     )
     .orderBy(asc(meetings.startTime));
@@ -41,6 +44,7 @@ export async function getMeetingsForDate(date) {
  * Get meetings for a date range (for FullCalendar views).
  */
 export async function getMeetingsForRange(start, end) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: meetings.id,
@@ -61,7 +65,8 @@ export async function getMeetingsForRange(start, end) {
     .where(
       and(
         gte(meetings.startTime, new Date(start)),
-        lte(meetings.endTime, new Date(end))
+        lte(meetings.endTime, new Date(end)),
+        eq(meetings.isDemo, isDemo)
       )
     )
     .orderBy(asc(meetings.startTime));
@@ -71,6 +76,7 @@ export async function getMeetingsForRange(start, end) {
  * Get next N upcoming meetings (for sidebar / widgets).
  */
 export async function getUpcomingMeetings(limit = 5) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: meetings.id,
@@ -87,7 +93,8 @@ export async function getUpcomingMeetings(limit = 5) {
     .where(
       and(
         gte(meetings.startTime, new Date()),
-        or(eq(meetings.status, 'scheduled'), eq(meetings.status, 'rescheduled'))
+        or(eq(meetings.status, 'scheduled'), eq(meetings.status, 'rescheduled')),
+        eq(meetings.isDemo, isDemo)
       )
     )
     .orderBy(asc(meetings.startTime))
@@ -98,10 +105,11 @@ export async function getUpcomingMeetings(limit = 5) {
  * Get a single meeting by ID.
  */
 export async function getMeetingById(id) {
+  const isDemo = await isDemoMode();
   const [meeting] = await db
     .select()
     .from(meetings)
-    .where(eq(meetings.id, id))
+    .where(and(eq(meetings.id, id), eq(meetings.isDemo, isDemo)))
     .limit(1);
   return meeting || null;
 }
@@ -110,10 +118,11 @@ export async function getMeetingById(id) {
  * Get a meeting by Cal.com booking UID (for dedup).
  */
 export async function getMeetingByCalcomUid(uid) {
+  const isDemo = await isDemoMode();
   const [meeting] = await db
     .select()
     .from(meetings)
-    .where(eq(meetings.calcomBookingUid, uid))
+    .where(and(eq(meetings.calcomBookingUid, uid), eq(meetings.isDemo, isDemo)))
     .limit(1);
   return meeting || null;
 }
@@ -122,7 +131,8 @@ export async function getMeetingByCalcomUid(uid) {
  * Get paginated meetings with filters (for admin meetings list page).
  */
 export async function getMeetings({ status, search, limit = 50, offset = 0 } = {}) {
-  const conditions = [];
+  const isDemo = await isDemoMode();
+  const conditions = [eq(meetings.isDemo, isDemo)];
 
   if (status) {
     conditions.push(eq(meetings.status, status));
@@ -178,6 +188,7 @@ export async function getMeetings({ status, search, limit = 50, offset = 0 } = {
  * Get meetings for a specific client (for client detail Meetings tab).
  */
 export async function getMeetingsByClientId(clientId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: meetings.id,
@@ -192,7 +203,7 @@ export async function getMeetingsByClientId(clientId) {
       calcomBookingUid: meetings.calcomBookingUid,
     })
     .from(meetings)
-    .where(eq(meetings.clientId, clientId))
+    .where(and(eq(meetings.clientId, clientId), eq(meetings.isDemo, isDemo)))
     .orderBy(desc(meetings.startTime));
 }
 
@@ -200,6 +211,7 @@ export async function getMeetingsByClientId(clientId) {
  * Get today's meetings (for dashboard schedule widget).
  */
 export async function getTodaysMeetings() {
+  const isDemo = await isDemoMode();
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 86400000);
@@ -223,7 +235,8 @@ export async function getTodaysMeetings() {
       and(
         gte(meetings.startTime, startOfDay),
         lte(meetings.startTime, endOfDay),
-        or(eq(meetings.status, 'scheduled'), eq(meetings.status, 'rescheduled'))
+        or(eq(meetings.status, 'scheduled'), eq(meetings.status, 'rescheduled')),
+        eq(meetings.isDemo, isDemo)
       )
     )
     .orderBy(asc(meetings.startTime));

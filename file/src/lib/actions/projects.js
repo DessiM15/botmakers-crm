@@ -18,6 +18,7 @@ import { projectCompletedEmail } from '@/lib/email/notifications';
 import { sendTeamNotification } from '@/lib/notifications/notify';
 import { advanceLead } from '@/lib/pipeline/transitions';
 import { completeMilestoneInternal, handleMilestoneStarted } from '@/lib/actions/milestone-internal';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Create a new project with phases and milestones.
@@ -26,6 +27,7 @@ export async function createProject(formData, phasesData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = projectCreateSchema.safeParse(formData);
     if (!parsed.success) {
@@ -49,6 +51,7 @@ export async function createProject(formData, phasesData) {
         startDate: data.startDate || null,
         targetEndDate: data.targetEndDate || null,
         createdBy: teamUser.id,
+        isDemo,
       })
       .returning();
 
@@ -84,6 +87,7 @@ export async function createProject(formData, phasesData) {
       entityType: 'project',
       entityId: project.id,
       metadata: { name: project.name, clientId: data.clientId },
+      isDemo,
     });
 
     // Team in-app notification (non-blocking)
@@ -123,6 +127,7 @@ export async function updateProject(projectId, formData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [existing] = await db
       .select({ id: projects.id })
@@ -151,6 +156,7 @@ export async function updateProject(projectId, formData) {
       action: 'project.updated',
       entityType: 'project',
       entityId: projectId,
+      isDemo,
     });
 
     revalidatePath(`/projects/${projectId}`);
@@ -173,6 +179,7 @@ export async function updateProjectStatus(projectId, status) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const updateData = { status, updatedAt: new Date() };
 
@@ -244,6 +251,7 @@ export async function updateProjectStatus(projectId, status) {
       entityType: 'project',
       entityId: projectId,
       metadata: { status },
+      isDemo,
     });
 
     revalidatePath(`/projects/${projectId}`);

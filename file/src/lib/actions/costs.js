@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { requireTeam } from '@/lib/auth/helpers';
 import { costEntryCreateSchema, costEntryUpdateSchema } from '@/lib/utils/validators';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Create a manual cost entry.
@@ -15,6 +16,7 @@ export async function createCostEntry(formData) {
   try {
     const cookieStore = await cookies();
     const user = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = costEntryCreateSchema.safeParse(formData);
     if (!parsed.success) {
@@ -38,6 +40,7 @@ export async function createCostEntry(formData) {
         externalId: data.externalId || null,
         metadata: data.metadata || null,
         createdBy: user.id,
+        isDemo,
       })
       .returning({ id: costEntries.id });
 
@@ -48,6 +51,7 @@ export async function createCostEntry(formData) {
       entityType: 'cost_entry',
       entityId: entry.id,
       metadata: { provider: data.provider, amount: data.amount },
+      isDemo,
     });
 
     revalidatePath('/costs');
@@ -115,6 +119,7 @@ export async function deleteCostEntry(id) {
   try {
     const cookieStore = await cookies();
     const user = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [existing] = await db
       .select({ source: costEntries.source, provider: costEntries.provider })
@@ -138,6 +143,7 @@ export async function deleteCostEntry(id) {
       entityType: 'cost_entry',
       entityId: id,
       metadata: { provider: existing.provider },
+      isDemo,
     });
 
     revalidatePath('/costs');
@@ -196,6 +202,7 @@ export async function pullVercelCosts(startDate, endDate) {
   try {
     const cookieStore = await cookies();
     const user = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const { isVercelBillingConfigured, getVercelCharges } = await import('@/lib/integrations/vercel-billing');
     if (!isVercelBillingConfigured()) {
@@ -219,6 +226,7 @@ export async function pullVercelCosts(startDate, endDate) {
             externalId: charge.id || `vercel-${startDate}-${charge.name}`,
             metadata: charge,
             createdBy: user.id,
+            isDemo,
           })
           .onConflictDoNothing();
         inserted++;
@@ -234,6 +242,7 @@ export async function pullVercelCosts(startDate, endDate) {
       entityType: 'cost_entry',
       entityId: user.id,
       metadata: { startDate, endDate, inserted },
+      isDemo,
     });
 
     revalidatePath('/costs');
@@ -250,6 +259,7 @@ export async function pullAnthropicCosts(startDate, endDate) {
   try {
     const cookieStore = await cookies();
     const user = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const { isAnthropicBillingConfigured, getAnthropicCostReport } = await import('@/lib/integrations/anthropic-billing');
     if (!isAnthropicBillingConfigured()) {
@@ -273,6 +283,7 @@ export async function pullAnthropicCosts(startDate, endDate) {
             externalId: cost.id || `anthropic-${startDate}-${cost.model || 'total'}`,
             metadata: cost,
             createdBy: user.id,
+            isDemo,
           })
           .onConflictDoNothing();
         inserted++;
@@ -288,6 +299,7 @@ export async function pullAnthropicCosts(startDate, endDate) {
       entityType: 'cost_entry',
       entityId: user.id,
       metadata: { startDate, endDate, inserted },
+      isDemo,
     });
 
     revalidatePath('/costs');
@@ -304,6 +316,7 @@ export async function calculateSquareFeesForPeriod(startDate, endDate) {
   try {
     const cookieStore = await cookies();
     const user = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const { calculateSquareFees } = await import('@/lib/integrations/square');
 
@@ -343,6 +356,7 @@ export async function calculateSquareFeesForPeriod(startDate, endDate) {
             externalId,
             metadata: { paymentCount: paymentRows.length, feeDetails },
             createdBy: user.id,
+            isDemo,
           })
           .onConflictDoNothing();
       } catch {
@@ -357,6 +371,7 @@ export async function calculateSquareFeesForPeriod(startDate, endDate) {
       entityType: 'cost_entry',
       entityId: user.id,
       metadata: { startDate, endDate, totalFees, paymentCount: paymentRows.length },
+      isDemo,
     });
 
     revalidatePath('/costs');

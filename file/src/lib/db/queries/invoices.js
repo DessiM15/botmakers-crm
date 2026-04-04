@@ -8,6 +8,7 @@ import {
   teamUsers,
 } from '@/lib/db/schema';
 import { eq, desc, and, count, sql, ilike, or, sum } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch paginated, filterable invoices list.
@@ -18,7 +19,11 @@ export async function getInvoices({
   page = 1,
   perPage = 25,
 } = {}) {
+  const isDemo = await isDemoMode();
   const conditions = [];
+
+  // Filter by demo mode
+  conditions.push(eq(invoices.isDemo, isDemo));
 
   if (status !== 'all') {
     conditions.push(eq(invoices.status, status));
@@ -81,6 +86,7 @@ export async function getInvoices({
  * Fetch a single invoice by ID with line items and payments.
  */
 export async function getInvoiceById(id) {
+  const isDemo = await isDemoMode();
   const [invoice] = await db
     .select({
       id: invoices.id,
@@ -108,7 +114,7 @@ export async function getInvoiceById(id) {
     })
     .from(invoices)
     .leftJoin(teamUsers, eq(invoices.createdBy, teamUsers.id))
-    .where(eq(invoices.id, id))
+    .where(and(eq(invoices.id, id), eq(invoices.isDemo, isDemo)))
     .limit(1);
 
   if (!invoice) return null;
@@ -133,6 +139,7 @@ export async function getInvoiceById(id) {
  * Fetch invoices for a specific client.
  */
 export async function getInvoicesByClientId(clientId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: invoices.id,
@@ -145,7 +152,7 @@ export async function getInvoicesByClientId(clientId) {
       createdAt: invoices.createdAt,
     })
     .from(invoices)
-    .where(eq(invoices.clientId, clientId))
+    .where(and(eq(invoices.clientId, clientId), eq(invoices.isDemo, isDemo)))
     .orderBy(desc(invoices.createdAt));
 }
 
@@ -153,6 +160,7 @@ export async function getInvoicesByClientId(clientId) {
  * Fetch invoices for a specific project.
  */
 export async function getInvoicesByProjectId(projectId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: invoices.id,
@@ -166,7 +174,7 @@ export async function getInvoicesByProjectId(projectId) {
       milestoneId: invoices.milestoneId,
     })
     .from(invoices)
-    .where(eq(invoices.projectId, projectId))
+    .where(and(eq(invoices.projectId, projectId), eq(invoices.isDemo, isDemo)))
     .orderBy(desc(invoices.createdAt));
 }
 
@@ -174,6 +182,7 @@ export async function getInvoicesByProjectId(projectId) {
  * Get invoice summary stats for the dashboard cards.
  */
 export async function getInvoiceSummary() {
+  const isDemo = await isDemoMode();
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -182,7 +191,7 @@ export async function getInvoiceSummary() {
     db
       .select({ total: sql`COALESCE(SUM(${invoices.amount}::numeric), 0)`.as('total') })
       .from(invoices)
-      .where(sql`${invoices.status} IN ('sent', 'viewed', 'overdue')`),
+      .where(and(sql`${invoices.status} IN ('sent', 'viewed', 'overdue')`, eq(invoices.isDemo, isDemo))),
     // Paid this month
     db
       .select({ total: sql`COALESCE(SUM(${invoices.amount}::numeric), 0)`.as('total') })
@@ -190,14 +199,15 @@ export async function getInvoiceSummary() {
       .where(
         and(
           eq(invoices.status, 'paid'),
-          sql`${invoices.paidAt} >= ${startOfMonth.toISOString()}`
+          sql`${invoices.paidAt} >= ${startOfMonth.toISOString()}`,
+          eq(invoices.isDemo, isDemo)
         )
       ),
     // Overdue count
     db
       .select({ count: count() })
       .from(invoices)
-      .where(eq(invoices.status, 'overdue')),
+      .where(and(eq(invoices.status, 'overdue'), eq(invoices.isDemo, isDemo))),
   ]);
 
   return {
@@ -211,6 +221,7 @@ export async function getInvoiceSummary() {
  * Get clients dropdown for invoice form.
  */
 export async function getClientsForInvoiceDropdown() {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: clients.id,
@@ -219,6 +230,7 @@ export async function getClientsForInvoiceDropdown() {
       company: clients.company,
     })
     .from(clients)
+    .where(eq(clients.isDemo, isDemo))
     .orderBy(clients.fullName);
 }
 
@@ -226,12 +238,13 @@ export async function getClientsForInvoiceDropdown() {
  * Get projects for a specific client (for invoice form dropdown).
  */
 export async function getProjectsForClient(clientId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: projects.id,
       name: projects.name,
     })
     .from(projects)
-    .where(eq(projects.clientId, clientId))
+    .where(and(eq(projects.clientId, clientId), eq(projects.isDemo, isDemo)))
     .orderBy(desc(projects.createdAt));
 }

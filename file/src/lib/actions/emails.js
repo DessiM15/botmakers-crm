@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { sendEmail } from '@/lib/email/client';
 import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
 import { saveDraftSchema } from '@/lib/utils/validators';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Get contacts for the email generator sidebar panel.
@@ -19,18 +20,22 @@ export async function getContactsForPanel(search = '', typeFilter = 'all') {
   try {
     const cookieStore = await cookies();
     await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const results = [];
     const pattern = search.trim() ? `%${search.trim()}%` : null;
 
     if (typeFilter === 'all' || typeFilter === 'lead') {
       const leadConditions = pattern
-        ? or(
-            ilike(leads.fullName, pattern),
-            ilike(leads.email, pattern),
-            ilike(leads.companyName, pattern)
+        ? and(
+            eq(leads.isDemo, isDemo),
+            or(
+              ilike(leads.fullName, pattern),
+              ilike(leads.email, pattern),
+              ilike(leads.companyName, pattern)
+            )
           )
-        : undefined;
+        : eq(leads.isDemo, isDemo);
 
       const matchedLeads = await db
         .select({
@@ -57,12 +62,15 @@ export async function getContactsForPanel(search = '', typeFilter = 'all') {
 
     if (typeFilter === 'all' || typeFilter === 'client') {
       const clientConditions = pattern
-        ? or(
-            ilike(clients.fullName, pattern),
-            ilike(clients.email, pattern),
-            ilike(clients.company, pattern)
+        ? and(
+            eq(clients.isDemo, isDemo),
+            or(
+              ilike(clients.fullName, pattern),
+              ilike(clients.email, pattern),
+              ilike(clients.company, pattern)
+            )
           )
-        : undefined;
+        : eq(clients.isDemo, isDemo);
 
       const matchedClients = await db
         .select({
@@ -237,6 +245,7 @@ export async function getRecipients(search) {
   try {
     const cookieStore = await cookies();
     await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const results = [];
 
@@ -252,10 +261,13 @@ export async function getRecipients(search) {
         })
         .from(leads)
         .where(
-          or(
-            ilike(leads.fullName, pattern),
-            ilike(leads.email, pattern),
-            ilike(leads.companyName, pattern)
+          and(
+            eq(leads.isDemo, isDemo),
+            or(
+              ilike(leads.fullName, pattern),
+              ilike(leads.email, pattern),
+              ilike(leads.companyName, pattern)
+            )
           )
         )
         .limit(10);
@@ -279,10 +291,13 @@ export async function getRecipients(search) {
         })
         .from(clients)
         .where(
-          or(
-            ilike(clients.fullName, pattern),
-            ilike(clients.email, pattern),
-            ilike(clients.company, pattern)
+          and(
+            eq(clients.isDemo, isDemo),
+            or(
+              ilike(clients.fullName, pattern),
+              ilike(clients.email, pattern),
+              ilike(clients.company, pattern)
+            )
           )
         )
         .limit(10);
@@ -342,6 +357,7 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     if (!to || !subject || !html) {
       return { error: 'CB-API-001: Recipient, subject, and body are required' };
@@ -379,6 +395,7 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
       body: fullHtml,
       direction: 'outbound',
       createdBy: teamUser.id,
+      isDemo,
     };
 
     if (recipientLeadId) contactData.leadId = recipientLeadId;
@@ -401,6 +418,7 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
         cc: ccList.length > 0 ? ccList : undefined,
         subject,
       },
+      isDemo,
     });
 
     revalidatePath('/activity');

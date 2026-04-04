@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { requireTeam } from '@/lib/auth/helpers';
 import { questionRepliedEmail } from '@/lib/email/notifications';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Save a draft reply for a question (CRM-side).
@@ -34,6 +35,7 @@ export async function sendReply(questionId, replyText) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     if (!replyText || replyText.trim().length < 1) {
       return { error: 'Reply cannot be empty.' };
@@ -79,6 +81,7 @@ export async function sendReply(questionId, replyText) {
       entityType: 'project',
       entityId: question.projectId,
       metadata: { questionId },
+      isDemo,
     });
 
     // Email client

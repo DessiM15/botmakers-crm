@@ -222,6 +222,7 @@ export const clients = pgTable('clients', {
   portalFirstLoginAt: timestamp('portal_first_login_at', { withTimezone: true }),
   portalOnboardingComplete: boolean('portal_onboarding_complete').notNull().default(false),
   portalAccessRevoked: boolean('portal_access_revoked').notNull().default(false),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -260,6 +261,7 @@ export const leads = pgTable('leads', {
   discoveryTranscript: text('discovery_transcript'),
   discoveryCallSummary: jsonb('discovery_call_summary'),
   discoveryCallProcessedAt: timestamp('discovery_call_processed_at', { withTimezone: true }),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -288,6 +290,7 @@ export const contacts = pgTable('contacts', {
   subject: text('subject'),
   body: text('body'),
   direction: text('direction').notNull().default('outbound'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -317,6 +320,7 @@ export const proposals = pgTable('proposals', {
   clientSignature: text('client_signature'),
   aiGenerated: boolean('ai_generated').notNull().default(false),
   aiPromptContext: text('ai_prompt_context'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -349,6 +353,7 @@ export const projects = pgTable('projects', {
   targetEndDate: date('target_end_date'),
   actualEndDate: date('actual_end_date'),
   syncApiKey: text('sync_api_key'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -431,6 +436,7 @@ export const invoices = pgTable('invoices', {
   viewedAt: timestamp('viewed_at', { withTimezone: true }),
   paidAt: timestamp('paid_at', { withTimezone: true }),
   dueDate: date('due_date'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').notNull().references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -454,6 +460,7 @@ export const payments = pgTable('payments', {
   squarePaymentId: text('square_payment_id'),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull().default('0'),
   method: paymentMethodEnum('method').notNull().default('square_invoice'),
+  isDemo: boolean('is_demo').notNull().default(false),
   paidAt: timestamp('paid_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -483,6 +490,7 @@ export const activityLog = pgTable('activity_log', {
   entityType: text('entity_type').notNull(),
   entityId: uuid('entity_id').notNull(),
   metadata: jsonb('metadata'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -562,6 +570,7 @@ export const clientServices = pgTable('client_services', {
   credentialsVaultUrl: text('credentials_vault_url'),
   accountIdentifier: text('account_identifier'),
   notes: text('notes'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -615,6 +624,7 @@ export const meetings = pgTable('meetings', {
   calcomBookingUid: text('calcom_booking_uid').unique(),
   source: meetingSourceEnum('source').notNull().default('manual'),
   status: meetingStatusEnum('status').notNull().default('scheduled'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').references(() => teamUsers.id),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -660,6 +670,7 @@ export const costEntries = pgTable('cost_entries', {
   periodEnd: date('period_end').notNull(),
   externalId: text('external_id'),
   metadata: jsonb('metadata'),
+  isDemo: boolean('is_demo').notNull().default(false),
   createdBy: uuid('created_by').references(() => teamUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

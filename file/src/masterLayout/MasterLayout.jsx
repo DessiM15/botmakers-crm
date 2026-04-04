@@ -1,7 +1,7 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { signOutAction } from "@/lib/actions/auth";
 import NotificationBell from "@/components/crm/NotificationBell";
@@ -34,18 +34,39 @@ const sidebarItems = [
 
 const MasterLayout = ({ children }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarActive, setSidebarActive] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoToggling, setDemoToggling] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       document.documentElement.setAttribute("data-theme", "dark");
+      // Check if demo_mode cookie is set
+      setDemoMode(document.cookie.split(';').some(c => c.trim().startsWith('demo_mode=true')));
     }
     fetch('/api/auth/me')
       .then((res) => res.ok ? res.json() : null)
       .then((data) => { if (data) setCurrentUser(data); })
       .catch(() => {});
+  }, []);
+
+  const toggleDemoMode = useCallback(async () => {
+    setDemoToggling(true);
+    try {
+      const res = await fetch('/api/demo-mode', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setDemoMode(data.demoMode);
+        window.location.reload();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDemoToggling(false);
+    }
   }, []);
 
   const isActive = (href) => {
@@ -202,6 +223,31 @@ const MasterLayout = ({ children }) => {
                     <Icon icon="mdi:magnify" className="text-secondary-light text-xl" />
                   </span>
                 </button>
+                {/* Demo Mode Toggle (admin only) */}
+                {currentUser?.role === 'admin' && (
+                  <button
+                    type="button"
+                    className="d-flex align-items-center gap-1 border-0 rounded-pill px-12 py-6"
+                    title={demoMode ? 'Demo mode ON — click to deactivate' : 'Activate demo mode'}
+                    onClick={toggleDemoMode}
+                    disabled={demoToggling}
+                    style={{
+                      background: demoMode ? '#7c3aed' : 'rgba(255,255,255,0.08)',
+                      color: demoMode ? '#fff' : '#999',
+                      cursor: demoToggling ? 'wait' : 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {demoToggling ? (
+                      <span className="spinner-border spinner-border-sm" style={{ width: 12, height: 12 }} />
+                    ) : (
+                      <Icon icon={demoMode ? 'mdi:play-circle' : 'mdi:play-circle-outline'} style={{ fontSize: 16 }} />
+                    )}
+                    <span>Demo</span>
+                  </button>
+                )}
                 {/* Notification Bell */}
                 <NotificationBell />
                 {/* User profile dropdown */}
@@ -265,6 +311,35 @@ const MasterLayout = ({ children }) => {
             </div>
           </div>
         </div>
+
+        {/* Demo Mode Banner */}
+        {demoMode && (
+          <div
+            className="d-flex align-items-center justify-content-center gap-2 py-8 px-16"
+            style={{
+              background: '#7c3aed',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 600,
+              letterSpacing: '0.3px',
+              position: 'sticky',
+              top: 0,
+              zIndex: 999,
+            }}
+          >
+            <Icon icon="mdi:play-circle" style={{ fontSize: 16 }} />
+            DEMO MODE — Showing sample data
+            <button
+              type="button"
+              className="btn btn-sm border-0 ms-2 d-flex align-items-center"
+              style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '11px', padding: '2px 8px' }}
+              onClick={toggleDemoMode}
+              disabled={demoToggling}
+            >
+              Deactivate
+            </button>
+          </div>
+        )}
 
         {/* dashboard-main-body */}
         <div className='dashboard-main-body'>{children}</div>

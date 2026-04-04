@@ -12,6 +12,7 @@ import {
   activityLog,
 } from '@/lib/db/schema';
 import { eq, asc, desc, ilike, or, and, sql, count } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch paginated, filtered, searchable projects list.
@@ -23,7 +24,11 @@ export async function getProjects({
   page = 1,
   perPage = 25,
 } = {}) {
+  const isDemo = await isDemoMode();
   const conditions = [];
+
+  // Filter by demo mode
+  conditions.push(eq(projects.isDemo, isDemo));
 
   if (search.trim()) {
     const term = `%${search.trim()}%`;
@@ -94,6 +99,7 @@ export async function getProjects({
  * Fetch a single project by ID with full details.
  */
 export async function getProjectById(id) {
+  const isDemo = await isDemoMode();
   const [project] = await db
     .select({
       id: projects.id,
@@ -126,7 +132,7 @@ export async function getProjectById(id) {
     .leftJoin(leads, eq(projects.leadId, leads.id))
     .leftJoin(proposals, eq(projects.proposalId, proposals.id))
     .leftJoin(teamUsers, eq(projects.createdBy, teamUsers.id))
-    .where(eq(projects.id, id))
+    .where(and(eq(projects.id, id), eq(projects.isDemo, isDemo)))
     .limit(1);
 
   if (!project) return null;
@@ -184,6 +190,7 @@ export async function getProjectById(id) {
  * Fetch projects for a specific client.
  */
 export async function getProjectsByClientId(clientId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: projects.id,
@@ -199,7 +206,7 @@ export async function getProjectsByClientId(clientId) {
       currentPhase: sql`(SELECT pp.name FROM project_phases pp JOIN project_milestones pm ON pm.phase_id = pp.id WHERE pm.project_id = ${projects.id} AND pm.status IN ('pending', 'in_progress') ORDER BY pp.sort_order ASC, pm.sort_order ASC LIMIT 1)`.as('current_phase'),
     })
     .from(projects)
-    .where(eq(projects.clientId, clientId))
+    .where(and(eq(projects.clientId, clientId), eq(projects.isDemo, isDemo)))
     .orderBy(desc(projects.createdAt));
 }
 
@@ -207,6 +214,7 @@ export async function getProjectsByClientId(clientId) {
  * Fetch all clients for dropdown.
  */
 export async function getClientsForDropdown() {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: clients.id,
@@ -214,5 +222,6 @@ export async function getClientsForDropdown() {
       company: clients.company,
     })
     .from(clients)
+    .where(eq(clients.isDemo, isDemo))
     .orderBy(asc(clients.fullName));
 }

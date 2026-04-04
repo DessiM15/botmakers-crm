@@ -20,6 +20,7 @@ const TABS = [
   { key: 'notifications', label: 'Notifications', icon: 'mdi:bell-outline' },
   { key: 'calendar', label: 'Calendar', icon: 'mdi:calendar-outline' },
   { key: 'defaults', label: 'Defaults', icon: 'mdi:cog-outline' },
+  { key: 'demo', label: 'Demo Data', icon: 'mdi:play-circle-outline', adminOnly: true },
 ];
 
 const SettingsPage = ({
@@ -51,7 +52,7 @@ const SettingsPage = ({
 
       {/* Tabs */}
       <ul className="nav nav-tabs border-secondary-subtle mb-4">
-        {TABS.map((tab) => (
+        {TABS.filter(tab => !tab.adminOnly || currentUser?.role === 'admin').map((tab) => (
           <li key={tab.key} className="nav-item">
             <button
               className={`nav-link ${activeTab === tab.key ? 'active' : 'text-secondary-light'}`}
@@ -110,6 +111,10 @@ const SettingsPage = ({
           initialProposalTerms={initialProposalTerms}
           initialProjectPhases={initialProjectPhases}
         />
+      )}
+
+      {activeTab === 'demo' && currentUser?.role === 'admin' && (
+        <DemoDataTab />
       )}
     </>
   );
@@ -911,6 +916,133 @@ function CalendarTab({ initialColors }) {
               Reset to Defaults
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoDataTab() {
+  const [resetting, setResetting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [demoActive, setDemoActive] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setDemoActive(document.cookie.split(';').some(c => c.trim().startsWith('demo_mode=true')));
+    }
+  }, []);
+
+  const handleReset = async () => {
+    setResetting(true);
+    setShowConfirm(false);
+    try {
+      const res = await fetch('/api/demo/reset', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Demo data reset: ${data.deleted} records removed. Re-run seed-demo.mjs to repopulate.`);
+      } else {
+        toast.error(data.error || 'Reset failed.');
+      }
+    } catch {
+      toast.error('Reset failed.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="card mb-4">
+        <div className="card-header">
+          <h6 className="text-white fw-semibold mb-0">
+            <Icon icon="mdi:play-circle-outline" className="me-2" style={{ fontSize: 18 }} />
+            Demo Mode
+          </h6>
+        </div>
+        <div className="card-body">
+          <p className="text-secondary-light text-sm mb-3">
+            Demo mode lets you show the CRM with realistic sample data during sales presentations.
+            When active, all pages display demo data instead of real data. Each team member&apos;s session is independent.
+          </p>
+
+          <div className="d-flex align-items-center gap-2 mb-4">
+            <span
+              className="badge fw-medium"
+              style={{
+                background: demoActive ? '#7c3aed33' : '#6c757d22',
+                color: demoActive ? '#a78bfa' : '#6c757d',
+                fontSize: '12px',
+              }}
+            >
+              {demoActive ? 'Demo Mode Active' : 'Demo Mode Off'}
+            </span>
+            <span className="text-secondary-light text-xs">
+              Toggle from the header bar using the &quot;Demo&quot; button.
+            </span>
+          </div>
+
+          <div
+            className="p-3 rounded mb-3"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <h6 className="text-white text-sm fw-semibold mb-2">How it works</h6>
+            <ul className="text-secondary-light text-sm mb-0 ps-3">
+              <li>Click the <strong>Demo</strong> button in the header to activate</li>
+              <li>All pages will show only demo data (purple banner confirms it&apos;s active)</li>
+              <li>Records created while in demo mode are automatically flagged as demo data</li>
+              <li>Webhooks and cron jobs always use real data (unaffected)</li>
+              <li>Click <strong>Deactivate</strong> to return to real data</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h6 className="text-white fw-semibold mb-0">Reset Demo Data</h6>
+        </div>
+        <div className="card-body">
+          <p className="text-secondary-light text-sm mb-3">
+            Delete all demo records from the database. After resetting, run{' '}
+            <code className="text-white">node src/lib/db/seed-demo.mjs</code> to repopulate with fresh sample data.
+          </p>
+
+          {!showConfirm ? (
+            <button
+              className="btn btn-outline-danger btn-sm"
+              onClick={() => setShowConfirm(true)}
+              disabled={resetting || !demoActive}
+            >
+              <Icon icon="mdi:delete-sweep-outline" className="me-1" style={{ fontSize: 16 }} />
+              Reset Demo Data
+            </button>
+          ) : (
+            <div className="d-flex align-items-center gap-2">
+              <span className="text-danger text-sm fw-medium">This will delete all demo records. Continue?</span>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={handleReset}
+                disabled={resetting}
+              >
+                {resetting ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+                Yes, Reset
+              </button>
+              <button
+                className="btn btn-outline-secondary btn-sm"
+                onClick={() => setShowConfirm(false)}
+                disabled={resetting}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {!demoActive && (
+            <p className="text-secondary-light text-xs mt-2 mb-0">
+              Demo mode must be active to reset demo data.
+            </p>
+          )}
         </div>
       </div>
     </div>

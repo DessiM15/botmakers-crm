@@ -12,6 +12,7 @@ import { proposalSent } from '@/lib/email/templates';
 import { sanitizeHtml } from '@/lib/utils/sanitize';
 import { advanceLead } from '@/lib/pipeline/transitions';
 import { sendTeamNotification } from '@/lib/notifications/notify';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Create a new proposal with line items.
@@ -20,6 +21,7 @@ export async function createProposal(formData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = proposalCreateSchema.safeParse(formData);
     if (!parsed.success) {
@@ -44,6 +46,7 @@ export async function createProposal(formData) {
         aiGenerated: formData.aiGenerated || false,
         aiPromptContext: formData.aiPromptContext || null,
         createdBy: teamUser.id,
+        isDemo,
       })
       .returning();
 
@@ -68,6 +71,7 @@ export async function createProposal(formData) {
       entityType: 'proposal',
       entityId: proposal.id,
       metadata: { title: proposal.title },
+      isDemo,
     });
 
     // Team in-app notification (non-blocking)
@@ -181,6 +185,7 @@ export async function sendProposal(proposalId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [proposal] = await db
       .select()
@@ -262,6 +267,7 @@ export async function sendProposal(proposalId) {
         recipientEmail,
         recipientName,
       },
+      isDemo,
     });
 
     // Team in-app notification (non-blocking)
@@ -305,6 +311,7 @@ export async function deleteProposal(proposalId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [existing] = await db
       .select({ id: proposals.id, status: proposals.status, title: proposals.title })
@@ -335,6 +342,7 @@ export async function deleteProposal(proposalId) {
       entityType: 'proposal',
       entityId: proposalId,
       metadata: { title: existing.title },
+      isDemo,
     });
 
     revalidatePath('/proposals');

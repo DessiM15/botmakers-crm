@@ -16,6 +16,7 @@ import {
   createSquareCheckoutLink,
   isSquareConfigured,
 } from '@/lib/integrations/square';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Create a new invoice with line items.
@@ -24,6 +25,7 @@ export async function createInvoice(formData) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const parsed = invoiceCreateSchema.safeParse(formData);
     if (!parsed.success) {
@@ -47,6 +49,7 @@ export async function createInvoice(formData) {
         amount: String(total),
         dueDate: data.dueDate || null,
         createdBy: teamUser.id,
+        isDemo,
       })
       .returning();
 
@@ -70,6 +73,7 @@ export async function createInvoice(formData) {
       entityType: 'invoice',
       entityId: invoice.id,
       metadata: { title: invoice.title, amount: String(total) },
+      isDemo,
     });
 
     // Team in-app notification (non-blocking)
@@ -101,6 +105,7 @@ export async function sendViaSquare(invoiceId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     if (!isSquareConfigured()) {
       return { error: 'Square is not configured. Add SQUARE_ACCESS_TOKEN to environment variables.' };
@@ -174,6 +179,7 @@ export async function sendViaSquare(invoiceId) {
         squareInvoiceId: squareResult.squareInvoiceId,
         recipientEmail: client.email,
       },
+      isDemo,
     });
 
     // Team in-app notification (non-blocking)
@@ -219,6 +225,7 @@ export async function generatePaymentLink(invoiceId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     if (!isSquareConfigured()) {
       return { error: 'Square is not configured. Add SQUARE_ACCESS_TOKEN to environment variables.' };
@@ -255,6 +262,7 @@ export async function generatePaymentLink(invoiceId) {
       entityType: 'invoice',
       entityId: invoiceId,
       metadata: { title: invoice.title, paymentUrl: result.paymentUrl },
+      isDemo,
     });
 
     revalidatePath(`/invoices/${invoiceId}`);
@@ -275,6 +283,7 @@ export async function markPaid(invoiceId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [invoice] = await db
       .select()
@@ -307,6 +316,7 @@ export async function markPaid(invoiceId) {
       amount: invoice.amount,
       method: 'manual',
       paidAt: now,
+      isDemo,
     });
 
     await db.insert(activityLog).values({
@@ -320,6 +330,7 @@ export async function markPaid(invoiceId) {
         amount: invoice.amount,
         method: 'manual',
       },
+      isDemo,
     });
 
     // Send client receipt email (matching Square webhook behavior)
@@ -370,6 +381,7 @@ export async function sendReminder(invoiceId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [invoice] = await db
       .select()
@@ -417,6 +429,7 @@ export async function sendReminder(invoiceId) {
       entityType: 'invoice',
       entityId: invoiceId,
       metadata: { title: invoice.title, recipientEmail: client.email },
+      isDemo,
     });
 
     revalidatePath(`/invoices/${invoiceId}`);
@@ -436,6 +449,7 @@ export async function sendReminder(invoiceId) {
  */
 export async function createInvoiceFromMilestone(milestone, project, teamUserId) {
   try {
+    const isDemo = await isDemoMode();
     const total = milestone.invoiceAmount ? String(milestone.invoiceAmount) : '0';
 
     const [invoice] = await db
@@ -449,6 +463,7 @@ export async function createInvoiceFromMilestone(milestone, project, teamUserId)
         amount: total,
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         createdBy: teamUserId,
+        isDemo,
       })
       .returning();
 
@@ -474,6 +489,7 @@ export async function createInvoiceFromMilestone(milestone, project, teamUserId)
         projectId: project.id,
         amount: total,
       },
+      isDemo,
     });
 
     // Try to send via Square if configured

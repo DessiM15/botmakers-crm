@@ -9,6 +9,7 @@ import {
   clientServices,
 } from '@/lib/db/schema';
 import { eq, desc, and, count, sql, ilike, or, sum, between } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch paginated, filterable cost entries.
@@ -23,7 +24,8 @@ export async function getCostEntries({
   page = 1,
   perPage = 25,
 } = {}) {
-  const conditions = [];
+  const isDemo = await isDemoMode();
+  const conditions = [eq(costEntries.isDemo, isDemo)];
 
   if (source !== 'all') {
     conditions.push(eq(costEntries.source, source));
@@ -95,6 +97,7 @@ export async function getCostEntries({
  * Get all costs for a specific project.
  */
 export async function getCostsByProjectId(projectId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: costEntries.id,
@@ -109,7 +112,7 @@ export async function getCostsByProjectId(projectId) {
       createdAt: costEntries.createdAt,
     })
     .from(costEntries)
-    .where(eq(costEntries.projectId, projectId))
+    .where(and(eq(costEntries.projectId, projectId), eq(costEntries.isDemo, isDemo)))
     .orderBy(desc(costEntries.periodStart));
 }
 
@@ -117,6 +120,7 @@ export async function getCostsByProjectId(projectId) {
  * Get all costs for a specific client.
  */
 export async function getCostsByClientId(clientId) {
+  const isDemo = await isDemoMode();
   return db
     .select({
       id: costEntries.id,
@@ -134,7 +138,7 @@ export async function getCostsByClientId(clientId) {
     })
     .from(costEntries)
     .leftJoin(projects, eq(costEntries.projectId, projects.id))
-    .where(eq(costEntries.clientId, clientId))
+    .where(and(eq(costEntries.clientId, clientId), eq(costEntries.isDemo, isDemo)))
     .orderBy(desc(costEntries.periodStart));
 }
 
@@ -142,7 +146,8 @@ export async function getCostsByClientId(clientId) {
  * Get overall cost summary.
  */
 export async function getCostSummary(startDate = null, endDate = null) {
-  const conditions = [];
+  const isDemo = await isDemoMode();
+  const conditions = [eq(costEntries.isDemo, isDemo)];
   if (startDate) {
     conditions.push(sql`${costEntries.periodStart} >= ${startDate}`);
   }
@@ -184,17 +189,18 @@ export async function getCostSummary(startDate = null, endDate = null) {
  * otherCosts comes from cost_entries without a serviceId.
  */
 export async function getProjectPnL(projectId) {
+  const isDemo = await isDemoMode();
   const [revenueResult, otherCostResult, serviceCostResult] = await Promise.all([
     db
       .select({ total: sum(payments.amount) })
       .from(payments)
       .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
-      .where(eq(invoices.projectId, projectId))
+      .where(and(eq(invoices.projectId, projectId), eq(invoices.isDemo, isDemo)))
       .then((r) => r[0]),
     db
       .select({ total: sum(costEntries.amount) })
       .from(costEntries)
-      .where(and(eq(costEntries.projectId, projectId), sql`${costEntries.serviceId} IS NULL`))
+      .where(and(eq(costEntries.projectId, projectId), sql`${costEntries.serviceId} IS NULL`, eq(costEntries.isDemo, isDemo)))
       .then((r) => r[0]),
     db
       .select({ total: sum(clientServices.monthlyCost) })
@@ -203,7 +209,8 @@ export async function getProjectPnL(projectId) {
         and(
           eq(clientServices.projectId, projectId),
           sql`${clientServices.status} IN ('active', 'expiring_soon')`,
-          sql`${clientServices.monthlyCost}::numeric > 0`
+          sql`${clientServices.monthlyCost}::numeric > 0`,
+          eq(clientServices.isDemo, isDemo)
         )
       )
       .then((r) => r[0]),
@@ -225,16 +232,17 @@ export async function getProjectPnL(projectId) {
  * otherCosts comes from cost_entries without a serviceId.
  */
 export async function getClientPnL(clientId) {
+  const isDemo = await isDemoMode();
   const [revenueResult, otherCostResult, serviceCostResult] = await Promise.all([
     db
       .select({ total: sum(payments.amount) })
       .from(payments)
-      .where(eq(payments.clientId, clientId))
+      .where(and(eq(payments.clientId, clientId), eq(payments.isDemo, isDemo)))
       .then((r) => r[0]),
     db
       .select({ total: sum(costEntries.amount) })
       .from(costEntries)
-      .where(and(eq(costEntries.clientId, clientId), sql`${costEntries.serviceId} IS NULL`))
+      .where(and(eq(costEntries.clientId, clientId), sql`${costEntries.serviceId} IS NULL`, eq(costEntries.isDemo, isDemo)))
       .then((r) => r[0]),
     db
       .select({ total: sum(clientServices.monthlyCost) })
@@ -243,7 +251,8 @@ export async function getClientPnL(clientId) {
         and(
           eq(clientServices.clientId, clientId),
           sql`${clientServices.status} IN ('active', 'expiring_soon')`,
-          sql`${clientServices.monthlyCost}::numeric > 0`
+          sql`${clientServices.monthlyCost}::numeric > 0`,
+          eq(clientServices.isDemo, isDemo)
         )
       )
       .then((r) => r[0]),
@@ -265,8 +274,9 @@ export async function getClientPnL(clientId) {
  * otherCosts comes from cost_entries without a serviceId.
  */
 export async function getGlobalPnL(startDate = null, endDate = null) {
-  const revConditions = [];
-  const costConditions = [sql`${costEntries.serviceId} IS NULL`];
+  const isDemo = await isDemoMode();
+  const revConditions = [eq(payments.isDemo, isDemo)];
+  const costConditions = [sql`${costEntries.serviceId} IS NULL`, eq(costEntries.isDemo, isDemo)];
 
   if (startDate) {
     revConditions.push(sql`${payments.paidAt} >= ${startDate}::timestamptz`);
@@ -281,7 +291,7 @@ export async function getGlobalPnL(startDate = null, endDate = null) {
     db
       .select({ total: sum(payments.amount) })
       .from(payments)
-      .where(revConditions.length > 0 ? and(...revConditions) : undefined)
+      .where(and(...revConditions))
       .then((r) => r[0]),
     db
       .select({ total: sum(costEntries.amount) })
@@ -294,7 +304,8 @@ export async function getGlobalPnL(startDate = null, endDate = null) {
       .where(
         and(
           sql`${clientServices.status} IN ('active', 'expiring_soon')`,
-          sql`${clientServices.monthlyCost}::numeric > 0`
+          sql`${clientServices.monthlyCost}::numeric > 0`,
+          eq(clientServices.isDemo, isDemo)
         )
       )
       .then((r) => r[0]),
@@ -314,6 +325,7 @@ export async function getGlobalPnL(startDate = null, endDate = null) {
  * Get 12-month P&L trend.
  */
 export async function getMonthlyPnLTrend(projectId = null, clientId = null) {
+  const isDemo = await isDemoMode();
   const revenueQuery = sql`
     SELECT
       TO_CHAR(DATE_TRUNC('month', paid_at), 'YYYY-MM') as month,
@@ -321,6 +333,7 @@ export async function getMonthlyPnLTrend(projectId = null, clientId = null) {
     FROM payments p
     ${projectId ? sql`INNER JOIN invoices i ON p.invoice_id = i.id` : sql``}
     WHERE paid_at >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
+    AND p.is_demo = ${isDemo}
     ${projectId ? sql`AND i.project_id = ${projectId}` : sql``}
     ${clientId ? sql`AND p.client_id = ${clientId}` : sql``}
     GROUP BY DATE_TRUNC('month', paid_at)
@@ -333,6 +346,7 @@ export async function getMonthlyPnLTrend(projectId = null, clientId = null) {
       COALESCE(SUM(amount::numeric), 0) as costs
     FROM cost_entries
     WHERE period_start >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
+    AND is_demo = ${isDemo}
     ${projectId ? sql`AND project_id = ${projectId}` : sql``}
     ${clientId ? sql`AND client_id = ${clientId}` : sql``}
     GROUP BY DATE_TRUNC('month', period_start)
@@ -378,7 +392,8 @@ export async function getMonthlyPnLTrend(projectId = null, clientId = null) {
  * Get cost breakdown by provider (for donut chart).
  */
 export async function getCostBreakdownByProvider(projectId = null, clientId = null) {
-  const conditions = [];
+  const isDemo = await isDemoMode();
+  const conditions = [eq(costEntries.isDemo, isDemo)];
   if (projectId) conditions.push(eq(costEntries.projectId, projectId));
   if (clientId) conditions.push(eq(costEntries.clientId, clientId));
 
@@ -404,6 +419,7 @@ export async function getCostBreakdownByProvider(projectId = null, clientId = nu
  * Get a single cost entry by ID.
  */
 export async function getCostEntryById(id) {
+  const isDemo = await isDemoMode();
   const [entry] = await db
     .select({
       id: costEntries.id,
@@ -426,7 +442,7 @@ export async function getCostEntryById(id) {
     .from(costEntries)
     .leftJoin(clients, eq(costEntries.clientId, clients.id))
     .leftJoin(projects, eq(costEntries.projectId, projects.id))
-    .where(eq(costEntries.id, id))
+    .where(and(eq(costEntries.id, id), eq(costEntries.isDemo, isDemo)))
     .limit(1);
 
   return entry || null;
@@ -436,9 +452,11 @@ export async function getCostEntryById(id) {
  * Get clients dropdown for cost form.
  */
 export async function getClientsForCostDropdown() {
+  const isDemo = await isDemoMode();
   return db
     .select({ id: clients.id, fullName: clients.fullName, company: clients.company })
     .from(clients)
+    .where(eq(clients.isDemo, isDemo))
     .orderBy(clients.fullName);
 }
 
@@ -446,13 +464,14 @@ export async function getClientsForCostDropdown() {
  * Get projects dropdown for cost form (optionally filtered by client).
  */
 export async function getProjectsForCostDropdown(clientId = null) {
-  const conditions = [];
+  const isDemo = await isDemoMode();
+  const conditions = [eq(projects.isDemo, isDemo)];
   if (clientId) conditions.push(eq(projects.clientId, clientId));
 
   return db
     .select({ id: projects.id, name: projects.name, clientId: projects.clientId })
     .from(projects)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(projects.name);
 }
 
@@ -460,6 +479,7 @@ export async function getProjectsForCostDropdown(clientId = null) {
  * Get total monthly cost of active services for a client (live value, not from cost_entries).
  */
 export async function getActiveServiceCostByClientId(clientId) {
+  const isDemo = await isDemoMode();
   const [result] = await db
     .select({
       total: sum(clientServices.monthlyCost),
@@ -469,7 +489,8 @@ export async function getActiveServiceCostByClientId(clientId) {
     .where(
       and(
         eq(clientServices.clientId, clientId),
-        sql`${clientServices.status} IN ('active', 'expiring_soon')`
+        sql`${clientServices.status} IN ('active', 'expiring_soon')`,
+        eq(clientServices.isDemo, isDemo)
       )
     );
 

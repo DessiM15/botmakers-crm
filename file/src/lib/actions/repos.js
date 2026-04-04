@@ -12,6 +12,7 @@ import { asc } from 'drizzle-orm';
 import { demoApprovedEmail } from '@/lib/email/notifications';
 import { sendTeamNotification } from '@/lib/notifications/notify';
 import { getProjectTrackingApiKeyRaw } from '@/lib/actions/settings';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Parse a GitHub repo input — accepts URL or owner/repo format.
@@ -47,6 +48,7 @@ export async function linkRepo(projectId, repoInput, legacyRepo) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     let owner, repo;
 
@@ -91,6 +93,7 @@ export async function linkRepo(projectId, repoInput, legacyRepo) {
       entityType: 'project',
       entityId: projectId,
       metadata: { repoId: newRepo.id, fullName: `${owner}/${repo}` },
+      isDemo,
     });
 
     revalidatePath(`/projects/${projectId}`);
@@ -119,6 +122,7 @@ export async function unlinkRepo(repoId, projectId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [repo] = await db
       .select()
@@ -139,6 +143,7 @@ export async function unlinkRepo(repoId, projectId) {
       entityType: 'project',
       entityId: projectId,
       metadata: { fullName: `${repo.githubOwner}/${repo.githubRepo}` },
+      isDemo,
     });
 
     revalidatePath(`/projects/${projectId}`);
@@ -200,6 +205,7 @@ export async function createDemo(projectId, data) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     if (!data.title?.trim() || !data.url?.trim()) {
       return { error: 'CB-API-001: Title and URL are required' };
@@ -244,6 +250,7 @@ export async function createDemo(projectId, data) {
       entityType: 'project',
       entityId: projectId,
       metadata: { demoId: demo.id, title: data.title },
+      isDemo,
     });
 
     revalidatePath(`/projects/${projectId}`);
@@ -431,6 +438,7 @@ export async function toggleDemoApproval(demoId, projectId) {
   try {
     const cookieStore = await cookies();
     const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
 
     const [demo] = await db
       .select()
@@ -456,6 +464,7 @@ export async function toggleDemoApproval(demoId, projectId) {
       entityType: 'project',
       entityId: projectId,
       metadata: { demoId, title: demo.title },
+      isDemo,
     });
 
     // In-app notification when demo is approved

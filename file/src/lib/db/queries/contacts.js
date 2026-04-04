@@ -1,6 +1,7 @@
 import { db } from '@/lib/db/client';
 import { clients, leads, teamUsers } from '@/lib/db/schema';
 import { desc, ilike, or, and, eq, count } from 'drizzle-orm';
+import { isDemoMode } from '@/lib/utils/demo';
 
 /**
  * Fetch paginated, filtered, searchable contacts (union of leads + clients + team_users).
@@ -11,6 +12,7 @@ export async function getAllContacts({
   page = 1,
   perPage = 25,
 } = {}) {
+  const isDemo = await isDemoMode();
   const offset = (page - 1) * perPage;
   const pattern = search.trim() ? `%${search.trim()}%` : null;
 
@@ -24,13 +26,16 @@ export async function getAllContacts({
   // Fetch leads
   if (typeFilter === 'all' || typeFilter === 'lead') {
     const leadConditions = pattern
-      ? or(
-          ilike(leads.fullName, pattern),
-          ilike(leads.email, pattern),
-          ilike(leads.companyName, pattern),
-          ilike(leads.phone, pattern)
+      ? and(
+          or(
+            ilike(leads.fullName, pattern),
+            ilike(leads.email, pattern),
+            ilike(leads.companyName, pattern),
+            ilike(leads.phone, pattern)
+          ),
+          eq(leads.isDemo, isDemo)
         )
-      : undefined;
+      : eq(leads.isDemo, isDemo);
 
     const [rows, [{ total }]] = await Promise.all([
       db
@@ -58,13 +63,16 @@ export async function getAllContacts({
   // Fetch clients
   if (typeFilter === 'all' || typeFilter === 'client') {
     const clientConditions = pattern
-      ? or(
-          ilike(clients.fullName, pattern),
-          ilike(clients.email, pattern),
-          ilike(clients.company, pattern),
-          ilike(clients.phone, pattern)
+      ? and(
+          or(
+            ilike(clients.fullName, pattern),
+            ilike(clients.email, pattern),
+            ilike(clients.company, pattern),
+            ilike(clients.phone, pattern)
+          ),
+          eq(clients.isDemo, isDemo)
         )
-      : undefined;
+      : eq(clients.isDemo, isDemo);
 
     const [rows, [{ total }]] = await Promise.all([
       db
