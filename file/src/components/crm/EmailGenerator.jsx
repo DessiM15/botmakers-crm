@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Icon } from '@iconify/react/dist/iconify.js';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -38,19 +38,186 @@ const TONES = [
   { value: 'casual', label: 'Casual' },
 ];
 
+/**
+ * Reusable multi-recipient input with CRM contact search.
+ * Shows selected recipients as chips, with inline search to add more.
+ */
+function RecipientInput({ selected, onAdd, onRemove, placeholder, excludeEmails }) {
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState([]);
+  const [showDd, setShowDd] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (search.length < 2) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const res = await getRecipients(search);
+      if (res.success) {
+        setResults(res.recipients);
+        setShowDd(true);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setShowDd(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const excludeSet = useMemo(() => new Set(excludeEmails || []), [excludeEmails]);
+  const filteredResults = results.filter((r) => !excludeSet.has(r.email));
+
+  const handleSelect = (r) => {
+    onAdd(r);
+    setSearch('');
+    setShowDd(false);
+    setResults([]);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = search.trim();
+      if (!val) return;
+      if (showDd && filteredResults.length > 0) {
+        handleSelect(filteredResults[0]);
+        return;
+      }
+      if (val.includes('@') && val.includes('.')) {
+        handleSelect({
+          id: null,
+          name: val.split('@')[0],
+          email: val,
+          company: null,
+          type: 'manual',
+        });
+      }
+    }
+    if (e.key === 'Backspace' && !search && selected.length > 0) {
+      onRemove(selected[selected.length - 1].email);
+    }
+  };
+
+  return (
+    <div className="position-relative" ref={ref}>
+      <div
+        className="form-control d-flex flex-wrap align-items-center gap-2"
+        style={{ minHeight: 42, height: 'auto', padding: '4px 8px', cursor: 'text' }}
+        onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
+      >
+        {selected.map((r) => (
+          <span
+            key={r.email}
+            className="d-inline-flex align-items-center gap-1 py-2 px-8 rounded-pill"
+            style={{ background: 'rgba(255,255,255,0.1)', fontSize: '12px' }}
+          >
+            <span
+              className={`badge ${
+                r.type === 'client'
+                  ? 'bg-success-600'
+                  : r.type === 'teammate'
+                  ? 'bg-warning-600'
+                  : r.type === 'lead'
+                  ? 'bg-info-600'
+                  : 'bg-secondary'
+              }`}
+              style={{ fontSize: '9px', padding: '1px 5px' }}
+            >
+              {r.type === 'client'
+                ? 'Client'
+                : r.type === 'teammate'
+                ? 'Team'
+                : r.type === 'lead'
+                ? 'Lead'
+                : 'Email'}
+            </span>
+            <span className="text-white">{r.name}</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)' }}>&lt;{r.email}&gt;</span>
+            <button
+              type="button"
+              className="btn p-0 border-0 bg-transparent text-white ms-1 d-flex align-items-center"
+              style={{ fontSize: '14px', lineHeight: 1, opacity: 0.7 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(r.email);
+              }}
+            >
+              &times;
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          className="border-0 bg-transparent text-white flex-grow-1"
+          style={{ outline: 'none', minWidth: 180, height: 32 }}
+          placeholder={selected.length === 0 ? placeholder : 'Add more...'}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onFocus={() => filteredResults.length > 0 && setShowDd(true)}
+          onKeyDown={handleKeyDown}
+        />
+      </div>
+      {showDd && filteredResults.length > 0 && (
+        <div
+          className="position-absolute w-100 border rounded-8 mt-4 shadow-lg"
+          style={{
+            zIndex: 1050,
+            maxHeight: 200,
+            overflowY: 'auto',
+            background: '#1a2332',
+            borderColor: 'rgba(255,255,255,0.15)',
+          }}
+        >
+          {filteredResults.map((r) => (
+            <button
+              key={`${r.type}-${r.id || r.email}`}
+              className="d-flex align-items-center gap-2 w-100 px-12 py-8 border-0 bg-transparent text-white"
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleSelect(r)}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span
+                className={`badge ${
+                  r.type === 'client'
+                    ? 'bg-success-600'
+                    : r.type === 'teammate'
+                    ? 'bg-warning-600'
+                    : 'bg-info-600'
+                } text-xs`}
+              >
+                {r.type === 'client' ? 'Client' : r.type === 'teammate' ? 'Teammate' : 'Lead'}
+              </span>
+              <span className="fw-medium text-white">{r.name}</span>
+              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                {r.email}
+              </span>
+              {r.company && (
+                <span className="text-sm ms-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  {r.company}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EmailGenerator({ teamUser }) {
   const urlParams = useSearchParams();
 
-  // Recipient state
-  const [recipientSearch, setRecipientSearch] = useState('');
-  const [recipients, setRecipients] = useState([]);
-  const [selectedRecipient, setSelectedRecipient] = useState(null);
-  const [manualEmail, setManualEmail] = useState('');
-  const [manualName, setManualName] = useState('');
-  const [showManual, setShowManual] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [ccField, setCcField] = useState('');
-  const dropdownRef = useRef(null);
+  // Recipient state (multi-select for both To and CC)
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [selectedCcRecipients, setSelectedCcRecipients] = useState([]);
 
   // Email config state
   const [category, setCategory] = useState('follow_up');
@@ -83,34 +250,11 @@ export default function EmailGenerator({ teamUser }) {
   const [contactsTypeFilter, setContactsTypeFilter] = useState('all');
   const [contactsLoading, setContactsLoading] = useState(false);
 
-  // Search recipients with debounce
-  useEffect(() => {
-    if (recipientSearch.length < 2) {
-      setRecipients([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      const result = await getRecipients(recipientSearch);
-      if (result.success) {
-        setRecipients(result.recipients);
-        setShowDropdown(true);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [recipientSearch]);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  // Combined exclude list for both recipient inputs
+  const allSelectedEmails = useMemo(
+    () => [...selectedRecipients, ...selectedCcRecipients].map((r) => r.email),
+    [selectedRecipients, selectedCcRecipients]
+  );
 
   // Load drafts on mount
   useEffect(() => {
@@ -124,7 +268,10 @@ export default function EmailGenerator({ teamUser }) {
     if (recipientId && recipientType) {
       getContactById(recipientId, recipientType).then((result) => {
         if (result.success && result.contact) {
-          selectRecipient(result.contact);
+          setSelectedRecipients((prev) => {
+            if (prev.some((r) => r.email === result.contact.email)) return prev;
+            return [...prev, result.contact];
+          });
         }
       });
     }
@@ -156,53 +303,53 @@ export default function EmailGenerator({ teamUser }) {
     setLoadingDrafts(false);
   };
 
-  const selectRecipient = (r) => {
-    setSelectedRecipient(r);
-    setRecipientSearch('');
-    setShowDropdown(false);
-    setShowManual(false);
-    setManualEmail('');
-    setManualName('');
+  // Add/remove handlers for To recipients
+  const addRecipient = (r) => {
+    if (allSelectedEmails.includes(r.email)) {
+      toast.info('Recipient already added');
+      return;
+    }
+    setSelectedRecipients((prev) => [...prev, r]);
   };
 
-  const clearRecipient = () => {
-    setSelectedRecipient(null);
-    setRecipientSearch('');
-    setManualEmail('');
-    setManualName('');
+  const removeRecipient = (email) => {
+    setSelectedRecipients((prev) => prev.filter((r) => r.email !== email));
   };
 
-  const getRecipientEmail = () => {
-    if (selectedRecipient) return selectedRecipient.email;
-    if (showManual && manualEmail) return manualEmail;
-    return '';
+  // Add/remove handlers for CC recipients
+  const addCcRecipient = (r) => {
+    if (allSelectedEmails.includes(r.email)) {
+      toast.info('Recipient already added');
+      return;
+    }
+    setSelectedCcRecipients((prev) => [...prev, r]);
   };
 
-  const getRecipientName = () => {
-    if (selectedRecipient) return selectedRecipient.name;
-    if (showManual && manualName) return manualName;
-    return '';
+  const removeCcRecipient = (email) => {
+    setSelectedCcRecipients((prev) => prev.filter((r) => r.email !== email));
   };
+
+  // Primary recipient (first in To list) used for AI generation and branded template
+  const getPrimaryRecipient = () => selectedRecipients[0] || null;
 
   const getFullBrandedHtml = useCallback(() => {
+    const primary = selectedRecipients[0];
     return wrapInBrandedTemplate({
-      recipientName: getRecipientName(),
+      recipientName: primary?.name || '',
       bodyHtml: bodyHtml,
       senderName: teamUser.fullName || 'The BotMakers Team',
       senderTitle: 'Co-Founder',
     });
-  }, [bodyHtml, teamUser.fullName]);
+  }, [bodyHtml, teamUser.fullName, selectedRecipients]);
 
   const handleGenerate = async () => {
-    const email = getRecipientEmail();
-    const name = getRecipientName();
-
-    if (!email) {
-      toast.error('Please select or enter a recipient');
+    const primary = getPrimaryRecipient();
+    if (!primary) {
+      toast.error('Please add at least one recipient');
       return;
     }
-    if (!name) {
-      toast.error('Recipient name is required');
+    if (!primary.name) {
+      toast.error('Primary recipient name is required');
       return;
     }
     if (category === 'holiday' && !holidayType) {
@@ -218,9 +365,9 @@ export default function EmailGenerator({ teamUser }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipientName: name,
-          recipientEmail: email,
-          recipientCompany: selectedRecipient?.company || '',
+          recipientName: primary.name,
+          recipientEmail: primary.email,
+          recipientCompany: primary.company || '',
           category,
           holidayType: category === 'holiday' ? holidayType : undefined,
           tone,
@@ -280,22 +427,25 @@ export default function EmailGenerator({ teamUser }) {
   };
 
   const handleSend = async () => {
-    const email = getRecipientEmail();
-    if (!email || !subject || !bodyHtml) {
-      toast.error('Recipient, subject, and body are required');
+    if (selectedRecipients.length === 0 || !subject || !bodyHtml) {
+      toast.error('At least one recipient, subject, and body are required');
       return;
     }
+
+    const toEmails = selectedRecipients.map((r) => r.email);
+    const ccEmails = selectedCcRecipients.map((r) => r.email);
+    const primary = getPrimaryRecipient();
 
     setSending(true);
     try {
       const result = await sendEmailFromCRM({
-        to: email,
-        cc: ccField || undefined,
+        to: toEmails,
+        cc: ccEmails.length > 0 ? ccEmails : undefined,
         subject,
         html: bodyHtml,
-        recipientLeadId: selectedRecipient?.type === 'lead' ? selectedRecipient.id : undefined,
-        recipientClientId: selectedRecipient?.type === 'client' ? selectedRecipient.id : undefined,
-        recipientName: getRecipientName(),
+        recipientLeadId: primary?.type === 'lead' ? primary.id : undefined,
+        recipientClientId: primary?.type === 'client' ? primary.id : undefined,
+        recipientName: primary?.name || '',
       });
 
       if (result.error) {
@@ -319,20 +469,21 @@ export default function EmailGenerator({ teamUser }) {
   };
 
   const handleSaveDraft = async () => {
-    const email = getRecipientEmail();
-    if (!email) {
-      toast.error('Please select or enter a recipient email');
+    if (selectedRecipients.length === 0) {
+      toast.error('Please add at least one recipient');
       return;
     }
+
+    const primary = getPrimaryRecipient();
 
     setSavingDraft(true);
     try {
       const result = await saveDraft({
         id: currentDraftId || undefined,
-        recipientEmail: email,
-        recipientName: getRecipientName() || undefined,
-        recipientLeadId: selectedRecipient?.type === 'lead' ? selectedRecipient.id : null,
-        recipientClientId: selectedRecipient?.type === 'client' ? selectedRecipient.id : null,
+        recipientEmail: primary.email,
+        recipientName: primary.name || undefined,
+        recipientLeadId: primary.type === 'lead' ? primary.id : null,
+        recipientClientId: primary.type === 'client' ? primary.id : null,
         subject: subject || undefined,
         bodyHtml: bodyHtml || undefined,
         bodyText: bodyText || undefined,
@@ -372,21 +523,31 @@ export default function EmailGenerator({ teamUser }) {
     setTone(d.tone || 'professional');
     setCustomInstructions(d.customInstructions || '');
 
-    // Set recipient
+    // Set recipient from draft
     if (d.recipientLeadId || d.recipientClientId) {
-      setSelectedRecipient({
-        id: d.recipientLeadId || d.recipientClientId,
-        name: d.recipientName || '',
-        email: d.recipientEmail,
-        type: d.recipientClientId ? 'client' : 'lead',
-      });
-      setShowManual(false);
+      setSelectedRecipients([
+        {
+          id: d.recipientLeadId || d.recipientClientId,
+          name: d.recipientName || '',
+          email: d.recipientEmail,
+          type: d.recipientClientId ? 'client' : 'lead',
+          company: null,
+        },
+      ]);
+    } else if (d.recipientEmail) {
+      setSelectedRecipients([
+        {
+          id: null,
+          name: d.recipientName || d.recipientEmail.split('@')[0],
+          email: d.recipientEmail,
+          type: 'manual',
+          company: null,
+        },
+      ]);
     } else {
-      setSelectedRecipient(null);
-      setShowManual(true);
-      setManualEmail(d.recipientEmail);
-      setManualName(d.recipientName || '');
+      setSelectedRecipients([]);
     }
+    setSelectedCcRecipients([]);
 
     setShowDrafts(false);
     toast.success('Draft loaded');
@@ -407,7 +568,8 @@ export default function EmailGenerator({ teamUser }) {
   };
 
   const handleNewEmail = () => {
-    clearRecipient();
+    setSelectedRecipients([]);
+    setSelectedCcRecipients([]);
     setCategory('follow_up');
     setHolidayType('');
     setTone('professional');
@@ -415,11 +577,9 @@ export default function EmailGenerator({ teamUser }) {
     setSubject('');
     setBodyHtml('');
     setBodyText('');
-    setCcField('');
     setCurrentDraftId(null);
     setShowHtmlPreview(false);
     setShowFullPreview(false);
-    setShowManual(false);
   };
 
   const getCategoryLabel = (val) => CATEGORIES.find((c) => c.value === val)?.label || val;
@@ -496,7 +656,7 @@ export default function EmailGenerator({ teamUser }) {
                     key={`${c.type}-${c.id}`}
                     className="d-flex flex-column w-100 px-12 py-8 border-0 bg-transparent text-start border-bottom border-neutral-600"
                     style={{ cursor: 'pointer' }}
-                    onClick={() => selectRecipient(c)}
+                    onClick={() => addRecipient(c)}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
@@ -565,147 +725,31 @@ export default function EmailGenerator({ teamUser }) {
           <div className="card-header">
             <h6 className="text-white fw-semibold mb-0">
               <Icon icon="mdi:account-outline" className="me-2" />
-              Recipient
+              Recipients
             </h6>
           </div>
           <div className="card-body">
-            {selectedRecipient ? (
-              <div className="d-flex align-items-center gap-2 mb-12">
-                <span className={`badge ${selectedRecipient.type === 'client' ? 'bg-success-600' : selectedRecipient.type === 'teammate' ? 'bg-warning-600' : 'bg-info-600'} text-sm`}>
-                  {selectedRecipient.type === 'client' ? 'Client' : selectedRecipient.type === 'teammate' ? 'Teammate' : 'Lead'}
-                </span>
-                <span className="text-white fw-medium">{selectedRecipient.name}</span>
-                <span className="text-secondary-light">&lt;{selectedRecipient.email}&gt;</span>
-                {selectedRecipient.company && (
-                  <span className="text-secondary-light">— {selectedRecipient.company}</span>
-                )}
-                <button
-                  className="btn btn-sm btn-outline-danger ms-auto"
-                  onClick={clearRecipient}
-                >
-                  <Icon icon="mdi:close" />
-                </button>
-              </div>
-            ) : showManual ? (
-              <div className="row mb-12">
-                <div className="col-md-5 mb-8 mb-md-0">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Recipient name"
-                    value={manualName}
-                    onChange={(e) => setManualName(e.target.value)}
-                  />
-                </div>
-                <div className="col-md-5 mb-8 mb-md-0">
-                  <input
-                    type="email"
-                    className="form-control"
-                    placeholder="Recipient email"
-                    value={manualEmail}
-                    onChange={(e) => setManualEmail(e.target.value)}
-                  />
-                </div>
-                <div className="col-md-2">
-                  <button
-                    className="btn btn-outline-secondary btn-sm w-100 h-100"
-                    onClick={() => {
-                      setShowManual(false);
-                      setManualEmail('');
-                      setManualName('');
-                    }}
-                  >
-                    Search CRM
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="position-relative mb-12" ref={dropdownRef}>
-                <div className="d-flex gap-2">
-                  <div className="flex-grow-1">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Search contacts by name/email, or type an email and press Enter..."
-                      value={recipientSearch}
-                      onChange={(e) => setRecipientSearch(e.target.value)}
-                      onFocus={() => recipients.length > 0 && setShowDropdown(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = recipientSearch.trim();
-                          if (!val) return;
-                          // If there are dropdown results, select the first one
-                          if (showDropdown && recipients.length > 0) {
-                            selectRecipient(recipients[0]);
-                            return;
-                          }
-                          // If it looks like an email, switch to manual mode with it pre-filled
-                          if (val.includes('@') && val.includes('.')) {
-                            setShowManual(true);
-                            setManualEmail(val);
-                            setManualName('');
-                            setRecipientSearch('');
-                            setShowDropdown(false);
-                          } else {
-                            // Treat as a name — switch to manual with name pre-filled
-                            setShowManual(true);
-                            setManualName(val);
-                            setManualEmail('');
-                            setRecipientSearch('');
-                            setShowDropdown(false);
-                          }
-                        }
-                      }}
-                    />
-                  </div>
-                  <button
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={() => setShowManual(true)}
-                    title="Enter email manually"
-                  >
-                    <Icon icon="mdi:pencil" className="text-lg" />
-                    Manual
-                  </button>
-                </div>
-                {showDropdown && recipients.length > 0 && (
-                  <div
-                    className="position-absolute w-100 border rounded-8 mt-4 shadow-lg"
-                    style={{ zIndex: 1050, maxHeight: 240, overflowY: 'auto', background: '#1a2332', borderColor: 'rgba(255,255,255,0.15)' }}
-                  >
-                    {recipients.map((r) => (
-                      <button
-                        key={`${r.type}-${r.id}`}
-                        className="d-flex align-items-center gap-2 w-100 px-12 py-8 border-0 bg-transparent text-white"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => selectRecipient(r)}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <span className={`badge ${r.type === 'client' ? 'bg-success-600' : r.type === 'teammate' ? 'bg-warning-600' : 'bg-info-600'} text-xs`}>
-                          {r.type === 'client' ? 'Client' : r.type === 'teammate' ? 'Teammate' : 'Lead'}
-                        </span>
-                        <span className="fw-medium text-white">{r.name}</span>
-                        <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{r.email}</span>
-                        {r.company && (
-                          <span className="text-sm ms-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>{r.company}</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* To Field */}
+            <div className="mb-12">
+              <label className="form-label text-secondary-light text-sm mb-4">To</label>
+              <RecipientInput
+                selected={selectedRecipients}
+                onAdd={addRecipient}
+                onRemove={removeRecipient}
+                placeholder="Search contacts by name/email, or type an email and press Enter..."
+                excludeEmails={allSelectedEmails}
+              />
+            </div>
 
             {/* CC Field */}
             <div>
-              <label className="form-label text-secondary-light text-sm mb-4">CC (optional, comma-separated)</label>
-              <input
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="cc@example.com, other@example.com"
-                value={ccField}
-                onChange={(e) => setCcField(e.target.value)}
+              <label className="form-label text-secondary-light text-sm mb-4">CC (optional)</label>
+              <RecipientInput
+                selected={selectedCcRecipients}
+                onAdd={addCcRecipient}
+                onRemove={removeCcRecipient}
+                placeholder="Add CC recipients..."
+                excludeEmails={allSelectedEmails}
               />
             </div>
           </div>

@@ -347,7 +347,10 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
       return { error: 'CB-API-001: Recipient, subject, and body are required' };
     }
 
-    const recipients = cc ? [to, ...cc.split(',').map((e) => e.trim()).filter(Boolean)] : [to];
+    const toList = Array.isArray(to) ? to : [to];
+    const ccList = cc
+      ? Array.isArray(cc) ? cc : cc.split(',').map((e) => e.trim()).filter(Boolean)
+      : [];
 
     // Wrap body content in branded template
     const fullHtml = wrapInBrandedTemplate({
@@ -358,7 +361,8 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
     });
 
     const result = await sendEmail({
-      to: recipients,
+      to: toList,
+      cc: ccList.length > 0 ? ccList : undefined,
       subject,
       html: fullHtml,
       from: 'BotMakers <info@botmakers.ai>',
@@ -392,7 +396,11 @@ export async function sendEmailFromCRM({ to, cc, subject, html, recipientLeadId,
       action: 'email.sent',
       entityType: recipientClientId ? 'client' : recipientLeadId ? 'lead' : 'email',
       entityId: recipientClientId || recipientLeadId || teamUser.id,
-      metadata: { to, subject },
+      metadata: {
+        to: toList,
+        cc: ccList.length > 0 ? ccList : undefined,
+        subject,
+      },
     });
 
     revalidatePath('/activity');
