@@ -81,27 +81,61 @@ function RecipientInput({ selected, onAdd, onRemove, placeholder, excludeEmails 
     setResults([]);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const val = search.trim();
-      if (!val) return;
-      if (showDd && filteredResults.length > 0) {
-        handleSelect(filteredResults[0]);
-        return;
-      }
-      if (val.includes('@') && val.includes('.')) {
-        handleSelect({
+  const addManualEmail = useCallback((email) => {
+    const trimmed = email.trim().replace(/[,;]$/, '').trim();
+    if (!trimmed) return;
+    if (trimmed.includes('@') && trimmed.includes('.')) {
+      const alreadyAdded = selected.some((s) => s.email === trimmed);
+      const isExcluded = excludeSet.has(trimmed);
+      if (!alreadyAdded && !isExcluded) {
+        onAdd({
           id: null,
-          name: val.split('@')[0],
-          email: val,
+          name: trimmed.split('@')[0],
+          email: trimmed,
           company: null,
           type: 'manual',
         });
       }
+      setSearch('');
+      setShowDd(false);
+      setResults([]);
+      return true;
+    }
+    return false;
+  }, [selected, excludeSet, onAdd]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === 'Tab' || e.key === ',' || e.key === ';') {
+      const val = search.trim().replace(/[,;]$/, '').trim();
+      if (!val) {
+        if (e.key !== 'Tab') e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      if (e.key === 'Enter' && showDd && filteredResults.length > 0) {
+        handleSelect(filteredResults[0]);
+        return;
+      }
+      addManualEmail(val);
     }
     if (e.key === 'Backspace' && !search && selected.length > 0) {
       onRemove(selected[selected.length - 1].email);
+    }
+  };
+
+  const handleBlur = () => {
+    const val = search.trim();
+    if (val) addManualEmail(val);
+    setTimeout(() => setShowDd(false), 150);
+  };
+
+  const handlePaste = (e) => {
+    const text = e.clipboardData.getData('text');
+    if (!text) return;
+    const emails = text.split(/[,;\s\n]+/).filter((s) => s.includes('@') && s.includes('.'));
+    if (emails.length > 0) {
+      e.preventDefault();
+      emails.forEach((email) => addManualEmail(email));
     }
   };
 
@@ -162,6 +196,8 @@ function RecipientInput({ selected, onAdd, onRemove, placeholder, excludeEmails 
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => filteredResults.length > 0 && setShowDd(true)}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          onPaste={handlePaste}
         />
       </div>
       {showDd && filteredResults.length > 0 && (

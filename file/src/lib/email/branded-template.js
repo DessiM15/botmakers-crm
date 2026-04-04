@@ -49,7 +49,7 @@ export function wrapInBrandedTemplate({
          alt="Botmakers"
          style="height:40px; max-width:100%;" />
   </td></tr>
-  <tr><td style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7; overflow-wrap:break-word;">
+  <tr><td style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7;">
     <p style="margin:0 0 16px;">${greeting}</p>
 
     ${bodyHtml}
