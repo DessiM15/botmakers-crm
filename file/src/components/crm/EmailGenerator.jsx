@@ -914,12 +914,17 @@ export default function EmailGenerator({ teamUser }) {
                   {showFullPreview ? 'Hide Full Preview' : 'Preview Full Email'}
                 </button>
                 {showFullPreview && (
-                  <div
-                    className="border border-neutral-600 rounded-8 overflow-hidden"
-                    style={{ background: '#f0f0f0', maxWidth: '100%', overflowX: 'auto' }}
-                  >
-                    <div
-                      dangerouslySetInnerHTML={{ __html: getFullBrandedHtml() }}
+                  <div className="border border-neutral-600 rounded-8 overflow-hidden">
+                    <iframe
+                      srcDoc={getFullBrandedHtml()}
+                      title="Email Preview"
+                      style={{ width: '100%', border: 'none', minHeight: 400 }}
+                      onLoad={(e) => {
+                        const doc = e.target.contentDocument;
+                        if (doc) {
+                          e.target.style.height = doc.documentElement.scrollHeight + 'px';
+                        }
+                      }}
                     />
                   </div>
                 )}
