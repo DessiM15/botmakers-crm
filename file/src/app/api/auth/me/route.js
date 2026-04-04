@@ -30,6 +30,7 @@ export async function GET() {
     return NextResponse.json({
       id: result.teamUser.id,
       fullName: result.teamUser.fullName,
+      role: result.teamUser.role,
       avatarUrl,
     });
   } catch {
