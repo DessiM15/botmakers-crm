@@ -90,6 +90,7 @@ CRITICAL: body_html must contain ONLY the inner body content — paragraphs, sec
 HTML requirements for body_html:
 - Use inline styles only (no external CSS, no <style> tags)
 - Use <p> tags for paragraphs with style="margin:0 0 16px; color:#333;"
+- Do NOT use <h1> or <h2> tags — the largest heading allowed is <h3> with font-size:16px
 - For highlighted/callout sections, use:
   <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
     <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">Section Title</h3>
@@ -98,13 +99,14 @@ HTML requirements for body_html:
 - For numbered steps or phases, use green numbered circles:
   <div style="display:flex; align-items:flex-start; margin:12px 0;">
     <div style="background:#03FF00; color:#033457; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; flex-shrink:0; margin-right:12px;">1</div>
-    <div>
+    <div style="min-width:0;">
       <strong style="color:#033457;">Step Title</strong><br/>
       <span style="color:#333;">Description</span>
     </div>
   </div>
 - Use navy (#033457) for headings/accents, green (#03FF00) for highlights ONLY as accents
 - Dark text (#333333) on white background for readability
+- All text content MUST wrap within 600px — never use white-space:nowrap
 
 Keep emails concise — most should be 2-5 paragraphs of body content. The goal is to be helpful and human, not robotic.`;
 

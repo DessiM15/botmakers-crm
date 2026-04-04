@@ -916,9 +916,10 @@ export default function EmailGenerator({ teamUser }) {
                 {showFullPreview && (
                   <div
                     className="border border-neutral-600 rounded-8 overflow-hidden"
-                    style={{ background: '#f0f0f0' }}
+                    style={{ background: '#f0f0f0', maxWidth: '100%', overflowX: 'auto' }}
                   >
                     <div
+                      style={{ maxWidth: 640, margin: '0 auto', overflowWrap: 'break-word', wordWrap: 'break-word' }}
                       dangerouslySetInnerHTML={{ __html: getFullBrandedHtml() }}
                     />
                   </div>
