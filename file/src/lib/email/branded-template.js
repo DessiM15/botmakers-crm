@@ -36,20 +36,18 @@ export function wrapInBrandedTemplate({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    html, body { margin:0; padding:0; width:100% !important; max-width:100% !important; overflow-x:hidden !important; background-color:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif; }
-    * { box-sizing:border-box; max-width:100% !important; }
+    html, body { margin:0; padding:0; background-color:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif; }
+    * { box-sizing:border-box; }
   </style>
 </head>
 <body>
-<div style="width:100%; max-width:600px; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff; overflow:hidden;">
-
-  <div style="background-color:#033457; padding:30px 40px; text-align:center;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px; margin:0 auto; font-family:'Helvetica Neue',Arial,sans-serif; background-color:#ffffff;">
+  <tr><td style="background-color:#033457; padding:30px 40px; text-align:center;">
     <img src="https://botmakers.ai/assets/botmakers-white-green-logo.png"
          alt="Botmakers"
-         style="height:40px; max-width:100%;" />
-  </div>
-
-  <div style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7; overflow:hidden;">
+         style="height:40px;" />
+  </td></tr>
+  <tr><td style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7;">
     <p style="margin:0 0 16px;">${greeting}</p>
 
     ${bodyHtml}
@@ -60,16 +58,14 @@ export function wrapInBrandedTemplate({
     <p style="margin:0; font-weight:bold; color:#033457;">${senderName}</p>
     ${senderTitleLine}
     <p style="margin:0; color:#666; font-size:13px;">&#x1F4F1; 832.790.5001 | &#x1F310; botmakers.ai</p>
-  </div>
-
-  <div style="background-color:#f5f5f5; padding:20px 40px; text-align:center; font-size:12px; color:#999;">
+  </td></tr>
+  <tr><td style="background-color:#f5f5f5; padding:20px 40px; text-align:center; font-size:12px; color:#999;">
     <p style="margin:0;">&copy; 2026 BotMakers Inc. All Rights Reserved.</p>
     <p style="margin:4px 0 0;">
       <a href="https://botmakers.ai" style="color:#033457; text-decoration:none;">botmakers.ai</a>
     </p>
-  </div>
-
-</div>
+  </td></tr>
+</table>
 </body>
 </html>`;
 }
