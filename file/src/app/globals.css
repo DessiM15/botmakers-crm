@@ -240,6 +240,22 @@ body,
   color: #e2e8f0 !important;
 }
 
+/* ── Dark theme: tables should inherit dark background ──────────────── */
+[data-theme="dark"] .table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: rgba(255,255,255,0.04);
+  --bs-table-striped-bg: rgba(255,255,255,0.02);
+  --bs-table-active-bg: rgba(255,255,255,0.06);
+  color: inherit;
+}
+[data-theme="dark"] .table > thead > tr > th {
+  background: transparent;
+}
+[data-theme="dark"] .table > tbody > tr > td {
+  background: transparent;
+  border-color: rgba(255,255,255,0.06);
+}
+
 /* ── Dark theme: outline buttons & form controls ───────────────────── */
 [data-theme="dark"] .btn-outline-secondary {
   color: #cbd5e1;
