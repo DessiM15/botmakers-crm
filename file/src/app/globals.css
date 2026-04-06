@@ -240,30 +240,47 @@ body,
   color: #e2e8f0 !important;
 }
 
-/* ── Dark theme: tables should inherit dark background ──────────────── */
+/* ── Dark theme: tables — light text, transparent background ────────── */
 [data-theme="dark"] .table {
   --bs-table-bg: transparent;
+  --bs-table-color: #d1d5db;
   --bs-table-hover-bg: rgba(255,255,255,0.04);
   --bs-table-striped-bg: rgba(255,255,255,0.02);
   --bs-table-active-bg: rgba(255,255,255,0.06);
-  color: inherit;
+  color: #d1d5db;
 }
 [data-theme="dark"] .table > thead > tr > th {
   background: transparent;
+  color: #94a3b8;
 }
 [data-theme="dark"] .table > tbody > tr > td {
   background: transparent;
+  color: #d1d5db;
   border-color: rgba(255,255,255,0.06);
 }
-/* Safety net: override dark text classes inside dark-theme tables */
-[data-theme="dark"] .table .text-dark {
-  color: #e2e8f0 !important;
+/* Let utility classes override table defaults */
+[data-theme="dark"] .table .text-white {
+  color: #fff !important;
 }
-[data-theme="dark"] .table .text-muted {
-  color: #94a3b8 !important;
+[data-theme="dark"] .table .text-secondary-light {
+  color: #d1d5db !important;
 }
+/* Safety net: override dark text classes everywhere in dark theme */
+[data-theme="dark"] .table .text-dark,
 [data-theme="dark"] .card .text-dark:not(.badge .text-dark) {
   color: #e2e8f0 !important;
+}
+[data-theme="dark"] .table .text-muted,
+[data-theme="dark"] .card .text-muted {
+  color: #94a3b8 !important;
+}
+
+/* ── CRM card padding: consistent 16px minimum ────────────────────── */
+[data-theme="dark"] .card > .card-body {
+  padding: 16px;
+}
+[data-theme="dark"] .card > .card-header {
+  padding: 12px 16px;
 }
 
 /* ── Dark theme: outline buttons & form controls ───────────────────── */

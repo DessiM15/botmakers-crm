@@ -42,7 +42,22 @@ export async function getMetrics() {
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [[thisWeek], [lastWeek], [pipeline], [activeProj], [revenue]] =
+  const monthAgo = new Date(now);
+  monthAgo.setDate(monthAgo.getDate() - 30);
+
+  const quarterAgo = new Date(now);
+  quarterAgo.setDate(quarterAgo.getDate() - 90);
+
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+
+  const [
+    [thisWeek], [lastWeek],
+    [outProposalSum], [outProposalCount],
+    [outInvoiceSum], [outInvoiceCount],
+    [activeProj], [revenue],
+    [leadsThisMonth], [leadsThisQuarter], [leadsThisYear],
+    leadSourceBreakdown,
+  ] =
     await Promise.all([
       // Leads created this week
       db
@@ -58,20 +73,47 @@ export async function getMetrics() {
           and(gte(leads.createdAt, twoWeeksAgo), lt(leads.createdAt, weekAgo), eq(leads.isDemo, isDemo))
         ),
 
-      // Pipeline value — proposals linked to leads in stages 5-7
+      // Outstanding proposals — SUM of total_amount for sent/viewed
       db
         .select({ value: sum(proposals.totalAmount) })
         .from(proposals)
-        .innerJoin(leads, eq(proposals.leadId, leads.id))
         .where(
           and(
-            inArray(leads.pipelineStage, [
-              'proposal_sent',
-              'negotiation',
-              'contract_signed',
-            ]),
-            notInArray(proposals.status, ['declined', 'expired']),
+            inArray(proposals.status, ['sent', 'viewed']),
             eq(proposals.isDemo, isDemo)
+          )
+        ),
+
+      // Outstanding proposals — COUNT
+      db
+        .select({ value: count() })
+        .from(proposals)
+        .where(
+          and(
+            inArray(proposals.status, ['sent', 'viewed']),
+            eq(proposals.isDemo, isDemo)
+          )
+        ),
+
+      // Outstanding invoices — SUM of amount for sent/viewed/overdue
+      db
+        .select({ value: sum(invoices.amount) })
+        .from(invoices)
+        .where(
+          and(
+            inArray(invoices.status, ['sent', 'viewed', 'overdue']),
+            eq(invoices.isDemo, isDemo)
+          )
+        ),
+
+      // Outstanding invoices — COUNT
+      db
+        .select({ value: count() })
+        .from(invoices)
+        .where(
+          and(
+            inArray(invoices.status, ['sent', 'viewed', 'overdue']),
+            eq(invoices.isDemo, isDemo)
           )
         ),
 
@@ -86,13 +128,45 @@ export async function getMetrics() {
         .select({ value: sum(payments.amount) })
         .from(payments)
         .where(and(gte(payments.paidAt, monthStart), eq(payments.isDemo, isDemo))),
+
+      // Leads this month
+      db
+        .select({ value: count() })
+        .from(leads)
+        .where(and(gte(leads.createdAt, monthAgo), eq(leads.isDemo, isDemo))),
+
+      // Leads this quarter
+      db
+        .select({ value: count() })
+        .from(leads)
+        .where(and(gte(leads.createdAt, quarterAgo), eq(leads.isDemo, isDemo))),
+
+      // Leads this year
+      db
+        .select({ value: count() })
+        .from(leads)
+        .where(and(gte(leads.createdAt, yearStart), eq(leads.isDemo, isDemo))),
+
+      // Lead source breakdown (this week)
+      db
+        .select({ source: leads.source, value: count() })
+        .from(leads)
+        .where(and(gte(leads.createdAt, weekAgo), eq(leads.isDemo, isDemo)))
+        .groupBy(leads.source),
     ]);
 
   return {
     leadsThisWeek: Number(thisWeek?.value ?? 0),
     leadsDelta:
       Number(thisWeek?.value ?? 0) - Number(lastWeek?.value ?? 0),
-    pipelineValue: parseFloat(pipeline?.value ?? '0'),
+    leadsThisMonth: Number(leadsThisMonth?.value ?? 0),
+    leadsThisQuarter: Number(leadsThisQuarter?.value ?? 0),
+    leadsThisYear: Number(leadsThisYear?.value ?? 0),
+    leadSourceBreakdown: leadSourceBreakdown.map((r) => ({ source: r.source, count: Number(r.value) })),
+    outstandingProposalsAmount: parseFloat(outProposalSum?.value ?? '0'),
+    outstandingProposalsCount: Number(outProposalCount?.value ?? 0),
+    outstandingInvoicesAmount: parseFloat(outInvoiceSum?.value ?? '0'),
+    outstandingInvoicesCount: Number(outInvoiceCount?.value ?? 0),
     activeProjects: Number(activeProj?.value ?? 0),
     revenueThisMonth: parseFloat(revenue?.value ?? '0'),
   };
@@ -210,7 +284,7 @@ export async function getUpcomingMilestones(days = 7, limit = 10) {
     .limit(limit);
 }
 
-export async function getRecentActivity(limit = 15) {
+export async function getRecentActivity(limit = 50) {
   const isDemo = await isDemoMode();
   const activities = await db
     .select()
@@ -446,4 +520,27 @@ export async function getLeadSourceAnalytics() {
         ? Math.round((( convertedMap[s.source] || 0) / Number(s.total)) * 100)
         : 0,
   }));
+}
+
+/**
+ * Draft proposals grouped by creator — for "Contracts for Review" dashboard widget.
+ */
+export async function getDraftProposalsByCreator() {
+  const isDemo = await isDemoMode();
+
+  const rows = await db.execute(sql`
+    SELECT
+      p.created_by,
+      tu.full_name AS creator_name,
+      COUNT(*)::int AS draft_count,
+      json_agg(json_build_object('id', p.id, 'title', p.title)) AS proposals
+    FROM proposals p
+    INNER JOIN team_users tu ON tu.id = p.created_by
+    WHERE p.status = 'draft'
+      AND p.is_demo = ${isDemo}
+    GROUP BY p.created_by, tu.full_name
+    ORDER BY draft_count DESC
+  `);
+
+  return rows.rows || rows;
 }

@@ -209,12 +209,24 @@ export async function getMeetingsByClientId(clientId) {
 
 /**
  * Get today's meetings (for dashboard schedule widget).
+ * If teamUserId is provided, only returns meetings created by that user.
  */
-export async function getTodaysMeetings() {
+export async function getTodaysMeetings(teamUserId = null) {
   const isDemo = await isDemoMode();
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 86400000);
+
+  const conditions = [
+    gte(meetings.startTime, startOfDay),
+    lte(meetings.startTime, endOfDay),
+    or(eq(meetings.status, 'scheduled'), eq(meetings.status, 'rescheduled')),
+    eq(meetings.isDemo, isDemo),
+  ];
+
+  if (teamUserId) {
+    conditions.push(eq(meetings.createdBy, teamUserId));
+  }
 
   return db
     .select({
@@ -231,13 +243,6 @@ export async function getTodaysMeetings() {
       clientId: meetings.clientId,
     })
     .from(meetings)
-    .where(
-      and(
-        gte(meetings.startTime, startOfDay),
-        lte(meetings.startTime, endOfDay),
-        or(eq(meetings.status, 'scheduled'), eq(meetings.status, 'rescheduled')),
-        eq(meetings.isDemo, isDemo)
-      )
-    )
+    .where(and(...conditions))
     .orderBy(asc(meetings.startTime));
 }

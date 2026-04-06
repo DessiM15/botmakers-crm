@@ -5,7 +5,7 @@ import AlertsPanel from './AlertsPanel';
 import UpcomingTasks from './UpcomingTasks';
 import ActivityFeed from './ActivityFeed';
 import RevenueWidget from './RevenueWidget';
-import LeadSourceAnalytics from './LeadSourceAnalytics';
+// LeadSourceAnalytics removed from dashboard — data is now in the Leads metric card
 import FollowUpQueue from './FollowUpQueue';
 import NewLeadsAssign from './NewLeadsAssign';
 import TodaySchedule from './TodaySchedule';
@@ -48,6 +48,7 @@ const DashBoardLayer = ({
   upcomingRenewals = [],
   todaysMeetings = [],
   monthlyRevenue = [],
+  draftProposals = [],
 }) => {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -70,23 +71,20 @@ const DashBoardLayer = ({
         </div>
       </div>
 
-      {/* Revenue + Lead Sources */}
-      <section className="row gy-4">
-        <div className="col-xxl-7 col-lg-6">
+      {/* Revenue */}
+      <section className="row gy-4 mt-24">
+        <div className="col-12">
           <RevenueWidget revenue={revenue} />
-        </div>
-        <div className="col-xxl-5 col-lg-6">
-          <LeadSourceAnalytics sources={leadSources} />
         </div>
       </section>
 
       {/* Metric Cards */}
-      <div className="mt-4">
+      <div className="mt-24">
         <MetricCards metrics={metrics} />
       </div>
 
       {/* Charts: Revenue Trend + Lead Pipeline */}
-      <section className="row gy-4 mt-1">
+      <section className="row gy-4 mt-24">
         <div className="col-lg-7">
           <div className="card h-100">
             <div className="card-header">
@@ -110,7 +108,7 @@ const DashBoardLayer = ({
       </section>
 
       {/* Unassigned Leads + Follow-Up Queue */}
-      <section className="row gy-4 mt-1">
+      <section className="row gy-4 mt-24">
         <div className="col-xxl-6 col-lg-6">
           <NewLeadsAssign leads={unassignedLeads} teamMembers={teamMembersForAssign} />
         </div>
@@ -120,7 +118,7 @@ const DashBoardLayer = ({
       </section>
 
       {/* Upcoming Tasks + Today's Schedule + Alerts */}
-      <section className="row gy-4 mt-1">
+      <section className="row gy-4 mt-24">
         <div className="col-xxl-4 col-lg-6">
           <UpcomingTasks milestones={upcomingMilestones} />
         </div>
@@ -134,7 +132,7 @@ const DashBoardLayer = ({
 
       {/* Upcoming Renewals */}
       {upcomingRenewals.length > 0 && (
-        <section className="row gy-4 mt-1">
+        <section className="row gy-4 mt-24">
           <div className="col-12">
             <div className="card">
               <div className="card-header d-flex align-items-center justify-content-between">
@@ -182,10 +180,60 @@ const DashBoardLayer = ({
         </section>
       )}
 
+      {/* Contracts for Review — admin only */}
+      {teamUser.role === 'admin' && draftProposals.length > 0 && (
+        <section className="row gy-4 mt-24">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header d-flex align-items-center justify-content-between">
+                <h6 className="card-title mb-0">
+                  <Icon icon="mdi:file-document-edit-outline" className="me-2" style={{ fontSize: '18px' }} />
+                  Contracts for Review
+                </h6>
+                <Link href="/proposals?status=draft" className="btn btn-outline-secondary btn-sm">
+                  View All Drafts
+                </Link>
+              </div>
+              <div className="card-body p-0">
+                {draftProposals.map((row) => (
+                  <div
+                    key={row.created_by}
+                    className="d-flex align-items-center justify-content-between px-4 py-3"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                  >
+                    <div>
+                      <span className="text-white text-sm fw-medium">{row.creator_name}</span>
+                      <span className="text-secondary-light text-sm ms-2">
+                        has {row.draft_count} proposal{row.draft_count !== 1 ? 's' : ''} for review
+                      </span>
+                    </div>
+                    <div className="d-flex gap-2 flex-wrap">
+                      {(row.proposals || []).slice(0, 3).map((p) => (
+                        <Link
+                          key={p.id}
+                          href={`/proposals/${p.id}`}
+                          className="badge text-decoration-none"
+                          style={{ background: 'rgba(13,110,253,0.15)', color: '#4d94ff', fontSize: '11px' }}
+                        >
+                          {(p.title || 'Untitled').slice(0, 30)}
+                        </Link>
+                      ))}
+                      {(row.proposals || []).length > 3 && (
+                        <span className="text-secondary-light text-xs">+{row.proposals.length - 3} more</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Activity Feed */}
-      <section className="row gy-4 mt-1">
+      <section className="row gy-4 mt-24">
         <div className="col-12">
-          <ActivityFeed activity={activity} />
+          <ActivityFeed activity={activity} teamUserId={teamUser.id} />
         </div>
       </section>
     </>

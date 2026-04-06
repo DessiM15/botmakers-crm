@@ -35,7 +35,7 @@ const Page = async ({ searchParams }) => {
 
   try {
     [costData, pnl, trend, breakdown, clientsList, projectsList] = await Promise.all([
-      getCostEntries({ search, source, page, perPage: 25 }),
+      getCostEntries({ search, source, page, perPage: 15 }),
       getGlobalPnL(),
       getMonthlyPnLTrend(),
       getCostBreakdownByProvider(),
@@ -43,7 +43,7 @@ const Page = async ({ searchParams }) => {
       getProjectsForCostDropdown(),
     ]);
   } catch {
-    costData = { items: [], total: 0, page: 1, perPage: 25 };
+    costData = { items: [], total: 0, page: 1, perPage: 15 };
     pnl = { revenue: 0, costs: 0, profit: 0, margin: 0 };
     trend = [];
     breakdown = [];

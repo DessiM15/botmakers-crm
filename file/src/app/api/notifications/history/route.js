@@ -28,7 +28,7 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get('page')) || 1);
-    const perPage = 25;
+    const perPage = 15;
     const filter = searchParams.get('filter') || 'all';
     const category = searchParams.get('category') || 'all';
 
@@ -70,6 +70,6 @@ export async function GET(request) {
       totalPages: Math.ceil(Number(total) / perPage),
     });
   } catch {
-    return NextResponse.json({ notifications: [], total: 0, page: 1, perPage: 25, totalPages: 0 });
+    return NextResponse.json({ notifications: [], total: 0, page: 1, perPage: 15, totalPages: 0 });
   }
 }

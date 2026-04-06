@@ -29,7 +29,7 @@ const Page = async ({ searchParams }) => {
   try {
     data = await getActivityLog({
       page,
-      perPage: 25,
+      perPage: 15,
       actorType,
       entityType,
       action,

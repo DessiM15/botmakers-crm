@@ -13,6 +13,7 @@ import {
   getUnassignedLeads,
   getTeamMembersForAssignment,
   getMonthlyRevenue,
+  getDraftProposalsByCreator,
 } from '@/lib/db/queries/dashboard';
 import { getPendingFollowUps } from '@/lib/db/queries/follow-ups';
 import { getUpcomingRenewals } from '@/lib/db/queries/services';
@@ -33,12 +34,12 @@ const Page = async () => {
     redirect('/sign-in');
   }
 
-  let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue;
+  let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue, draftProposals;
   try {
-    [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue] = await Promise.all([
+    [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue, draftProposals] = await Promise.all([
       getMetrics().catch((err) => {
         if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getMetrics failed:', err);
-        return { leadsThisWeek: 0, leadsDelta: 0, pipelineValue: 0, activeProjects: 0, revenueThisMonth: 0, _error: true };
+        return { leadsThisWeek: 0, leadsDelta: 0, leadsThisMonth: 0, leadsThisQuarter: 0, leadsThisYear: 0, leadSourceBreakdown: [], outstandingProposalsAmount: 0, outstandingProposalsCount: 0, outstandingInvoicesAmount: 0, outstandingInvoicesCount: 0, activeProjects: 0, revenueThisMonth: 0, _error: true };
       }),
       getAlerts().catch((err) => {
         if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getAlerts failed:', err);
@@ -70,7 +71,7 @@ const Page = async () => {
         if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getUpcomingRenewals failed:', err);
         return [];
       }),
-      getTodaysMeetings().catch((err) => {
+      getTodaysMeetings(teamUser.id).catch((err) => {
         if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getTodaysMeetings failed:', err);
         return [];
       }),
@@ -78,11 +79,15 @@ const Page = async () => {
         if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getMonthlyRevenue failed:', err);
         return [];
       }),
+      getDraftProposalsByCreator().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getDraftProposalsByCreator failed:', err);
+        return [];
+      }),
     ]);
   } catch (err) {
     if (process.env.NODE_ENV === 'development') console.error('[Dashboard] Data fetch error:', err.message, err.stack);
     // Fallback to empty data so the page still renders
-    metrics = { leadsThisWeek: 0, leadsDelta: 0, pipelineValue: 0, activeProjects: 0, revenueThisMonth: 0 };
+    metrics = { leadsThisWeek: 0, leadsDelta: 0, leadsThisMonth: 0, leadsThisQuarter: 0, leadsThisYear: 0, leadSourceBreakdown: [], outstandingProposalsAmount: 0, outstandingProposalsCount: 0, outstandingInvoicesAmount: 0, outstandingInvoicesCount: 0, activeProjects: 0, revenueThisMonth: 0 };
     alerts = { staleLeads: [], overdueMilestones: [], pendingQuestions: [] };
     activity = [];
     upcomingMilestones = [];
@@ -94,6 +99,7 @@ const Page = async () => {
     upcomingRenewals = [];
     todaysMeetings = [];
     monthlyRevenue = [];
+    draftProposals = [];
   }
 
   return (
@@ -112,6 +118,7 @@ const Page = async () => {
         upcomingRenewals={upcomingRenewals}
         todaysMeetings={todaysMeetings}
         monthlyRevenue={monthlyRevenue}
+        draftProposals={draftProposals}
       />
     </MasterLayout>
   );
