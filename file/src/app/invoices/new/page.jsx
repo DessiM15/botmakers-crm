@@ -28,7 +28,9 @@ const Page = async ({ searchParams }) => {
   let clients = [];
   try {
     clients = await getClientsForInvoiceDropdown();
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[InvoiceNew] Failed to load clients:', error);
+  }
   const squareConfigured = isSquareConfigured();
 
   return (

@@ -125,7 +125,9 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null, ed
         discoveryData = JSON.parse(stored);
         sessionStorage.removeItem('discoveryProposalData');
       }
-    } catch {}
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') console.error('[ProposalWizard] Failed to read discovery data from session:', error);
+    }
 
     if (discoveryData && discoveryData.leadId) {
       setSelectedLeadId(discoveryData.leadId);

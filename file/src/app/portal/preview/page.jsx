@@ -78,7 +78,9 @@ export default async function PortalPreviewPage({ searchParams }) {
       getClientProjects(client.id).catch(() => []),
       getPortalInvoices(client.id).catch(() => []),
     ]);
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[PortalPreview] Data fetch error:', error);
+  }
 
   const formatCurrency = (val) =>
     Number(val).toLocaleString('en-US', { style: 'currency', currency: 'USD' });

@@ -53,7 +53,7 @@ export async function POST(request) {
 
     if (dbErr) {
       return NextResponse.json(
-        { error: 'Database error. Please try again.', code: 'CB-DB-001', debug: dbErr.message },
+        { error: 'Database error. Please try again.', code: 'CB-DB-001', ...(process.env.NODE_ENV === 'development' && { debug: dbErr.message }) },
         { status: 500 }
       );
     }
@@ -78,7 +78,7 @@ export async function POST(request) {
     );
   } catch (err) {
     return NextResponse.json(
-      { error: 'An unexpected error occurred. Please try again.', code: 'CB-AUTH-001', debug: err.message },
+      { error: 'An unexpected error occurred. Please try again.', code: 'CB-AUTH-001', ...(process.env.NODE_ENV === 'development' && { debug: err.message }) },
       { status: 500 }
     );
   }

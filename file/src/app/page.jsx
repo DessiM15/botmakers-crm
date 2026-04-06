@@ -36,18 +36,48 @@ const Page = async () => {
   let metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue;
   try {
     [metrics, alerts, activity, upcomingMilestones, revenue, leadSources, followUps, unassignedLeads, teamMembersForAssign, upcomingRenewals, todaysMeetings, monthlyRevenue] = await Promise.all([
-      getMetrics().catch(() => ({ leadsThisWeek: 0, leadsDelta: 0, pipelineValue: 0, activeProjects: 0, revenueThisMonth: 0 })),
-      getAlerts().catch(() => ({ staleLeads: [], overdueMilestones: [], pendingQuestions: [] })),
-      getRecentActivity().catch(() => []),
-      getUpcomingMilestones().catch(() => []),
-      getRevenueMetrics().catch(() => ({ invoicedThisMonth: 0, paidThisMonth: 0, outstanding: 0, momChange: 0 })),
-      getLeadSourceAnalytics().catch(() => []),
-      getPendingFollowUps(teamUser.id).catch(() => []),
+      getMetrics().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getMetrics failed:', err);
+        return { leadsThisWeek: 0, leadsDelta: 0, pipelineValue: 0, activeProjects: 0, revenueThisMonth: 0, _error: true };
+      }),
+      getAlerts().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getAlerts failed:', err);
+        return { staleLeads: [], overdueMilestones: [], pendingQuestions: [], _error: true };
+      }),
+      getRecentActivity().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getRecentActivity failed:', err);
+        return [];
+      }),
+      getUpcomingMilestones().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getUpcomingMilestones failed:', err);
+        return [];
+      }),
+      getRevenueMetrics().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getRevenueMetrics failed:', err);
+        return { invoicedThisMonth: 0, paidThisMonth: 0, outstanding: 0, momChange: 0, _error: true };
+      }),
+      getLeadSourceAnalytics().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getLeadSourceAnalytics failed:', err);
+        return [];
+      }),
+      getPendingFollowUps(teamUser.id).catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getPendingFollowUps failed:', err);
+        return [];
+      }),
       getUnassignedLeads(),
       getTeamMembersForAssignment(),
-      getUpcomingRenewals(7).catch(() => []),
-      getTodaysMeetings().catch(() => []),
-      getMonthlyRevenue().catch(() => []),
+      getUpcomingRenewals(7).catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getUpcomingRenewals failed:', err);
+        return [];
+      }),
+      getTodaysMeetings().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getTodaysMeetings failed:', err);
+        return [];
+      }),
+      getMonthlyRevenue().catch((err) => {
+        if (process.env.NODE_ENV === 'development') console.error('[Dashboard] getMonthlyRevenue failed:', err);
+        return [];
+      }),
     ]);
   } catch (err) {
     if (process.env.NODE_ENV === 'development') console.error('[Dashboard] Data fetch error:', err.message, err.stack);

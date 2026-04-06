@@ -66,7 +66,9 @@ const Page = async () => {
       googleCalendarConnected = row.connected || false;
       googleCalendarEmail = row.email || null;
     }
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[Settings] Failed to fetch Google Calendar status:', error);
+  }
 
   // Fetch team members
   let members = [];
@@ -103,7 +105,9 @@ const Page = async () => {
       const k = keyRow.value.key;
       trackingKeyMasked = k.length >= 12 ? k.slice(0, 9) + '...' + k.slice(-4) : '****';
     }
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[Settings] Failed to fetch tracking key:', error);
+  }
 
   // Fetch settings
   let staleDays = 7;
@@ -120,7 +124,9 @@ const Page = async () => {
       if (s.key === 'default_project_phases') defaultProjectPhases = s.value || null;
       if (s.key === 'calendar_colors') calendarColors = s.value || null;
     }
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[Settings] Failed to fetch system settings:', error);
+  }
 
   return (
     <MasterLayout>

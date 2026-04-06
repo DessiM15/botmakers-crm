@@ -26,7 +26,9 @@ const Page = async ({ searchParams }) => {
     const dropdown = await getLeadsAndClientsForDropdown();
     leads = dropdown.leads;
     clients = dropdown.clients;
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[ProposalNew] Failed to load dropdown data:', error);
+  }
 
   let editProposal = null;
   if (editId) {
@@ -35,7 +37,9 @@ const Page = async ({ searchParams }) => {
       if (editProposal && editProposal.status !== 'draft') {
         editProposal = null;
       }
-    } catch {}
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') console.error('[ProposalNew] Failed to load proposal for editing:', error);
+    }
   }
 
   return (

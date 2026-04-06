@@ -9,7 +9,7 @@ const formatCurrency = (val) => {
 };
 
 const RevenueWidget = ({ revenue }) => {
-  const { invoicedThisMonth, paidThisMonth, outstanding, momChange } = revenue;
+  const { invoicedThisMonth, paidThisMonth, outstanding, momChange, _error } = revenue;
 
   const metrics = [
     {
@@ -35,7 +35,15 @@ const RevenueWidget = ({ revenue }) => {
   return (
     <div className="card h-100">
       <div className="card-header border-bottom d-flex align-items-center justify-content-between">
-        <h6 className="text-lg fw-semibold mb-0">Revenue</h6>
+        <h6 className="text-lg fw-semibold mb-0">
+          Revenue
+          {_error && (
+            <span className="text-warning-main text-xs fw-normal ms-2">
+              <Icon icon="mdi:alert-circle-outline" className="text-sm me-1" />
+              Error loading
+            </span>
+          )}
+        </h6>
         {momChange !== 0 && (
           <span
             className="badge d-flex align-items-center gap-1"

@@ -33,7 +33,9 @@ const Page = async ({ searchParams }) => {
       const [client] = await db.select({ fullName: clients.fullName }).from(clients).where(eq(clients.id, entityId)).limit(1);
       entityName = client?.fullName || '';
     }
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[DocsNew] Failed to load entity name:', error);
+  }
 
   return (
     <MasterLayout>

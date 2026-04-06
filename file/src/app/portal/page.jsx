@@ -39,7 +39,9 @@ export default async function PortalHomePage() {
   let projects = [];
   try {
     projects = await getClientProjects(client.id);
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[PortalHome] Failed to load projects:', error);
+  }
 
   // Auto-redirect if exactly 1 project
   if (projects.length === 1) {

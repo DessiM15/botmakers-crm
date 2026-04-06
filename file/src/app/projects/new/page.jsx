@@ -22,7 +22,9 @@ const Page = async ({ searchParams }) => {
   let clients = [];
   try {
     clients = await getClientsForDropdown();
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[ProjectNew] Failed to load clients:', error);
+  }
 
   return (
     <MasterLayout>

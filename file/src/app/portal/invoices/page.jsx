@@ -28,7 +28,9 @@ export default async function PortalInvoicesPage() {
   let invoices = [];
   try {
     invoices = await getPortalInvoices(client.id);
-  } catch {}
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') console.error('[PortalInvoices] Failed to load invoices:', error);
+  }
 
   const formatCurrency = (val) =>
     Number(val).toLocaleString('en-US', { style: 'currency', currency: 'USD' });

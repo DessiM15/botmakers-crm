@@ -47,6 +47,14 @@ const cards = [
 const MetricCards = ({ metrics }) => {
   return (
     <div className="row row-cols-xxl-4 row-cols-lg-2 row-cols-1 gy-4">
+      {metrics._error && (
+        <div className="col-12">
+          <div className="text-warning-main text-xs d-flex align-items-center gap-1 mb-2">
+            <Icon icon="mdi:alert-circle-outline" className="text-sm" />
+            Some metrics could not be loaded
+          </div>
+        </div>
+      )}
       {cards.map((card) => {
         const value = metrics[card.key] ?? 0;
         const delta = card.deltaKey ? metrics[card.deltaKey] : null;
