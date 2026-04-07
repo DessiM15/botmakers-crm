@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db/client';
 import { createAdminClient } from '@/lib/db/client';
-import { clients, proposals, projects, projectQuestions, activityLog } from '@/lib/db/schema';
+import { clients, proposals, projects, projectQuestions, activityLog, followUpReminders, invoices, invoiceLineItems, systemSettings } from '@/lib/db/schema';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { requireClient } from '@/lib/auth/helpers';
@@ -11,6 +11,7 @@ import { advanceLead } from '@/lib/pipeline/transitions';
 import { sendTeamNotification } from '@/lib/notifications/notify';
 import { sendEmail } from '@/lib/email/client';
 import { wrapInBrandedTemplate } from '@/lib/email/branded-template';
+import { revalidatePath } from 'next/cache';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -244,6 +245,7 @@ export async function acceptProposal(proposalId, signature) {
         expiresAt: proposals.expiresAt,
         title: proposals.title,
         totalAmount: proposals.totalAmount,
+        createdBy: proposals.createdBy,
       })
       .from(proposals)
       .where(and(eq(proposals.id, proposalId), eq(proposals.clientId, client.id)))
@@ -332,9 +334,354 @@ export async function acceptProposal(proposalId, signature) {
       }
     }
 
+    // Auto-generate deposit invoice
+    try {
+      const depositResult = await createDepositInvoice(proposal, client);
+      if (depositResult?.paymentUrl) {
+        // Send acceptance + deposit email to client
+        const depositAmount = Number(depositResult.depositAmount).toLocaleString('en-US', {
+          style: 'currency', currency: 'USD',
+        });
+        const acceptBodyHtml = `<p style="margin:0 0 16px; color:#333;">Thank you for accepting the proposal: <strong style="color:#033457;">${proposal.title}</strong></p>
+          <p style="margin:0 0 16px; color:#333;">To get started, we require a deposit of <strong style="color:#033457;">${depositAmount}</strong>. Once received, we'll kick off your project right away.</p>
+          <p style="margin:0 0 16px; color:#333;">Click the button below to pay your deposit securely via Square.</p>`;
+        sendEmail({
+          to: client.email,
+          subject: `Proposal Accepted — Deposit Invoice: ${proposal.title}`,
+          html: wrapInBrandedTemplate({
+            recipientName: client.fullName,
+            bodyHtml: acceptBodyHtml,
+            senderName: 'The BotMakers Team',
+            senderTitle: null,
+            ctaUrl: depositResult.paymentUrl,
+            ctaText: `Pay Deposit (${depositAmount})`,
+          }),
+        }).catch(() => {});
+      }
+    } catch {
+      // Non-blocking — deposit can be created manually
+    }
+
+    revalidatePath('/invoices');
+    revalidatePath('/proposals');
+    revalidatePath(`/proposals/${proposalId}`);
+
     return { success: true };
   } catch {
     return { error: 'Failed to accept proposal. Please try again.' };
+  }
+}
+
+/**
+ * Create a deposit invoice for an accepted proposal.
+ * Reads deposit percentage from system_settings (default 60%).
+ */
+async function createDepositInvoice(proposal, client) {
+  // Get configurable deposit percentage
+  let depositPct = 60;
+  try {
+    const [setting] = await db
+      .select({ value: systemSettings.value })
+      .from(systemSettings)
+      .where(eq(systemSettings.key, 'deposit_percentage'))
+      .limit(1);
+    if (setting?.value?.percentage) {
+      depositPct = Number(setting.value.percentage);
+    }
+  } catch {
+    // Use default
+  }
+
+  const totalAmount = Number(proposal.totalAmount) || 0;
+  if (totalAmount <= 0) return null;
+
+  const depositAmount = (totalAmount * depositPct / 100).toFixed(2);
+
+  // Create invoice
+  const [invoice] = await db
+    .insert(invoices)
+    .values({
+      clientId: client.id,
+      proposalId: proposal.id,
+      title: `Deposit — ${proposal.title}`,
+      description: `${depositPct}% deposit for proposal: ${proposal.title}`,
+      amount: depositAmount,
+      status: 'sent',
+      sentAt: new Date(),
+      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      createdBy: proposal.createdBy || (await getFirstAdmin()),
+    })
+    .returning();
+
+  // Add line item
+  await db.insert(invoiceLineItems).values({
+    invoiceId: invoice.id,
+    description: `${depositPct}% Deposit — ${proposal.title}`,
+    quantity: '1',
+    unitPrice: depositAmount,
+    total: depositAmount,
+    sortOrder: 0,
+  });
+
+  // Log activity
+  db.insert(activityLog).values({
+    actorType: 'system',
+    action: 'invoice.auto_created',
+    entityType: 'invoice',
+    entityId: invoice.id,
+    metadata: {
+      proposalId: proposal.id,
+      proposalTitle: proposal.title,
+      depositPercentage: depositPct,
+      amount: depositAmount,
+    },
+  }).catch(() => {});
+
+  // Try to create Square payment link
+  let paymentUrl = null;
+  try {
+    const { isSquareConfigured, createSquareCheckoutLink } = await import('@/lib/integrations/square');
+    if (isSquareConfigured()) {
+      const result = await createSquareCheckoutLink(invoice.title, depositAmount);
+      if (result?.paymentUrl) {
+        paymentUrl = result.paymentUrl;
+        await db
+          .update(invoices)
+          .set({ squarePaymentUrl: paymentUrl, updatedAt: new Date() })
+          .where(eq(invoices.id, invoice.id));
+      }
+    }
+  } catch {
+    // Non-blocking
+  }
+
+  // If no Square, use portal URL
+  if (!paymentUrl) {
+    paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/invoices/${invoice.id}`;
+  }
+
+  return { invoice, depositAmount, paymentUrl };
+}
+
+/**
+ * Get the first admin team user ID (for system-generated records).
+ */
+async function getFirstAdmin() {
+  const { teamUsers } = await import('@/lib/db/schema');
+  const [admin] = await db
+    .select({ id: teamUsers.id })
+    .from(teamUsers)
+    .where(eq(teamUsers.role, 'admin'))
+    .limit(1);
+  return admin?.id;
+}
+
+/**
+ * Decline a proposal from the client portal.
+ * Captures decline reason, sends notifications, creates follow-up reminder.
+ */
+export async function declineProposal(proposalId, reason) {
+  try {
+    const cookieStore = await cookies();
+    const { client } = await requireClient(cookieStore);
+
+    if (!reason || reason.trim().length < 10) {
+      return { error: 'Please provide at least 10 characters of feedback.' };
+    }
+
+    // Validate proposal belongs to client
+    const [proposal] = await db
+      .select({
+        id: proposals.id,
+        clientId: proposals.clientId,
+        leadId: proposals.leadId,
+        status: proposals.status,
+        title: proposals.title,
+        createdBy: proposals.createdBy,
+      })
+      .from(proposals)
+      .where(and(eq(proposals.id, proposalId), eq(proposals.clientId, client.id)))
+      .limit(1);
+
+    if (!proposal) {
+      return { error: 'Proposal not found.' };
+    }
+
+    if (proposal.status === 'declined') {
+      return { error: 'This proposal has already been declined.' };
+    }
+
+    if (proposal.status === 'accepted') {
+      return { error: 'This proposal has already been accepted.' };
+    }
+
+    const now = new Date();
+
+    // Update proposal
+    await db
+      .update(proposals)
+      .set({
+        status: 'declined',
+        declinedAt: now,
+        declineReason: reason.trim(),
+        updatedAt: now,
+      })
+      .where(eq(proposals.id, proposalId));
+
+    // Log activity
+    db.insert(activityLog).values({
+      actorId: client.id,
+      actorType: 'client',
+      action: 'proposal.declined',
+      entityType: 'proposal',
+      entityId: proposalId,
+      metadata: {
+        clientName: client.fullName,
+        proposalTitle: proposal.title,
+        reason: reason.trim().slice(0, 200),
+      },
+    }).catch(() => {});
+
+    // Send "thank you for feedback" email to client
+    const thankYouHtml = `<p style="margin:0 0 16px; color:#333;">Thank you for your feedback on our proposal: <strong style="color:#033457;">${proposal.title}</strong></p>
+      <p style="margin:0 0 16px; color:#333;">We appreciate your time and would love to work with you in the future. If anything changes, don't hesitate to reach out.</p>
+      <p style="margin:0 0 16px; color:#333;">You can always schedule a call with us if you'd like to discuss further.</p>`;
+    sendEmail({
+      to: client.email,
+      subject: `Thank you for your feedback — ${proposal.title}`,
+      html: wrapInBrandedTemplate({
+        recipientName: client.fullName,
+        bodyHtml: thankYouHtml,
+        senderName: 'The BotMakers Team',
+        senderTitle: null,
+        ctaUrl: 'https://botmakers.ai/booking',
+        ctaText: 'Schedule a Call',
+      }),
+    }).catch(() => {});
+
+    // Notify team (email + bell)
+    const reasonPreview = reason.trim().slice(0, 100);
+    sendTeamNotification({
+      type: 'proposal_declined',
+      title: `${client.fullName} declined proposal: ${proposal.title}`,
+      body: `Reason: ${reasonPreview}${reason.trim().length > 100 ? '...' : ''}`,
+      link: `/proposals/${proposalId}`,
+    }).catch(() => {});
+
+    // Create follow-up reminder for 7 days from now
+    if (proposal.leadId) {
+      db.insert(followUpReminders).values({
+        leadId: proposal.leadId,
+        assignedTo: proposal.createdBy,
+        remindAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        triggerReason: 'proposal_declined_followup',
+      }).catch(() => {});
+    }
+
+    revalidatePath('/proposals');
+    revalidatePath(`/proposals/${proposalId}`);
+
+    return { success: true };
+  } catch {
+    return { error: 'Failed to decline proposal. Please try again.' };
+  }
+}
+
+/**
+ * Request changes to a proposal from the client portal.
+ */
+export async function requestProposalChanges(proposalId, changeRequest) {
+  try {
+    const cookieStore = await cookies();
+    const { client } = await requireClient(cookieStore);
+
+    if (!changeRequest || changeRequest.trim().length < 10) {
+      return { error: 'Please provide at least 10 characters describing the changes.' };
+    }
+
+    // Validate proposal belongs to client
+    const [proposal] = await db
+      .select({
+        id: proposals.id,
+        clientId: proposals.clientId,
+        status: proposals.status,
+        title: proposals.title,
+      })
+      .from(proposals)
+      .where(and(eq(proposals.id, proposalId), eq(proposals.clientId, client.id)))
+      .limit(1);
+
+    if (!proposal) {
+      return { error: 'Proposal not found.' };
+    }
+
+    if (proposal.status === 'accepted') {
+      return { error: 'This proposal has already been accepted.' };
+    }
+
+    if (proposal.status === 'declined') {
+      return { error: 'This proposal has already been declined.' };
+    }
+
+    const now = new Date();
+
+    // Update proposal
+    await db
+      .update(proposals)
+      .set({
+        status: 'changes_requested',
+        changeRequest: changeRequest.trim(),
+        changeRequestedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(proposals.id, proposalId));
+
+    // Log activity
+    db.insert(activityLog).values({
+      actorId: client.id,
+      actorType: 'client',
+      action: 'proposal.changes_requested',
+      entityType: 'proposal',
+      entityId: proposalId,
+      metadata: {
+        clientName: client.fullName,
+        proposalTitle: proposal.title,
+        changeRequest: changeRequest.trim().slice(0, 200),
+      },
+    }).catch(() => {});
+
+    // Send confirmation email to client
+    const confirmHtml = `<p style="margin:0 0 16px; color:#333;">Thank you for your feedback on our proposal: <strong style="color:#033457;">${proposal.title}</strong></p>
+      <p style="margin:0 0 16px; color:#333;">We'll review your requested changes and get back to you shortly with a revised proposal.</p>
+      <p style="margin:0 0 16px; color:#333;">If you'd like to discuss the changes in person, feel free to schedule a call with us.</p>`;
+    sendEmail({
+      to: client.email,
+      subject: `Changes requested — ${proposal.title}`,
+      html: wrapInBrandedTemplate({
+        recipientName: client.fullName,
+        bodyHtml: confirmHtml,
+        senderName: 'The BotMakers Team',
+        senderTitle: null,
+        ctaUrl: 'https://botmakers.ai/booking',
+        ctaText: 'Schedule a Call',
+      }),
+    }).catch(() => {});
+
+    // Notify team (email + bell)
+    const changesPreview = changeRequest.trim().slice(0, 100);
+    sendTeamNotification({
+      type: 'proposal_changes_requested',
+      title: `${client.fullName} requested changes to: ${proposal.title}`,
+      body: `Details: ${changesPreview}${changeRequest.trim().length > 100 ? '...' : ''}`,
+      link: `/proposals/${proposalId}`,
+    }).catch(() => {});
+
+    revalidatePath('/proposals');
+    revalidatePath(`/proposals/${proposalId}`);
+
+    return { success: true };
+  } catch {
+    return { error: 'Failed to submit change request. Please try again.' };
   }
 }
 

@@ -27,42 +27,46 @@ const STEPS = [
   { key: 'preview', label: 'Preview', icon: 'mdi:eye-outline' },
 ];
 
-const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null, editProposal = null }) => {
+const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null, editProposal = null, reviseProposal = null }) => {
   const router = useRouter();
   const isEditMode = !!editProposal;
+  // reviseProposal pre-fills fields but creates a NEW proposal
+  const prefill = editProposal || reviseProposal;
 
-  // Start at step 1 (Edit) when editing an existing proposal
-  const [step, setStep] = useState(isEditMode ? 1 : 0);
+  // Start at step 1 (Edit) when editing or revising an existing proposal
+  const [step, setStep] = useState(prefill ? 1 : 0);
 
   // Step 1: Context
   const [entityType, setEntityType] = useState(
-    isEditMode
-      ? (editProposal.clientId ? 'client' : 'lead')
+    prefill
+      ? (prefill.clientId ? 'client' : 'lead')
       : (preselectedLeadId ? 'lead' : 'lead')
   );
   const [selectedLeadId, setSelectedLeadId] = useState(
-    isEditMode ? (editProposal.leadId || '') : (preselectedLeadId || '')
+    prefill ? (prefill.leadId || '') : (preselectedLeadId || '')
   );
   const [selectedClientId, setSelectedClientId] = useState(
-    isEditMode ? (editProposal.clientId || '') : ''
+    prefill ? (prefill.clientId || '') : ''
   );
   const [discoveryNotes, setDiscoveryNotes] = useState('');
   const [pricingType, setPricingType] = useState(
-    isEditMode ? (editProposal.pricingType || 'fixed') : 'fixed'
+    prefill ? (prefill.pricingType || 'fixed') : 'fixed'
   );
   const [aiGenerating, setAiGenerating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Step 2: Edit — initialize from editProposal if in edit mode
-  const [title, setTitle] = useState(isEditMode ? (editProposal.title || '') : '');
-  const [scopeOfWork, setScopeOfWork] = useState(isEditMode ? (editProposal.scopeOfWork || '') : '');
-  const [deliverables, setDeliverables] = useState(isEditMode ? (editProposal.deliverables || '') : '');
+  // Step 2: Edit — initialize from prefill if available
+  const [title, setTitle] = useState(
+    reviseProposal ? `${reviseProposal.title} (Revised)` : (prefill?.title || '')
+  );
+  const [scopeOfWork, setScopeOfWork] = useState(prefill ? (prefill.scopeOfWork || '') : '');
+  const [deliverables, setDeliverables] = useState(prefill ? (prefill.deliverables || '') : '');
   const [termsAndConditions, setTermsAndConditions] = useState(
-    isEditMode ? (editProposal.termsAndConditions || DEFAULT_TERMS) : DEFAULT_TERMS
+    prefill ? (prefill.termsAndConditions || DEFAULT_TERMS) : DEFAULT_TERMS
   );
   const [lineItems, setLineItems] = useState(() => {
-    if (isEditMode && editProposal.lineItems?.length > 0) {
-      return editProposal.lineItems.map((item) => ({
+    if (prefill && prefill.lineItems?.length > 0) {
+      return prefill.lineItems.map((item) => ({
         description: item.description || '',
         quantity: Number(item.quantity) || 1,
         unitPrice: Number(item.unitPrice) || 0,
@@ -72,14 +76,14 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null, ed
     }
     return [{ description: '', quantity: 1, unitPrice: 0, total: 0, phaseLabel: '' }];
   });
-  const [aiGenerated, setAiGenerated] = useState(isEditMode ? (editProposal.aiGenerated || false) : false);
+  const [aiGenerated, setAiGenerated] = useState(prefill ? (prefill.aiGenerated || false) : false);
 
   // Saving
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
 
   // Track if auto-generate has been triggered
-  const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(isEditMode);
+  const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(!!prefill);
 
   // Pre-populate discovery notes from AI analysis when lead is selected
   const handleLeadSelect = useCallback((leadId) => {

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { requireClient } from '@/lib/auth/helpers';
@@ -35,10 +36,12 @@ export default async function PortalProposalPage({ params }) {
 
   return (
     <PortalLayout>
-      <PortalProposalDetail
-        proposal={proposal}
-        clientName={client.fullName}
-      />
+      <Suspense fallback={null}>
+        <PortalProposalDetail
+          proposal={proposal}
+          clientName={client.fullName}
+        />
+      </Suspense>
     </PortalLayout>
   );
 }

@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db/client';
 import { proposals, proposalLineItems, leads, activityLog, clients } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import { requireTeam } from '@/lib/auth/helpers';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
@@ -279,12 +279,27 @@ export async function sendProposal(proposalId) {
       excludeUserId: teamUser.id,
     }).catch(() => {});
 
+    // Fetch line items for the email summary
+    let emailLineItems = [];
+    try {
+      emailLineItems = await db
+        .select({ description: proposalLineItems.description, total: proposalLineItems.total })
+        .from(proposalLineItems)
+        .where(eq(proposalLineItems.proposalId, proposalId))
+        .orderBy(asc(proposalLineItems.sortOrder));
+    } catch {
+      // Non-critical
+    }
+
     // Send email (don't block on failure)
     const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/proposals/${proposalId}`;
     sendEmail({
       to: recipientEmail,
       subject: `New Proposal from Botmakers.ai: ${proposal.title}`,
-      html: proposalSent(recipientName || 'there', proposal.title, portalUrl),
+      html: proposalSent(recipientName || 'there', proposal.title, portalUrl, {
+        totalAmount: proposal.totalAmount,
+        lineItems: emailLineItems,
+      }),
     }).catch(() => {});
 
     revalidatePath('/proposals');

@@ -39,6 +39,7 @@ const SettingsPage = ({
   defaultProposalTerms: initialProposalTerms,
   defaultProjectPhases: initialProjectPhases,
   calendarColors: initialCalendarColors,
+  depositPercentage: initialDepositPercentage,
   trackingKeyConfigured,
   trackingKeyMasked,
   vercelBillingConfigured,
@@ -111,6 +112,7 @@ const SettingsPage = ({
         <DefaultsTab
           initialProposalTerms={initialProposalTerms}
           initialProjectPhases={initialProjectPhases}
+          initialDepositPercentage={initialDepositPercentage}
         />
       )}
 
@@ -600,9 +602,11 @@ function NotificationsTab({ initialStaleDays }) {
   );
 }
 
-function DefaultsTab({ initialProposalTerms, initialProjectPhases }) {
+function DefaultsTab({ initialProposalTerms, initialProjectPhases, initialDepositPercentage }) {
   const [proposalTerms, setProposalTerms] = useState(initialProposalTerms || '');
   const [savingTerms, setSavingTerms] = useState(false);
+  const [depositPct, setDepositPct] = useState(initialDepositPercentage || 60);
+  const [savingDeposit, setSavingDeposit] = useState(false);
   const [phases, setPhases] = useState(initialProjectPhases || [
     { name: 'Discovery', milestones: ['Initial consultation', 'Requirements documented', 'Project plan approved'] },
     { name: 'MVP Build', milestones: ['Dev environment setup', 'Core features implemented', 'Internal testing passed'] },
@@ -673,8 +677,53 @@ function DefaultsTab({ initialProposalTerms, initialProjectPhases }) {
     );
   };
 
+  const handleSaveDeposit = async () => {
+    const val = Math.min(100, Math.max(1, Number(depositPct) || 60));
+    setDepositPct(val);
+    setSavingDeposit(true);
+    const result = await saveSetting('deposit_percentage', { percentage: val });
+    setSavingDeposit(false);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success('Deposit percentage saved.');
+    }
+  };
+
   return (
     <div>
+      {/* Default Deposit Percentage */}
+      <div className="card mb-4">
+        <div className="card-header">
+          <h6 className="text-white fw-semibold mb-0">Default Deposit Percentage</h6>
+        </div>
+        <div className="card-body">
+          <p className="text-secondary-light text-sm mb-3">
+            When a client accepts a proposal, a deposit invoice is auto-generated for this percentage of the total amount.
+          </p>
+          <div className="d-flex align-items-center gap-2 mb-3" style={{ maxWidth: 200 }}>
+            <input
+              type="number"
+              className="form-control form-control-sm bg-base text-white"
+              value={depositPct}
+              onChange={(e) => setDepositPct(e.target.value)}
+              min={1}
+              max={100}
+              style={{ width: 80 }}
+            />
+            <span className="text-secondary-light">%</span>
+          </div>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={handleSaveDeposit}
+            disabled={savingDeposit}
+          >
+            {savingDeposit ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+            Save
+          </button>
+        </div>
+      </div>
+
       {/* Default Proposal Terms */}
       <div className="card mb-4">
         <div className="card-header">

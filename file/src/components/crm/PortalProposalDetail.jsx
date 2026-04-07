@@ -1,21 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { acceptProposal } from '@/lib/actions/portal';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { acceptProposal, declineProposal, requestProposalChanges } from '@/lib/actions/portal';
 import { sanitizeHtml } from '@/lib/utils/sanitize';
 
 const PortalProposalDetail = ({ proposal, clientName, isPreview = false }) => {
   const router = useRouter();
-  const [showModal, setShowModal] = useState(false);
+  const searchParams = useSearchParams();
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [showChangesModal, setShowChangesModal] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [signature, setSignature] = useState('');
+  const [declineReason, setDeclineReason] = useState('');
+  const [changeRequest, setChangeRequest] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(!!proposal.acceptedAt);
+  const [declined, setDeclined] = useState(proposal.status === 'declined');
+  const [changesRequested, setChangesRequested] = useState(proposal.status === 'changes_requested');
 
   const isExpired = proposal.expiresAt && new Date(proposal.expiresAt) < new Date();
-  const isDeclined = !!proposal.declinedAt;
+  const canRespond = !accepted && !declined && !changesRequested && !isExpired;
+
+  // Auto-open modal based on URL action param
+  useEffect(() => {
+    if (isPreview || !canRespond) return;
+    const action = searchParams.get('action');
+    if (action === 'accept') setShowAcceptModal(true);
+    else if (action === 'changes') setShowChangesModal(true);
+    else if (action === 'decline') setShowDeclineModal(true);
+  }, [searchParams, isPreview, canRespond]);
 
   const handleAccept = async () => {
     if (!agreed || signature.trim().length < 2) return;
@@ -29,7 +45,41 @@ const PortalProposalDetail = ({ proposal, clientName, isPreview = false }) => {
       setError(result.error);
     } else {
       setAccepted(true);
-      setShowModal(false);
+      setShowAcceptModal(false);
+      router.refresh();
+    }
+  };
+
+  const handleDecline = async () => {
+    if (declineReason.trim().length < 10) return;
+    setLoading(true);
+    setError('');
+
+    const result = await declineProposal(proposal.id, declineReason);
+    setLoading(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setDeclined(true);
+      setShowDeclineModal(false);
+      router.refresh();
+    }
+  };
+
+  const handleRequestChanges = async () => {
+    if (changeRequest.trim().length < 10) return;
+    setLoading(true);
+    setError('');
+
+    const result = await requestProposalChanges(proposal.id, changeRequest);
+    setLoading(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setChangesRequested(true);
+      setShowChangesModal(false);
       router.refresh();
     }
   };
@@ -46,7 +96,7 @@ const PortalProposalDetail = ({ proposal, clientName, isPreview = false }) => {
     year: 'numeric',
   });
 
-  // Status banner
+  // Status banner: Expired
   if (isExpired && !accepted) {
     return (
       <div className='card border-0 shadow-sm'>
@@ -71,6 +121,7 @@ const PortalProposalDetail = ({ proposal, clientName, isPreview = false }) => {
     );
   }
 
+  // Status banner: Accepted
   if (accepted) {
     return (
       <>
@@ -95,135 +146,269 @@ const PortalProposalDetail = ({ proposal, clientName, isPreview = false }) => {
     );
   }
 
+  // Status banner: Declined
+  if (declined) {
+    return (
+      <>
+        <div className='alert border-0 mb-4' style={{ background: '#dc354515', color: '#dc3545' }}>
+          <div className='d-flex align-items-center gap-2'>
+            <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='#dc3545' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+              <line x1='18' y1='6' x2='6' y2='18' />
+              <line x1='6' y1='6' x2='18' y2='18' />
+            </svg>
+            <span className='fw-semibold'>
+              Proposal declined
+              {proposal.declinedAt && ` on ${formatDate(proposal.declinedAt)}`}
+            </span>
+          </div>
+        </div>
+        <ProposalContent proposal={proposal} formatCurrency={formatCurrency} />
+      </>
+    );
+  }
+
+  // Status banner: Changes Requested
+  if (changesRequested) {
+    return (
+      <>
+        <div className='alert border-0 mb-4' style={{ background: '#ffc10715', color: '#856404' }}>
+          <div className='d-flex align-items-center gap-2'>
+            <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='#ffc107' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+              <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' />
+              <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' />
+            </svg>
+            <span className='fw-semibold'>
+              Changes requested
+              {proposal.changeRequestedAt && ` on ${formatDate(proposal.changeRequestedAt)}`}
+            </span>
+          </div>
+          <p className='small mb-0 mt-1'>
+            We&apos;re reviewing your requested changes and will send a revised proposal shortly.
+          </p>
+        </div>
+        <ProposalContent proposal={proposal} formatCurrency={formatCurrency} />
+      </>
+    );
+  }
+
   return (
     <>
       <ProposalContent proposal={proposal} formatCurrency={formatCurrency} />
 
-      {/* Accept button */}
-      {!isDeclined && !isExpired && (
+      {/* Three response buttons */}
+      {canRespond && (
         <div className='text-center mt-4'>
           {isPreview ? (
-            <button
-              className='btn btn-lg fw-semibold px-5 disabled'
-              style={{ background: '#e9ecef', color: '#6c757d', border: 'none', cursor: 'not-allowed' }}
-              title='Preview mode — signing disabled'
-              disabled
-            >
-              Accept & Sign
-            </button>
+            <div className='d-flex flex-wrap justify-content-center gap-2'>
+              <button className='btn btn-lg fw-semibold px-4 disabled' style={{ background: '#e9ecef', color: '#6c757d', border: 'none', cursor: 'not-allowed' }} disabled>Accept & Sign</button>
+              <button className='btn btn-lg fw-semibold px-4 disabled' style={{ background: '#e9ecef', color: '#6c757d', border: 'none', cursor: 'not-allowed' }} disabled>Request Changes</button>
+              <button className='btn btn-lg fw-semibold px-4 disabled' style={{ background: '#e9ecef', color: '#6c757d', border: 'none', cursor: 'not-allowed' }} disabled>Decline</button>
+            </div>
           ) : (
-            <button
-              className='btn btn-lg fw-semibold px-5'
-              style={{ background: '#03FF00', color: '#033457', border: 'none' }}
-              onClick={() => setShowModal(true)}
-            >
-              Accept & Sign
-            </button>
+            <div className='d-flex flex-wrap justify-content-center gap-2'>
+              <button
+                className='btn btn-lg fw-semibold px-4'
+                style={{ background: '#03FF00', color: '#033457', border: 'none' }}
+                onClick={() => setShowAcceptModal(true)}
+              >
+                Accept & Sign
+              </button>
+              <button
+                className='btn btn-lg btn-outline-warning fw-semibold px-4'
+                onClick={() => setShowChangesModal(true)}
+              >
+                Request Changes
+              </button>
+              <button
+                className='btn btn-lg btn-outline-danger fw-semibold px-4'
+                onClick={() => setShowDeclineModal(true)}
+              >
+                Decline
+              </button>
+            </div>
           )}
         </div>
       )}
 
-      {isDeclined && (
-        <div className='alert border-0 text-center' style={{ background: '#dc354515', color: '#dc3545' }}>
-          This proposal was declined on {formatDate(proposal.declinedAt)}.
-        </div>
-      )}
-
       {/* Accept & Sign Modal */}
-      {showModal && (
-        <div
-          className='modal d-block'
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
-        >
-          <div className='modal-dialog modal-dialog-centered'>
-            <div className='modal-content border-0 shadow'>
-              <div className='modal-header border-0 pb-0'>
-                <h5 className='modal-title fw-bold' style={{ color: '#033457' }}>
-                  Accept & Sign Proposal
-                </h5>
-                <button
-                  type='button'
-                  className='btn-close'
-                  onClick={() => setShowModal(false)}
-                />
-              </div>
-              <div className='modal-body'>
-                <p className='text-muted small mb-3'>
-                  By signing below, you agree to the terms and scope outlined in this proposal.
-                </p>
-
-                {/* Full Legal Name */}
-                <div className='mb-3'>
-                  <label className='form-label small fw-medium'>
-                    Full Legal Name
-                  </label>
-                  <input
-                    type='text'
-                    className='form-control'
-                    placeholder={clientName}
-                    value={signature}
-                    onChange={(e) => setSignature(e.target.value)}
-                    style={{
-                      fontFamily: 'cursive',
-                      fontSize: '18px',
-                      padding: '10px 14px',
-                    }}
-                  />
-                </div>
-
-                {/* Agreement checkbox */}
-                <div className='mb-3'>
-                  <div className='form-check'>
-                    <input
-                      type='checkbox'
-                      className='form-check-input'
-                      id='agree'
-                      checked={agreed}
-                      onChange={(e) => setAgreed(e.target.checked)}
-                    />
-                    <label className='form-check-label small' htmlFor='agree'>
-                      I agree to the terms and conditions outlined in this proposal and authorize
-                      BotMakers Inc. to proceed with the described scope of work.
-                    </label>
-                  </div>
-                </div>
-
-                {/* Date */}
-                <div className='mb-3'>
-                  <span className='text-muted small'>
-                    Date: {todayFormatted}
-                  </span>
-                </div>
-
-                {error && (
-                  <div className='text-danger small mb-2'>{error}</div>
-                )}
-              </div>
-              <div className='modal-footer border-0'>
-                <button
-                  className='btn btn-light btn-sm'
-                  onClick={() => setShowModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className='btn btn-sm fw-semibold'
-                  style={{ background: '#03FF00', color: '#033457', border: 'none' }}
-                  disabled={!agreed || signature.trim().length < 2 || loading}
-                  onClick={handleAccept}
-                >
-                  {loading && <span className='spinner-border spinner-border-sm me-2' />}
-                  Sign & Accept
-                </button>
+      {showAcceptModal && (
+        <ModalOverlay onClose={() => { setShowAcceptModal(false); setError(''); }}>
+          <div className='modal-header border-0 pb-0'>
+            <h5 className='modal-title fw-bold' style={{ color: '#033457' }}>
+              Accept & Sign Proposal
+            </h5>
+            <button type='button' className='btn-close' onClick={() => { setShowAcceptModal(false); setError(''); }} />
+          </div>
+          <div className='modal-body'>
+            <p className='text-muted small mb-3'>
+              By signing below, you agree to the terms and scope outlined in this proposal.
+            </p>
+            <div className='mb-3'>
+              <label className='form-label small fw-medium'>Full Legal Name</label>
+              <input
+                type='text'
+                className='form-control'
+                placeholder={clientName}
+                value={signature}
+                onChange={(e) => setSignature(e.target.value)}
+                style={{ fontFamily: 'cursive', fontSize: '18px', padding: '10px 14px' }}
+              />
+            </div>
+            <div className='mb-3'>
+              <div className='form-check'>
+                <input type='checkbox' className='form-check-input' id='agree' checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                <label className='form-check-label small' htmlFor='agree'>
+                  I agree to the terms and conditions outlined in this proposal and authorize
+                  BotMakers Inc. to proceed with the described scope of work.
+                </label>
               </div>
             </div>
+            <div className='mb-3'>
+              <span className='text-muted small'>Date: {todayFormatted}</span>
+            </div>
+            {error && <div className='text-danger small mb-2'>{error}</div>}
           </div>
-        </div>
+          <div className='modal-footer border-0'>
+            <button className='btn btn-light btn-sm' onClick={() => { setShowAcceptModal(false); setError(''); }}>Cancel</button>
+            <button
+              className='btn btn-sm fw-semibold'
+              style={{ background: '#03FF00', color: '#033457', border: 'none' }}
+              disabled={!agreed || signature.trim().length < 2 || loading}
+              onClick={handleAccept}
+            >
+              {loading && <span className='spinner-border spinner-border-sm me-2' />}
+              Sign & Accept
+            </button>
+          </div>
+        </ModalOverlay>
+      )}
+
+      {/* Decline Modal */}
+      {showDeclineModal && (
+        <ModalOverlay onClose={() => { setShowDeclineModal(false); setError(''); }}>
+          <div className='modal-header border-0 pb-0'>
+            <h5 className='modal-title fw-bold' style={{ color: '#033457' }}>
+              We&apos;re sorry to hear that
+            </h5>
+            <button type='button' className='btn-close' onClick={() => { setShowDeclineModal(false); setError(''); }} />
+          </div>
+          <div className='modal-body'>
+            <p className='text-muted small mb-3'>
+              We&apos;d love another chance to earn your business. Would you mind telling us what the issues were?
+            </p>
+            <div className='mb-3'>
+              <textarea
+                className='form-control'
+                rows={4}
+                placeholder='Tell us what didn&apos;t work for you...'
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                style={{ resize: 'vertical' }}
+              />
+              {declineReason.length > 0 && declineReason.trim().length < 10 && (
+                <div className='text-muted small mt-1'>At least 10 characters required</div>
+              )}
+            </div>
+            <div className='mb-3'>
+              <span className='text-muted small'>Or would you prefer to discuss in person?</span>
+              <a
+                href='https://botmakers.ai/booking'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='btn btn-link btn-sm p-0 ms-2'
+                style={{ color: '#033457', fontWeight: 600 }}
+              >
+                Schedule a Call &rarr;
+              </a>
+            </div>
+            {error && <div className='text-danger small mb-2'>{error}</div>}
+          </div>
+          <div className='modal-footer border-0'>
+            <button className='btn btn-light btn-sm' onClick={() => { setShowDeclineModal(false); setError(''); }}>Cancel</button>
+            <button
+              className='btn btn-danger btn-sm fw-semibold'
+              disabled={declineReason.trim().length < 10 || loading}
+              onClick={handleDecline}
+            >
+              {loading && <span className='spinner-border spinner-border-sm me-2' />}
+              Submit Feedback
+            </button>
+          </div>
+        </ModalOverlay>
+      )}
+
+      {/* Request Changes Modal */}
+      {showChangesModal && (
+        <ModalOverlay onClose={() => { setShowChangesModal(false); setError(''); }}>
+          <div className='modal-header border-0 pb-0'>
+            <h5 className='modal-title fw-bold' style={{ color: '#033457' }}>
+              We&apos;d love to make this work for you
+            </h5>
+            <button type='button' className='btn-close' onClick={() => { setShowChangesModal(false); setError(''); }} />
+          </div>
+          <div className='modal-body'>
+            <p className='text-muted small mb-3'>
+              What changes would you like?
+            </p>
+            <div className='mb-3'>
+              <textarea
+                className='form-control'
+                rows={4}
+                placeholder='Describe the changes you&apos;d like...'
+                value={changeRequest}
+                onChange={(e) => setChangeRequest(e.target.value)}
+                style={{ resize: 'vertical' }}
+              />
+              {changeRequest.length > 0 && changeRequest.trim().length < 10 && (
+                <div className='text-muted small mt-1'>At least 10 characters required</div>
+              )}
+            </div>
+            <div className='mb-3'>
+              <span className='text-muted small'>Or would you prefer to discuss changes together?</span>
+              <a
+                href='https://botmakers.ai/booking'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='btn btn-link btn-sm p-0 ms-2'
+                style={{ color: '#033457', fontWeight: 600 }}
+              >
+                Schedule a Call &rarr;
+              </a>
+            </div>
+            {error && <div className='text-danger small mb-2'>{error}</div>}
+          </div>
+          <div className='modal-footer border-0'>
+            <button className='btn btn-light btn-sm' onClick={() => { setShowChangesModal(false); setError(''); }}>Cancel</button>
+            <button
+              className='btn btn-warning btn-sm fw-semibold'
+              disabled={changeRequest.trim().length < 10 || loading}
+              onClick={handleRequestChanges}
+            >
+              {loading && <span className='spinner-border spinner-border-sm me-2' />}
+              Submit Changes Request
+            </button>
+          </div>
+        </ModalOverlay>
       )}
     </>
   );
 };
+
+function ModalOverlay({ children, onClose }) {
+  return (
+    <div
+      className='modal d-block'
+      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className='modal-dialog modal-dialog-centered'>
+        <div className='modal-content border-0 shadow'>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ProposalContent({ proposal, formatCurrency }) {
   return (
@@ -242,10 +427,10 @@ function ProposalContent({ proposal, formatCurrency }) {
       {/* Scope of Work */}
       <div className='card border-0 shadow-sm mb-3'>
         <div className='card-body'>
-          <h6 className='fw-semibold mb-3' style={{ color: '#033457' }}>Scope of Work</h6>
+          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Scope of Work</h6>
           <div
-            className='small'
-            style={{ color: '#333', lineHeight: 1.7 }}
+            className='portal-proposal-content'
+            style={{ color: '#333', lineHeight: 1.7, fontSize: '15px' }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.scopeOfWork) }}
           />
         </div>
@@ -254,10 +439,10 @@ function ProposalContent({ proposal, formatCurrency }) {
       {/* Deliverables */}
       <div className='card border-0 shadow-sm mb-3'>
         <div className='card-body'>
-          <h6 className='fw-semibold mb-3' style={{ color: '#033457' }}>Deliverables</h6>
+          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Deliverables</h6>
           <div
-            className='small'
-            style={{ color: '#333', lineHeight: 1.7 }}
+            className='portal-proposal-content'
+            style={{ color: '#333', lineHeight: 1.7, fontSize: '15px' }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.deliverables) }}
           />
         </div>
@@ -267,7 +452,7 @@ function ProposalContent({ proposal, formatCurrency }) {
       {proposal.lineItems && proposal.lineItems.length > 0 && (
         <div className='card border-0 shadow-sm mb-3'>
           <div className='card-body'>
-            <h6 className='fw-semibold mb-3' style={{ color: '#033457' }}>Pricing</h6>
+            <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Pricing</h6>
             <div className='table-responsive'>
               <table className='table table-sm mb-0'>
                 <thead>
@@ -310,10 +495,10 @@ function ProposalContent({ proposal, formatCurrency }) {
       {/* Terms */}
       <div className='card border-0 shadow-sm mb-3'>
         <div className='card-body'>
-          <h6 className='fw-semibold mb-3' style={{ color: '#033457' }}>Terms & Conditions</h6>
+          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Terms & Conditions</h6>
           <div
-            className='small'
-            style={{ color: '#333', lineHeight: 1.7 }}
+            className='portal-proposal-content'
+            style={{ color: '#333', lineHeight: 1.7, fontSize: '15px' }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.termsAndConditions) }}
           />
         </div>

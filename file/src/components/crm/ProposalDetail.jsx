@@ -81,8 +81,48 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
     });
   };
 
+  const changeRequestDate = proposal.changeRequestedAt
+    ? new Date(proposal.changeRequestedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
   return (
     <>
+      {/* Change Request Banner */}
+      {proposal.status === 'changes_requested' && proposal.changeRequest && (
+        <div className="alert mb-4 d-flex align-items-start gap-3" style={{ background: '#ffc10720', border: '1px solid #ffc107', color: '#fff' }}>
+          <Icon icon="mdi:alert-outline" style={{ fontSize: '24px', color: '#ffc107', flexShrink: 0, marginTop: '2px' }} />
+          <div className="flex-grow-1">
+            <h6 className="fw-semibold mb-1" style={{ color: '#ffc107' }}>
+              Client requested changes{changeRequestDate && ` on ${changeRequestDate}`}
+            </h6>
+            <p className="text-secondary-light text-sm mb-2" style={{ whiteSpace: 'pre-wrap' }}>
+              {proposal.changeRequest}
+            </p>
+            <button
+              className="btn btn-warning btn-sm fw-semibold"
+              onClick={() => router.push(`/proposals/new?revise_id=${proposal.id}`)}
+            >
+              Create Revised Proposal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Reason Banner */}
+      {proposal.status === 'declined' && proposal.declineReason && (
+        <div className="alert mb-4 d-flex align-items-start gap-3" style={{ background: '#dc354520', border: '1px solid #dc3545', color: '#fff' }}>
+          <Icon icon="mdi:close-circle-outline" style={{ fontSize: '24px', color: '#dc3545', flexShrink: 0, marginTop: '2px' }} />
+          <div className="flex-grow-1">
+            <h6 className="fw-semibold mb-1" style={{ color: '#dc3545' }}>
+              Client declined this proposal
+            </h6>
+            <p className="text-secondary-light text-sm mb-0" style={{ whiteSpace: 'pre-wrap' }}>
+              Reason: {proposal.declineReason}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Back Button */}
       <div className="d-flex align-items-center gap-2 mb-4">
         <button
@@ -171,6 +211,17 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
                   <Icon icon="mdi:close" style={{ fontSize: '16px' }} />
                 </div>
                 <span className="text-xs text-danger">Declined</span>
+              </div>
+            )}
+            {proposal.status === 'changes_requested' && (
+              <div className="d-flex flex-column align-items-center" style={{ minWidth: '80px' }}>
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center mb-1"
+                  style={{ width: '32px', height: '32px', background: '#ffc107', color: '#000' }}
+                >
+                  <Icon icon="mdi:pencil" style={{ fontSize: '16px' }} />
+                </div>
+                <span className="text-xs" style={{ color: '#ffc107' }}>Changes</span>
               </div>
             )}
           </div>
@@ -430,6 +481,12 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
                   <div>
                     <label className="text-secondary-light text-xs d-block mb-1">Declined</label>
                     <span className="text-white text-sm">{formatDate(proposal.declinedAt)}</span>
+                  </div>
+                )}
+                {proposal.changeRequestedAt && (
+                  <div>
+                    <label className="text-secondary-light text-xs d-block mb-1">Changes Requested</label>
+                    <span className="text-white text-sm">{formatDate(proposal.changeRequestedAt)}</span>
                   </div>
                 )}
                 {proposal.createdByName && (

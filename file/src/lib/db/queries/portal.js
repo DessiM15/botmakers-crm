@@ -139,6 +139,9 @@ export async function getPortalProposal(proposalId, clientId) {
       expiresAt: proposals.expiresAt,
       clientSignature: proposals.clientSignature,
       clientId: proposals.clientId,
+      declineReason: proposals.declineReason,
+      changeRequest: proposals.changeRequest,
+      changeRequestedAt: proposals.changeRequestedAt,
     })
     .from(proposals)
     .where(and(eq(proposals.id, proposalId), eq(proposals.clientId, clientId)))

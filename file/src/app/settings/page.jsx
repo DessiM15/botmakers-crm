@@ -114,6 +114,7 @@ const Page = async () => {
   let defaultProposalTerms = '';
   let defaultProjectPhases = null;
   let calendarColors = null;
+  let depositPercentage = 60;
   try {
     const settings = await db
       .select({ key: systemSettings.key, value: systemSettings.value })
@@ -123,6 +124,7 @@ const Page = async () => {
       if (s.key === 'default_proposal_terms') defaultProposalTerms = s.value || '';
       if (s.key === 'default_project_phases') defaultProjectPhases = s.value || null;
       if (s.key === 'calendar_colors') calendarColors = s.value || null;
+      if (s.key === 'deposit_percentage') depositPercentage = Number(s.value?.percentage) || 60;
     }
   } catch (error) {
     if (process.env.NODE_ENV === 'development') console.error('[Settings] Failed to fetch system settings:', error);
@@ -150,6 +152,7 @@ const Page = async () => {
         staleDays={staleDays}
         defaultProposalTerms={defaultProposalTerms}
         defaultProjectPhases={defaultProjectPhases}
+        depositPercentage={depositPercentage}
         calendarColors={calendarColors}
         trackingKeyConfigured={trackingKeyConfigured}
         trackingKeyMasked={trackingKeyMasked}

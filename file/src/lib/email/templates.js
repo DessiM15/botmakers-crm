@@ -85,19 +85,60 @@ export function welcomeClient(clientName, portalUrl) {
 
 /**
  * Email sent when a proposal is shared with a client/lead.
+ * Includes summary, key deliverables, total amount, and three action buttons.
  */
-export function proposalSent(recipientName, proposalTitle, portalUrl) {
-  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">We've prepared a proposal for you: <strong style="color:#033457;">${proposalTitle}</strong></p>
-    <p style="margin:0 0 16px; color:#333;">Please review the scope of work, deliverables, and pricing at your convenience. You can accept the proposal directly through your portal.</p>
-    <p style="margin:0 0 16px; color:#333;">If you have any questions about this proposal, feel free to reply to this email. We look forward to working with you!</p>`;
+export function proposalSent(recipientName, proposalTitle, portalUrl, { totalAmount = 0, lineItems = [] } = {}) {
+  const formattedTotal = Number(totalAmount).toLocaleString('en-US', {
+    style: 'currency', currency: 'USD',
+  });
 
+  // Show first 4 line items
+  const topItems = lineItems.slice(0, 4);
+  const lineItemsHtml = topItems.length > 0
+    ? `<div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 8px; color:#333; font-weight:600;">Key deliverables:</p>
+        <ul style="margin:0 0 8px; padding-left:20px;">
+          ${topItems.map(item => `<li style="margin-bottom:4px; color:#333;">${item.description}${item.total ? ` — $${Number(item.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : ''}</li>`).join('')}
+          ${lineItems.length > 4 ? `<li style="margin-bottom:4px; color:#666; font-style:italic;">+${lineItems.length - 4} more items</li>` : ''}
+        </ul>
+        <p style="margin:0; color:#033457; font-weight:bold; font-size:18px;">Total: ${formattedTotal}</p>
+      </div>`
+    : `<p style="margin:0 0 16px; color:#033457; font-weight:bold; font-size:18px;">Total: ${formattedTotal}</p>`;
+
+  const acceptUrl = `${portalUrl}?action=accept`;
+  const changesUrl = `${portalUrl}?action=changes`;
+
+  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">Here's a proposal for <strong style="color:#033457;">${proposalTitle}</strong> — <strong style="color:#033457;">${formattedTotal}</strong></p>
+    ${lineItemsHtml}
+    <p style="margin:0 0 16px; color:#333;">Please review the full scope of work, deliverables, and pricing at your convenience.</p>
+    <p style="margin:0 0 16px; color:#333;">If you have any questions, feel free to reply to this email. We look forward to working with you!</p>
+    <div style="text-align:center; margin:28px 0;">
+      <a href="${acceptUrl}"
+         style="display:inline-block; background-color:#03FF00; color:#033457;
+                padding:14px 24px; text-decoration:none; font-weight:bold;
+                border-radius:6px; font-size:15px; margin:0 4px 8px;">
+        Accept & Sign &rarr;
+      </a>
+      <a href="${changesUrl}"
+         style="display:inline-block; background-color:#fff; color:#033457;
+                padding:14px 24px; text-decoration:none; font-weight:bold;
+                border-radius:6px; font-size:15px; border:2px solid #ffc107; margin:0 4px 8px;">
+        Request Changes
+      </a>
+      <a href="${portalUrl}"
+         style="display:inline-block; background-color:#033457; color:#ffffff;
+                padding:14px 24px; text-decoration:none; font-weight:bold;
+                border-radius:6px; font-size:15px; margin:0 4px 8px;">
+        View Full Proposal &rarr;
+      </a>
+    </div>`;
+
+  // Don't use the default CTA block — we have custom buttons inline
   return wrapInBrandedTemplate({
     recipientName,
     bodyHtml,
     senderName: 'The BotMakers Team',
     senderTitle: null,
-    ctaUrl: portalUrl,
-    ctaText: 'View Proposal',
   });
 }
 

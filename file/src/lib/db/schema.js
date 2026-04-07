@@ -62,6 +62,7 @@ export const proposalStatusEnum = pgEnum('proposal_status', [
   'accepted',
   'declined',
   'expired',
+  'changes_requested',
 ]);
 
 export const invoiceStatusEnum = pgEnum('invoice_status', [
@@ -353,6 +354,9 @@ export const proposals = pgTable('proposals', {
   signerIp: text('signer_ip'),
   signedPdfUrl: text('signed_pdf_url'),
   clientSignature: text('client_signature'),
+  declineReason: text('decline_reason'),
+  changeRequest: text('change_request'),
+  changeRequestedAt: timestamp('change_requested_at', { withTimezone: true }),
   aiGenerated: boolean('ai_generated').notNull().default(false),
   aiPromptContext: text('ai_prompt_context'),
   isDemo: boolean('is_demo').notNull().default(false),
@@ -461,6 +465,7 @@ export const invoices = pgTable('invoices', {
   clientId: uuid('client_id').notNull().references(() => clients.id),
   projectId: uuid('project_id').references(() => projects.id),
   milestoneId: uuid('milestone_id').references(() => projectMilestones.id),
+  proposalId: uuid('proposal_id').references(() => proposals.id),
   squareInvoiceId: text('square_invoice_id'),
   squarePaymentUrl: text('square_payment_url'),
   title: text('title').notNull(),

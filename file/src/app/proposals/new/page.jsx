@@ -20,6 +20,7 @@ const Page = async ({ searchParams }) => {
   const params = await searchParams;
   const leadId = params?.lead_id || null;
   const editId = params?.edit_id || null;
+  const reviseId = params?.revise_id || null;
 
   let leads = [], clients = [];
   try {
@@ -42,6 +43,16 @@ const Page = async ({ searchParams }) => {
     }
   }
 
+  // Load proposal for revision (pre-fill as new, not editing)
+  let reviseProposal = null;
+  if (reviseId && !editId) {
+    try {
+      reviseProposal = await getProposalById(reviseId);
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') console.error('[ProposalNew] Failed to load proposal for revision:', error);
+    }
+  }
+
   return (
     <MasterLayout>
       <ProposalWizard
@@ -49,6 +60,7 @@ const Page = async ({ searchParams }) => {
         clients={clients}
         preselectedLeadId={leadId}
         editProposal={editProposal}
+        reviseProposal={reviseProposal}
       />
     </MasterLayout>
   );

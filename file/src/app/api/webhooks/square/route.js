@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { db } from '@/lib/db/client';
-import { invoices, payments, clients, activityLog } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { invoices, payments, clients, activityLog, proposals, projects, projectPhases, projectMilestones } from '@/lib/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 import { sendEmail } from '@/lib/email/client';
 import { paymentReceipt } from '@/lib/email/templates';
 import { paymentReceived as paymentReceivedNotif } from '@/lib/email/notifications';
 import { sendTeamNotification } from '@/lib/notifications/notify';
+import { DEFAULT_PROJECT_PHASES } from '@/lib/utils/constants';
 
 /**
  * Verify Square webhook signature using HMAC-SHA256.
@@ -178,6 +179,15 @@ export async function POST(request) {
         link: `/invoices/${invoice.id}`,
       }).catch(() => {});
 
+      // Check if this is a deposit invoice linked to a proposal → auto-create project
+      if (invoice.proposalId) {
+        try {
+          await autoCreateProjectFromDeposit(invoice);
+        } catch {
+          // Non-blocking
+        }
+      }
+
       return NextResponse.json({
         ok: true,
         message: 'Payment recorded',
@@ -253,6 +263,15 @@ export async function POST(request) {
         link: `/invoices/${invoice.id}`,
       }).catch(() => {});
 
+      // Check if this is a deposit invoice linked to a proposal → auto-create project
+      if (invoice.proposalId) {
+        try {
+          await autoCreateProjectFromDeposit(invoice);
+        } catch {
+          // Non-blocking
+        }
+      }
+
       return NextResponse.json({ ok: true, message: 'Invoice marked paid' });
     }
 
@@ -260,5 +279,119 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, message: `Unhandled event: ${eventType}` });
   } catch (error) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  }
+}
+
+/**
+ * Auto-create a project when a deposit invoice (linked to a proposal) is paid.
+ * Only creates if no project already exists for the proposal.
+ */
+async function autoCreateProjectFromDeposit(invoice) {
+  // Get the proposal
+  const [proposal] = await db
+    .select({
+      id: proposals.id,
+      title: proposals.title,
+      clientId: proposals.clientId,
+      leadId: proposals.leadId,
+      projectId: proposals.projectId,
+      createdBy: proposals.createdBy,
+    })
+    .from(proposals)
+    .where(eq(proposals.id, invoice.proposalId))
+    .limit(1);
+
+  if (!proposal) return;
+
+  // Check if proposal already has a project linked
+  if (proposal.projectId) return;
+
+  // Check if a project was already created for this proposal
+  const [existingProject] = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(eq(projects.proposalId, invoice.proposalId))
+    .limit(1);
+
+  if (existingProject) return;
+
+  // Create the project
+  const [project] = await db
+    .insert(projects)
+    .values({
+      name: proposal.title,
+      clientId: proposal.clientId,
+      leadId: proposal.leadId || null,
+      proposalId: proposal.id,
+      status: 'draft',
+      createdBy: proposal.createdBy,
+    })
+    .returning();
+
+  // Create default phases and milestones
+  for (const phase of DEFAULT_PROJECT_PHASES) {
+    const [createdPhase] = await db
+      .insert(projectPhases)
+      .values({
+        projectId: project.id,
+        name: phase.name,
+        sortOrder: phase.sortOrder,
+      })
+      .returning();
+
+    if (phase.milestones?.length > 0) {
+      await db.insert(projectMilestones).values(
+        phase.milestones.map((ms, idx) => ({
+          projectId: project.id,
+          phaseId: createdPhase.id,
+          title: ms,
+          sortOrder: idx,
+        }))
+      );
+    }
+  }
+
+  // Link proposal to the project
+  await db
+    .update(proposals)
+    .set({ projectId: project.id, updatedAt: new Date() })
+    .where(eq(proposals.id, proposal.id));
+
+  // Log activity
+  await db.insert(activityLog).values({
+    actorType: 'system',
+    action: 'project.auto_created',
+    entityType: 'project',
+    entityId: project.id,
+    metadata: {
+      proposalId: proposal.id,
+      invoiceId: invoice.id,
+      trigger: 'deposit_payment',
+    },
+  });
+
+  // Get client name for notification
+  const [client] = await db
+    .select({ fullName: clients.fullName })
+    .from(clients)
+    .where(eq(clients.id, proposal.clientId))
+    .limit(1);
+
+  // Notify team
+  sendTeamNotification({
+    type: 'project_created',
+    title: `Project auto-created: ${proposal.title}`,
+    body: `Payment received — project auto-created for ${client?.fullName || 'client'}`,
+    link: `/projects/${project.id}`,
+  }).catch(() => {});
+
+  // Pipeline auto-transition → active_client
+  if (proposal.leadId) {
+    try {
+      const { advanceLead } = await import('@/lib/pipeline/transitions');
+      await advanceLead(proposal.leadId, 'active_client', 'deposit_paid');
+    } catch {
+      // Non-blocking
+    }
   }
 }

@@ -82,6 +82,7 @@ export const PROPOSAL_STATUSES = [
   { value: 'accepted', label: 'Accepted', color: '#198754' },
   { value: 'declined', label: 'Declined', color: '#dc3545' },
   { value: 'expired', label: 'Expired', color: '#6c757d' },
+  { value: 'changes_requested', label: 'Changes Requested', color: '#ffc107' },
 ];
 
 export const INVOICE_STATUSES = [
