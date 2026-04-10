@@ -167,33 +167,33 @@ body,
 }
 
 /* Proposal content rendered HTML — CRM dark theme */
-.proposal-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; font-size: 15px; }
-.proposal-content h2 { color: #fff; font-size: 19px; font-weight: 600; margin-bottom: 8px; }
-.proposal-content h3 { color: #fff; font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-.proposal-content h4 { color: #fff; font-size: 17px; font-weight: 600; margin-bottom: 6px; }
-.proposal-content p { margin-bottom: 12px; line-height: 1.7; font-size: 15px; }
+.proposal-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; font-size: 17px; }
+.proposal-content h2 { color: #fff; font-size: 21px; font-weight: 600; margin-bottom: 8px; }
+.proposal-content h3 { color: #fff; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+.proposal-content h4 { color: #fff; font-size: 19px; font-weight: 600; margin-bottom: 6px; }
+.proposal-content p { margin-bottom: 12px; line-height: 1.7; font-size: 17px; }
 .proposal-content ul, .proposal-content ol { padding-left: 20px; margin-bottom: 12px; }
-.proposal-content li { margin-bottom: 4px; line-height: 1.6; font-size: 15px; }
+.proposal-content li { margin-bottom: 4px; line-height: 1.6; font-size: 17px; }
 .proposal-content strong { color: #fff; }
 
 /* Branded proposal preview (white document inside dark admin) */
-.proposal-preview-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; font-size: 15px; }
-.proposal-preview-content h2 { color: #033457 !important; font-size: 19px; }
-.proposal-preview-content h3 { color: #033457 !important; font-size: 18px; }
-.proposal-preview-content h4 { color: #033457 !important; font-size: 17px; }
-.proposal-preview-content p { color: #333 !important; line-height: 1.7; font-size: 15px; }
+.proposal-preview-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; font-size: 17px; }
+.proposal-preview-content h2 { color: #033457 !important; font-size: 21px; }
+.proposal-preview-content h3 { color: #033457 !important; font-size: 20px; }
+.proposal-preview-content h4 { color: #033457 !important; font-size: 19px; }
+.proposal-preview-content p { color: #333 !important; line-height: 1.7; font-size: 17px; }
 .proposal-preview-content ul, .proposal-preview-content ol { color: #333 !important; }
-.proposal-preview-content li { color: #333 !important; line-height: 1.7; font-size: 15px; }
+.proposal-preview-content li { color: #333 !important; line-height: 1.7; font-size: 17px; }
 .proposal-preview-content strong { color: #222 !important; }
 
 /* Portal proposal content — light theme */
 .portal-proposal-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; }
-.portal-proposal-content h2 { color: #033457; font-size: 19px; font-weight: 600; margin-bottom: 8px; }
-.portal-proposal-content h3 { color: #033457; font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-.portal-proposal-content h4 { color: #033457; font-size: 17px; font-weight: 600; margin-bottom: 6px; }
-.portal-proposal-content p { margin-bottom: 12px; line-height: 1.7; font-size: 15px; color: #333; }
+.portal-proposal-content h2 { color: #033457; font-size: 21px; font-weight: 600; margin-bottom: 8px; }
+.portal-proposal-content h3 { color: #033457; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+.portal-proposal-content h4 { color: #033457; font-size: 19px; font-weight: 600; margin-bottom: 6px; }
+.portal-proposal-content p { margin-bottom: 12px; line-height: 1.7; font-size: 17px; color: #333; }
 .portal-proposal-content ul, .portal-proposal-content ol { padding-left: 20px; margin-bottom: 12px; }
-.portal-proposal-content li { margin-bottom: 4px; line-height: 1.6; font-size: 15px; color: #333; }
+.portal-proposal-content li { margin-bottom: 4px; line-height: 1.6; font-size: 17px; color: #333; }
 .portal-proposal-content strong { color: #033457; }
 
 /* Lead Sources table — dark theme */

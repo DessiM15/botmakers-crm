@@ -427,10 +427,10 @@ function ProposalContent({ proposal, formatCurrency }) {
       {/* Scope of Work */}
       <div className='card border-0 shadow-sm mb-3'>
         <div className='card-body'>
-          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Scope of Work</h6>
+          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '18px' }}>Scope of Work</h6>
           <div
             className='portal-proposal-content'
-            style={{ color: '#333', lineHeight: 1.7, fontSize: '15px' }}
+            style={{ color: '#333', lineHeight: 1.7, fontSize: '17px' }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.scopeOfWork) }}
           />
         </div>
@@ -439,10 +439,10 @@ function ProposalContent({ proposal, formatCurrency }) {
       {/* Deliverables */}
       <div className='card border-0 shadow-sm mb-3'>
         <div className='card-body'>
-          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Deliverables</h6>
+          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '18px' }}>Deliverables</h6>
           <div
             className='portal-proposal-content'
-            style={{ color: '#333', lineHeight: 1.7, fontSize: '15px' }}
+            style={{ color: '#333', lineHeight: 1.7, fontSize: '17px' }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.deliverables) }}
           />
         </div>
@@ -452,7 +452,7 @@ function ProposalContent({ proposal, formatCurrency }) {
       {proposal.lineItems && proposal.lineItems.length > 0 && (
         <div className='card border-0 shadow-sm mb-3'>
           <div className='card-body'>
-            <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Pricing</h6>
+            <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '18px' }}>Pricing</h6>
             <div className='table-responsive'>
               <table className='table table-sm mb-0'>
                 <thead>
@@ -495,10 +495,10 @@ function ProposalContent({ proposal, formatCurrency }) {
       {/* Terms */}
       <div className='card border-0 shadow-sm mb-3'>
         <div className='card-body'>
-          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '16px' }}>Terms & Conditions</h6>
+          <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '18px' }}>Terms & Conditions</h6>
           <div
             className='portal-proposal-content'
-            style={{ color: '#333', lineHeight: 1.7, fontSize: '15px' }}
+            style={{ color: '#333', lineHeight: 1.7, fontSize: '17px' }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.termsAndConditions) }}
           />
         </div>
