@@ -102,9 +102,11 @@ export async function middleware(request) {
     }
   }
 
-  // Portal routes: no session → redirect /portal/login
+  // Portal routes: no session → redirect /portal/login (preserve original URL)
   if (isPortalRoute && !user) {
-    return NextResponse.redirect(new URL('/portal/login', request.url));
+    const loginUrl = new URL('/portal/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return response;

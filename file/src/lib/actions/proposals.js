@@ -13,6 +13,7 @@ import { sanitizeHtml } from '@/lib/utils/sanitize';
 import { advanceLead } from '@/lib/pipeline/transitions';
 import { sendTeamNotification } from '@/lib/notifications/notify';
 import { isDemoMode } from '@/lib/utils/demo';
+import { generateProposalViewUrl } from '@/lib/utils/formatters';
 
 /**
  * Create a new proposal with line items.
@@ -292,13 +293,16 @@ export async function sendProposal(proposalId) {
     }
 
     // Send email (don't block on failure)
-    const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/proposals/${proposalId}`;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const portalUrl = `${siteUrl}/portal/proposals/${proposalId}`;
+    const publicViewUrl = generateProposalViewUrl(proposalId);
     sendEmail({
       to: recipientEmail,
       subject: `New Proposal from Botmakers.ai: ${proposal.title}`,
       html: proposalSent(recipientName || 'there', proposal.title, portalUrl, {
         totalAmount: proposal.totalAmount,
         lineItems: emailLineItems,
+        publicViewUrl,
       }),
     }).catch(() => {});
 

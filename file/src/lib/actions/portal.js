@@ -33,14 +33,21 @@ function getMagicLinkLimiter() {
 
 /**
  * Send a magic link to a client email.
+ * @param {string} email
+ * @param {string} redirectTo - portal path to redirect after login (default: '/portal')
  */
-export async function sendMagicLink(email) {
+export async function sendMagicLink(email, redirectTo = '/portal') {
   try {
     if (!email || !email.includes('@')) {
       return { error: 'Please enter a valid email address.' };
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    // Sanitize redirect — must be a portal path
+    const safeRedirect = (redirectTo && redirectTo.startsWith('/portal'))
+      ? redirectTo
+      : '/portal';
 
     // Check rate limit
     const { success: withinLimit } = await getMagicLinkLimiter().limit(normalizedEmail);
@@ -67,7 +74,7 @@ export async function sendMagicLink(email) {
       type: 'magiclink',
       email: normalizedEmail,
       options: {
-        redirectTo: `${siteUrl}/auth/callback?next=/portal`,
+        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
       },
     });
 
@@ -77,7 +84,7 @@ export async function sendMagicLink(email) {
 
     // Build the actual magic link URL from the token hash
     const tokenHash = linkData?.properties?.hashed_token;
-    const magicLinkUrl = `${siteUrl}/auth/callback?token_hash=${tokenHash}&type=magiclink&next=/portal`;
+    const magicLinkUrl = `${siteUrl}/auth/callback?token_hash=${tokenHash}&type=magiclink&next=${encodeURIComponent(safeRedirect)}`;
 
     // Send branded email via Resend
     const bodyHtml = `<p style="margin:0 0 16px; color:#333;">Click the button below to securely log in to your BotMakers client portal. This link expires in 1 hour.</p>

@@ -87,7 +87,7 @@ export function welcomeClient(clientName, portalUrl) {
  * Email sent when a proposal is shared with a client/lead.
  * Includes summary, key deliverables, total amount, and three action buttons.
  */
-export function proposalSent(recipientName, proposalTitle, portalUrl, { totalAmount = 0, lineItems = [] } = {}) {
+export function proposalSent(recipientName, proposalTitle, portalUrl, { totalAmount = 0, lineItems = [], publicViewUrl = null } = {}) {
   const formattedTotal = Number(totalAmount).toLocaleString('en-US', {
     style: 'currency', currency: 'USD',
   });
@@ -125,7 +125,7 @@ export function proposalSent(recipientName, proposalTitle, portalUrl, { totalAmo
                 border-radius:6px; font-size:15px; border:2px solid #ffc107; margin:0 4px 8px;">
         Request Changes
       </a>
-      <a href="${portalUrl}"
+      <a href="${publicViewUrl || portalUrl}"
          style="display:inline-block; background-color:#033457; color:#ffffff;
                 padding:14px 24px; text-decoration:none; font-weight:bold;
                 border-radius:6px; font-size:15px; margin:0 4px 8px;">

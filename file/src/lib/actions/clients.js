@@ -341,6 +341,12 @@ export async function convertLeadToClientInternal(lead, actorId, actorType = 'te
     })
     .where(eq(leads.id, lead.id));
 
+  // Backfill clientId on any proposals linked to this lead
+  await db
+    .update(proposals)
+    .set({ clientId, updatedAt: now })
+    .where(sql`${proposals.leadId} = ${lead.id} AND ${proposals.clientId} IS NULL`);
+
   // Log conversion
   await db.insert(activityLog).values({
     actorId,

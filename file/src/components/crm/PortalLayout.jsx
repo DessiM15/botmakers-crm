@@ -4,7 +4,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import Link from "next/link";
 import { signOutAction } from "@/lib/actions/auth";
 
-const PortalLayout = ({ children, isPreview = false, clientName = '' }) => {
+const PortalLayout = ({ children, isPreview = false, isPublic = false, clientName = '' }) => {
   return (
     <div className='portal-layout'>
       {/* Admin preview banner */}
@@ -33,7 +33,7 @@ const PortalLayout = ({ children, isPreview = false, clientName = '' }) => {
         </div>
       )}
       <header className='portal-header d-flex align-items-center justify-content-between'>
-        <Link href={isPreview ? '#' : '/portal'} className='d-flex align-items-center gap-2 text-white text-decoration-none'>
+        <Link href={isPublic ? 'https://botmakers.ai' : isPreview ? '#' : '/portal'} className='d-flex align-items-center gap-2 text-white text-decoration-none'>
           <img
             src='/assets/images/botmakers-logo.png'
             alt='Botmakers'
@@ -41,7 +41,7 @@ const PortalLayout = ({ children, isPreview = false, clientName = '' }) => {
           />
         </Link>
         <div className='d-flex align-items-center gap-3'>
-          {!isPreview && (
+          {!isPreview && !isPublic && (
             <form action={signOutAction}>
               <button
                 type='submit'

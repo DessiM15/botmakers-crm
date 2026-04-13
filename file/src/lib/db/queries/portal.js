@@ -11,9 +11,10 @@ import {
   invoiceLineItems,
   payments,
   clients,
+  leads,
   teamUsers,
 } from '@/lib/db/schema';
-import { eq, and, asc, desc, sql, ne } from 'drizzle-orm';
+import { eq, and, asc, desc, sql, ne, or } from 'drizzle-orm';
 
 /**
  * Fetch all projects for a specific client (portal view).
@@ -120,6 +121,7 @@ export async function getPortalProject(projectId, clientId) {
 
 /**
  * Fetch a proposal for the portal (validates client ownership).
+ * Matches by clientId directly, OR by leadId where the lead was converted to this client.
  */
 export async function getPortalProposal(proposalId, clientId) {
   const [proposal] = await db
@@ -144,7 +146,62 @@ export async function getPortalProposal(proposalId, clientId) {
       changeRequestedAt: proposals.changeRequestedAt,
     })
     .from(proposals)
-    .where(and(eq(proposals.id, proposalId), eq(proposals.clientId, clientId)))
+    .where(
+      and(
+        eq(proposals.id, proposalId),
+        or(
+          eq(proposals.clientId, clientId),
+          // Also match proposals linked to a lead that was converted to this client
+          sql`${proposals.leadId} IN (SELECT ${leads.id} FROM ${leads} WHERE ${leads.convertedToClientId} = ${clientId})`
+        )
+      )
+    )
+    .limit(1);
+
+  if (!proposal) return null;
+
+  const lineItems = await db
+    .select()
+    .from(proposalLineItems)
+    .where(eq(proposalLineItems.proposalId, proposalId))
+    .orderBy(proposalLineItems.sortOrder);
+
+  return { ...proposal, lineItems };
+}
+
+/**
+ * Fetch a proposal for public (tokenized) view — no client auth required.
+ * Excludes drafts (only sent/viewed/accepted/declined/etc. are visible).
+ */
+export async function getPublicProposal(proposalId) {
+  const [proposal] = await db
+    .select({
+      id: proposals.id,
+      title: proposals.title,
+      scopeOfWork: proposals.scopeOfWork,
+      deliverables: proposals.deliverables,
+      termsAndConditions: proposals.termsAndConditions,
+      pricingType: proposals.pricingType,
+      totalAmount: proposals.totalAmount,
+      status: proposals.status,
+      sentAt: proposals.sentAt,
+      viewedAt: proposals.viewedAt,
+      acceptedAt: proposals.acceptedAt,
+      declinedAt: proposals.declinedAt,
+      expiresAt: proposals.expiresAt,
+      clientSignature: proposals.clientSignature,
+      clientId: proposals.clientId,
+      declineReason: proposals.declineReason,
+      changeRequest: proposals.changeRequest,
+      changeRequestedAt: proposals.changeRequestedAt,
+    })
+    .from(proposals)
+    .where(
+      and(
+        eq(proposals.id, proposalId),
+        ne(proposals.status, 'draft')
+      )
+    )
     .limit(1);
 
   if (!proposal) return null;

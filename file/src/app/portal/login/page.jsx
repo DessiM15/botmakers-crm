@@ -4,6 +4,13 @@ import { useState } from 'react';
 import { sendMagicLink } from '@/lib/actions/portal';
 
 export default function PortalLoginPage() {
+  const [redirectTo] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('redirect') || '/portal';
+    }
+    return '/portal';
+  });
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -22,7 +29,7 @@ export default function PortalLoginPage() {
     setLoading(true);
     setError('');
 
-    const result = await sendMagicLink(email);
+    const result = await sendMagicLink(email, redirectTo);
 
     if (result.error) {
       setError(result.error);
