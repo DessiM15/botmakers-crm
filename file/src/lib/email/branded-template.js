@@ -32,7 +32,7 @@ export function wrapInBrandedTemplate({
     : `<p style="margin:0; color:#666; font-size:13px;">BotMakers.ai</p>`;
 
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,6 +40,8 @@ export function wrapInBrandedTemplate({
     html, body { margin:0; padding:0; background-color:#f0f0f0; font-family:'Helvetica Neue',Arial,sans-serif; }
     * { box-sizing:border-box; }
     img { max-width:100%; height:auto; }
+    a { overflow-wrap:break-word; word-break:break-word; }
+    pre, code { overflow-wrap:break-word; word-break:break-word; white-space:pre-wrap; }
   </style>
 </head>
 <body>
@@ -49,7 +51,7 @@ export function wrapInBrandedTemplate({
          alt="Botmakers"
          style="height:40px; max-width:100%;" />
   </td></tr>
-  <tr><td style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7; overflow-wrap:break-word;">
+  <tr><td style="padding:32px 40px; color:#1a1a1a; font-size:15px; line-height:1.7;">
     <p style="margin:0 0 16px;">${greeting}</p>
 
     ${bodyHtml}

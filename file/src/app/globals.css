@@ -167,7 +167,7 @@ body,
 }
 
 /* Proposal content rendered HTML — CRM dark theme */
-.proposal-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; font-size: 17px; }
+.proposal-content { font-size: 17px; }
 .proposal-content h2 { color: #fff; font-size: 21px; font-weight: 600; margin-bottom: 8px; }
 .proposal-content h3 { color: #fff; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
 .proposal-content h4 { color: #fff; font-size: 19px; font-weight: 600; margin-bottom: 6px; }
@@ -175,9 +175,11 @@ body,
 .proposal-content ul, .proposal-content ol { padding-left: 20px; margin-bottom: 12px; }
 .proposal-content li { margin-bottom: 4px; line-height: 1.6; font-size: 17px; }
 .proposal-content strong { color: #fff; }
+.proposal-content a { overflow-wrap: break-word; word-break: break-word; }
+.proposal-content pre, .proposal-content code { overflow-wrap: break-word; word-break: break-word; white-space: pre-wrap; }
 
 /* Branded proposal preview (white document inside dark admin) */
-.proposal-preview-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; font-size: 17px; }
+.proposal-preview-content { font-size: 17px; }
 .proposal-preview-content h2 { color: #033457 !important; font-size: 21px; }
 .proposal-preview-content h3 { color: #033457 !important; font-size: 20px; }
 .proposal-preview-content h4 { color: #033457 !important; font-size: 19px; }
@@ -185,9 +187,11 @@ body,
 .proposal-preview-content ul, .proposal-preview-content ol { color: #333 !important; }
 .proposal-preview-content li { color: #333 !important; line-height: 1.7; font-size: 17px; }
 .proposal-preview-content strong { color: #222 !important; }
+.proposal-preview-content a { overflow-wrap: break-word; word-break: break-word; }
+.proposal-preview-content pre, .proposal-preview-content code { overflow-wrap: break-word; word-break: break-word; white-space: pre-wrap; }
 
 /* Portal proposal content — light theme */
-.portal-proposal-content { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; }
+.portal-proposal-content { hyphens: auto; -webkit-hyphens: auto; }
 .portal-proposal-content h2 { color: #033457; font-size: 21px; font-weight: 600; margin-bottom: 8px; }
 .portal-proposal-content h3 { color: #033457; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
 .portal-proposal-content h4 { color: #033457; font-size: 19px; font-weight: 600; margin-bottom: 6px; }
@@ -195,6 +199,8 @@ body,
 .portal-proposal-content ul, .portal-proposal-content ol { padding-left: 20px; margin-bottom: 12px; }
 .portal-proposal-content li { margin-bottom: 4px; line-height: 1.6; font-size: 17px; color: #333; }
 .portal-proposal-content strong { color: #033457; }
+.portal-proposal-content a { overflow-wrap: break-word; word-break: break-word; }
+.portal-proposal-content pre, .portal-proposal-content code { overflow-wrap: break-word; word-break: break-word; white-space: pre-wrap; }
 
 /* Lead Sources table — dark theme */
 .lead-sources-table th { color: #94a3b8 !important; }
