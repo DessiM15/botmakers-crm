@@ -900,7 +900,7 @@ const ProposalWizard = ({ leads = [], clients = [], preselectedLeadId = null, ed
                 </div>
 
                 {/* Body — white background */}
-                <div style={{ background: '#ffffff', padding: '36px 40px', color: '#333' }}>
+                <div style={{ background: '#ffffff', padding: '36px 40px', color: '#333', minWidth: 0, overflow: 'hidden' }}>
 
                   {/* Scope of Work */}
                   <div style={{ marginBottom: '32px' }}>
