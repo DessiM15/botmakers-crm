@@ -426,7 +426,7 @@ function ProposalContent({ proposal, formatCurrency }) {
 
       {/* Scope of Work */}
       <div className='card border-0 shadow-sm mb-3'>
-        <div className='card-body'>
+        <div className='card-body' style={{ overflow: 'hidden' }}>
           <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '18px' }}>Scope of Work</h6>
           <div
             className='portal-proposal-content'
@@ -438,7 +438,7 @@ function ProposalContent({ proposal, formatCurrency }) {
 
       {/* Deliverables */}
       <div className='card border-0 shadow-sm mb-3'>
-        <div className='card-body'>
+        <div className='card-body' style={{ overflow: 'hidden' }}>
           <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '18px' }}>Deliverables</h6>
           <div
             className='portal-proposal-content'
@@ -494,7 +494,7 @@ function ProposalContent({ proposal, formatCurrency }) {
 
       {/* Terms */}
       <div className='card border-0 shadow-sm mb-3'>
-        <div className='card-body'>
+        <div className='card-body' style={{ overflow: 'hidden' }}>
           <h6 className='fw-semibold mb-3' style={{ color: '#033457', fontSize: '18px' }}>Terms & Conditions</h6>
           <div
             className='portal-proposal-content'

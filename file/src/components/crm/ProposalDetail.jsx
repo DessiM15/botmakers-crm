@@ -236,7 +236,7 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
             <div className="card-header">
               <h6 className="text-white fw-semibold mb-0">Scope of Work</h6>
             </div>
-            <div className="card-body">
+            <div className="card-body" style={{ overflow: 'hidden' }}>
               <div
                 className="text-secondary-light proposal-content"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.scopeOfWork) }}
@@ -249,7 +249,7 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
             <div className="card-header">
               <h6 className="text-white fw-semibold mb-0">Deliverables</h6>
             </div>
-            <div className="card-body">
+            <div className="card-body" style={{ overflow: 'hidden' }}>
               <div
                 className="text-secondary-light proposal-content"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.deliverables) }}
@@ -314,7 +314,7 @@ const ProposalDetail = ({ proposal: initialProposal }) => {
             <div className="card-header">
               <h6 className="text-white fw-semibold mb-0">Terms & Conditions</h6>
             </div>
-            <div className="card-body">
+            <div className="card-body" style={{ overflow: 'hidden' }}>
               <div
                 className="text-secondary-light proposal-content"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(proposal.termsAndConditions) }}
