@@ -50,25 +50,43 @@ function serverSanitize(html) {
 }
 
 /**
+ * Replace non-breaking spaces with regular spaces so text wraps normally.
+ * ReactQuill/Quill converts regular spaces to &nbsp; in its HTML output,
+ * which makes the browser treat entire paragraphs as single unbreakable words.
+ */
+function normalizeSpaces(html) {
+  // Replace &nbsp; entity (and its numeric forms) with regular space
+  return html
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/&#xA0;/g, ' ')
+    .replace(/\u00A0/g, ' ');
+}
+
+/**
  * Sanitize HTML content to prevent XSS attacks.
  * Uses DOMPurify on client, regex-based sanitizer on server.
+ * Also normalizes &nbsp; to regular spaces for proper text wrapping.
  */
 export function sanitizeHtml(html) {
   if (!html) return '';
 
+  let clean;
   if (typeof window !== 'undefined') {
     // Client-side: use DOMPurify (loaded dynamically)
     try {
       const DOMPurify = require('dompurify');
-      return DOMPurify.sanitize(html, {
+      clean = DOMPurify.sanitize(html, {
         ALLOWED_TAGS,
         ALLOWED_ATTR,
       });
     } catch {
-      return serverSanitize(html);
+      clean = serverSanitize(html);
     }
+  } else {
+    // Server-side: use regex-based sanitizer
+    clean = serverSanitize(html);
   }
 
-  // Server-side: use regex-based sanitizer
-  return serverSanitize(html);
+  return normalizeSpaces(clean);
 }
