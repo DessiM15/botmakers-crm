@@ -104,10 +104,10 @@ export default async function PortalInvoiceDetailPage({ params }) {
                 <tbody>
                   {invoice.lineItems.map((item) => (
                     <tr key={item.id} className='small'>
-                      <td style={{ color: '#333' }}>{item.description}</td>
-                      <td className='text-center'>{item.quantity}</td>
-                      <td className='text-end'>{formatCurrency(item.unitPrice)}</td>
-                      <td className='text-end fw-medium'>{formatCurrency(item.total)}</td>
+                      <td style={{ color: '#1a1a1a' }}>{item.description}</td>
+                      <td className='text-center' style={{ color: '#1a1a1a' }}>{item.quantity}</td>
+                      <td className='text-end' style={{ color: '#1a1a1a' }}>{formatCurrency(item.unitPrice)}</td>
+                      <td className='text-end fw-medium' style={{ color: '#1a1a1a' }}>{formatCurrency(item.total)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -166,6 +166,32 @@ body,
   color: #033457 !important;
 }
 
+/* Invoice public view — print-only header/footer hidden on screen */
+.invoice-print-header { display: none; }
+.invoice-print-footer { display: none; }
+
+/* Invoice public view — print styles */
+@media print {
+  /* Hide portal header, footer, and non-printable elements */
+  .portal-layout .portal-header { display: none !important; }
+  .portal-layout > footer { display: none !important; }
+  .invoice-no-print { display: none !important; }
+
+  /* Show branded print header and footer */
+  .invoice-print-header { display: block !important; }
+  .invoice-print-footer { display: block !important; }
+
+  /* Clean white background for print */
+  .portal-layout { background: #fff !important; min-height: auto !important; }
+  .portal-layout .portal-content { max-width: 100% !important; padding: 0 !important; }
+  .portal-layout .card { box-shadow: none !important; border: none !important; }
+
+  /* Ensure all text is black for print */
+  .portal-layout .card-body td,
+  .portal-layout .card-body th { color: #1a1a1a !important; }
+  .portal-layout .card-body .fw-bold td { color: #033457 !important; }
+}
+
 /* Proposal content rendered HTML — CRM dark theme */
 .proposal-content { font-size: 17px; word-break: normal; overflow-wrap: normal; }
 .proposal-content h2 { color: #fff; font-size: 21px; font-weight: 600; margin-bottom: 8px; }

@@ -5,6 +5,7 @@ import { invoices } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getPublicInvoice } from '@/lib/db/queries/portal';
 import PortalLayout from '@/components/crm/PortalLayout';
+import InvoicePrintButton from '@/components/crm/InvoicePrintButton';
 
 export const metadata = {
   title: 'Invoice — BotMakers',
@@ -70,6 +71,33 @@ export default async function PublicInvoicePage({ params, searchParams }) {
 
   return (
     <PortalLayout isPublic>
+      {/* Print-only branded header — hidden on screen, shown when printing */}
+      <div className='invoice-print-header'>
+        <div className='d-flex align-items-center justify-content-between mb-3'>
+          <div>
+            <img
+              src='/assets/images/botmakers-logo.png'
+              alt='BotMakers'
+              style={{ height: 32 }}
+            />
+            <p style={{ margin: '4px 0 0', color: '#666', fontSize: '12px' }}>
+              botmakers.ai &bull; team@botmakers.ai &bull; 832.790.5001
+            </p>
+          </div>
+          <div className='text-end'>
+            <span style={{ fontSize: '24px', fontWeight: 700, color: '#033457', letterSpacing: '2px' }}>
+              INVOICE
+            </span>
+          </div>
+        </div>
+        <hr style={{ border: 'none', borderTop: '2px solid #033457', margin: '0 0 16px' }} />
+      </div>
+
+      {/* Print Invoice button */}
+      <div className='d-flex justify-content-end mb-3 invoice-no-print'>
+        <InvoicePrintButton />
+      </div>
+
       {/* Invoice Header */}
       <div className='card border-0 shadow-sm mb-4'>
         <div className='card-body'>
@@ -79,7 +107,7 @@ export default async function PublicInvoicePage({ params, searchParams }) {
                 {invoice.title}
               </h4>
               {invoice.projectName && (
-                <p className='text-muted small mb-0'>
+                <p className='small mb-0' style={{ color: '#555' }}>
                   Project: {invoice.projectName}
                 </p>
               )}
@@ -89,7 +117,7 @@ export default async function PublicInvoicePage({ params, searchParams }) {
                 {formatCurrency(invoice.amount)}
               </div>
               {invoice.dueDate && (
-                <span className='text-muted small'>
+                <span className='small' style={{ color: '#555' }}>
                   Due {formatDate(invoice.dueDate)}
                 </span>
               )}
@@ -126,20 +154,20 @@ export default async function PublicInvoicePage({ params, searchParams }) {
             <div className='table-responsive'>
               <table className='table table-sm mb-0'>
                 <thead>
-                  <tr className='small text-muted'>
-                    <th>Description</th>
-                    <th className='text-center'>Qty</th>
-                    <th className='text-end'>Unit Price</th>
-                    <th className='text-end'>Total</th>
+                  <tr className='small' style={{ color: '#555' }}>
+                    <th style={{ color: '#555' }}>Description</th>
+                    <th className='text-center' style={{ color: '#555' }}>Qty</th>
+                    <th className='text-end' style={{ color: '#555' }}>Unit Price</th>
+                    <th className='text-end' style={{ color: '#555' }}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map((item) => (
                     <tr key={item.id} className='small'>
-                      <td style={{ color: '#333' }}>{item.description}</td>
-                      <td className='text-center'>{Number(item.quantity)}</td>
-                      <td className='text-end'>{formatCurrency(item.unitPrice)}</td>
-                      <td className='text-end fw-medium'>{formatCurrency(item.total)}</td>
+                      <td style={{ color: '#1a1a1a' }}>{item.description}</td>
+                      <td className='text-center' style={{ color: '#1a1a1a' }}>{Number(item.quantity)}</td>
+                      <td className='text-end' style={{ color: '#1a1a1a' }}>{formatCurrency(item.unitPrice)}</td>
+                      <td className='text-end fw-medium' style={{ color: '#1a1a1a' }}>{formatCurrency(item.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -160,7 +188,7 @@ export default async function PublicInvoicePage({ params, searchParams }) {
         <div className='card border-0 shadow-sm mb-4'>
           <div className='card-body'>
             <h6 className='fw-semibold mb-2' style={{ color: '#033457' }}>Notes</h6>
-            <p className='small mb-0' style={{ color: '#333' }}>
+            <p className='small mb-0' style={{ color: '#1a1a1a' }}>
               {invoice.description}
             </p>
           </div>
@@ -168,12 +196,20 @@ export default async function PublicInvoicePage({ params, searchParams }) {
       )}
 
       {/* Footer */}
-      <div className='text-center mt-4 mb-5'>
-        <p className='text-muted small mb-0'>
+      <div className='text-center mt-4 mb-5 invoice-no-print'>
+        <p className='small mb-0' style={{ color: '#555' }}>
           Questions about this invoice? Email us at{' '}
           <a href='mailto:team@botmakers.ai' style={{ color: '#033457' }}>
             team@botmakers.ai
           </a>
+        </p>
+      </div>
+
+      {/* Print-only footer */}
+      <div className='invoice-print-footer'>
+        <hr style={{ border: 'none', borderTop: '1px solid #ddd', margin: '24px 0 12px' }} />
+        <p style={{ color: '#666', fontSize: '11px', textAlign: 'center', margin: 0 }}>
+          BotMakers Inc. &bull; botmakers.ai &bull; team@botmakers.ai &bull; 832.790.5001
         </p>
       </div>
     </PortalLayout>
