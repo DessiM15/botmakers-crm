@@ -47,9 +47,8 @@ export function generateUnsubscribeUrl(type, id) {
     .createHmac('sha256', secret)
     .update(payload)
     .digest('hex');
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   return `${baseUrl}/api/unsubscribe?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&token=${token}`;
 }
 
@@ -61,9 +60,8 @@ export function generateProposalViewUrl(proposalId) {
     .createHmac('sha256', secret)
     .update(payload)
     .digest('hex');
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   return `${baseUrl}/p/${encodeURIComponent(proposalId)}?token=${token}`;
 }
 
@@ -75,9 +73,8 @@ export function generateInvoiceViewUrl(invoiceId) {
     .createHmac('sha256', secret)
     .update(payload)
     .digest('hex');
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   return `${baseUrl}/i/${encodeURIComponent(invoiceId)}?token=${token}`;
 }
 
