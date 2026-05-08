@@ -7,6 +7,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import {
   sendViaSquare,
+  sendInvoice,
   generatePaymentLink,
   markPaid,
   sendReminder,
@@ -15,7 +16,7 @@ import { INVOICE_STATUSES } from '@/lib/utils/constants';
 
 const STATUS_FLOW = ['draft', 'sent', 'viewed', 'paid'];
 
-const InvoiceDetail = ({ invoice: initialInvoice, squareConfigured = false }) => {
+const InvoiceDetail = ({ invoice: initialInvoice, squareConfigured = false, publicViewUrl = '' }) => {
   const router = useRouter();
   const [invoice, setInvoice] = useState(initialInvoice);
   const [actionLoading, setActionLoading] = useState(null);
@@ -47,6 +48,36 @@ const InvoiceDetail = ({ invoice: initialInvoice, squareConfigured = false }) =>
 
   const formatCurrency = (amount) => {
     return '$' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  };
+
+  const handleSendInvoice = async () => {
+    setActionLoading('sendInvoice');
+    const res = await sendInvoice(invoice.id);
+    setActionLoading(null);
+
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success('Invoice sent!');
+      setInvoice((prev) => ({
+        ...prev,
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+      }));
+      router.refresh();
+    }
+  };
+
+  const handleCopyInvoiceLink = () => {
+    if (!publicViewUrl) {
+      toast.error('Invoice link not available');
+      return;
+    }
+    navigator.clipboard.writeText(publicViewUrl).then(() => {
+      toast.success('Invoice link copied!');
+    }).catch(() => {
+      toast.error('Failed to copy to clipboard');
+    });
   };
 
   const handleSendViaSquare = async () => {
@@ -154,18 +185,43 @@ const InvoiceDetail = ({ invoice: initialInvoice, squareConfigured = false }) =>
         </div>
 
         <div className="d-flex gap-2 flex-wrap">
-          {invoice.status === 'draft' && squareConfigured && (
+          {invoice.status === 'draft' && (
             <button
               className="btn btn-primary btn-sm d-flex align-items-center gap-1"
+              onClick={handleSendInvoice}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === 'sendInvoice' ? (
+                <span className="spinner-border spinner-border-sm" />
+              ) : (
+                <Icon icon="mdi:send" style={{ fontSize: '16px' }} />
+              )}
+              Send Invoice
+            </button>
+          )}
+
+          {invoice.status === 'draft' && squareConfigured && (
+            <button
+              className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
               onClick={handleSendViaSquare}
               disabled={actionLoading !== null}
             >
               {actionLoading === 'send' ? (
                 <span className="spinner-border spinner-border-sm" />
               ) : (
-                <Icon icon="mdi:send" style={{ fontSize: '16px' }} />
+                <Icon icon="mdi:square-rounded" style={{ fontSize: '16px' }} />
               )}
               Send via Square
+            </button>
+          )}
+
+          {['sent', 'viewed', 'overdue'].includes(invoice.status) && (
+            <button
+              className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+              onClick={handleCopyInvoiceLink}
+            >
+              <Icon icon="mdi:link-variant" style={{ fontSize: '16px' }} />
+              Copy Invoice Link
             </button>
           )}
 
@@ -432,53 +488,72 @@ const InvoiceDetail = ({ invoice: initialInvoice, squareConfigured = false }) =>
 
         {/* Right — Sidebar */}
         <div className="col-lg-4">
-          {/* Square Status */}
+          {/* Invoice Link / Square Status */}
           <div className="card mb-3">
             <div className="card-header">
-              <h6 className="text-white fw-semibold mb-0">Square Integration</h6>
+              <h6 className="text-white fw-semibold mb-0">
+                {invoice.squareInvoiceId ? 'Square Integration' : 'Invoice Link'}
+              </h6>
             </div>
             <div className="card-body">
-              <div className="mb-3">
-                <span className="text-secondary-light text-xs d-block mb-1">Sync Status</span>
-                {invoice.squareInvoiceId ? (
-                  <span className="badge bg-success bg-opacity-25 text-success">
-                    <Icon icon="mdi:check-circle" className="me-1" style={{ fontSize: '14px' }} />
-                    Synced
-                  </span>
-                ) : (
-                  <span className="badge bg-secondary bg-opacity-25 text-secondary-light">
-                    Not Synced
-                  </span>
-                )}
-              </div>
-
-              {invoice.squareInvoiceId && (
-                <div className="mb-3">
-                  <span className="text-secondary-light text-xs d-block mb-1">Square Invoice ID</span>
-                  <span className="text-white text-xs" style={{ wordBreak: 'break-all' }}>
-                    {invoice.squareInvoiceId}
-                  </span>
-                </div>
-              )}
-
-              {invoice.squarePaymentUrl && (
-                <div>
-                  <span className="text-secondary-light text-xs d-block mb-1">Payment URL</span>
-                  <div className="input-group input-group-sm">
-                    <input
-                      type="text"
-                      className="form-control form-control-sm bg-base text-white"
-                      readOnly
-                      value={invoice.squarePaymentUrl}
-                    />
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={copyPaymentUrl}
-                    >
-                      <Icon icon="mdi:content-copy" style={{ fontSize: '14px' }} />
-                    </button>
+              {invoice.squareInvoiceId ? (
+                <>
+                  <div className="mb-3">
+                    <span className="text-secondary-light text-xs d-block mb-1">Sync Status</span>
+                    <span className="badge bg-success bg-opacity-25 text-success">
+                      <Icon icon="mdi:check-circle" className="me-1" style={{ fontSize: '14px' }} />
+                      Synced
+                    </span>
                   </div>
-                </div>
+                  <div className="mb-3">
+                    <span className="text-secondary-light text-xs d-block mb-1">Square Invoice ID</span>
+                    <span className="text-white text-xs" style={{ wordBreak: 'break-all' }}>
+                      {invoice.squareInvoiceId}
+                    </span>
+                  </div>
+                  {invoice.squarePaymentUrl && (
+                    <div>
+                      <span className="text-secondary-light text-xs d-block mb-1">Payment URL</span>
+                      <div className="input-group input-group-sm">
+                        <input
+                          type="text"
+                          className="form-control form-control-sm bg-base text-white"
+                          readOnly
+                          value={invoice.squarePaymentUrl}
+                        />
+                        <button
+                          className="btn btn-outline-secondary"
+                          onClick={copyPaymentUrl}
+                        >
+                          <Icon icon="mdi:content-copy" style={{ fontSize: '14px' }} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {invoice.status !== 'draft' ? (
+                    <div>
+                      <span className="text-secondary-light text-xs d-block mb-1">Public View URL</span>
+                      <p className="text-secondary-light text-xs mb-2">
+                        Share this link with your client to view the invoice (no login required).
+                      </p>
+                      <button
+                        className="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+                        onClick={handleCopyInvoiceLink}
+                      >
+                        <Icon icon="mdi:content-copy" style={{ fontSize: '14px' }} />
+                        Copy Invoice Link
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-secondary-light text-xs mb-0">
+                      <Icon icon="mdi:information-outline" className="me-1" style={{ fontSize: '14px' }} />
+                      Send the invoice to generate a shareable link.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

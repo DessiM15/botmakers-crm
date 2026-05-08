@@ -144,8 +144,9 @@ export function proposalSent(recipientName, proposalTitle, portalUrl, { totalAmo
 
 /**
  * Email sent when an invoice is sent to a client.
+ * Includes full line items table and links to public invoice view.
  */
-export function invoiceSent(recipientName, invoiceTitle, amount, dueDate, paymentUrl) {
+export function invoiceSent(recipientName, invoiceTitle, amount, dueDate, viewUrl, { lineItems = [] } = {}) {
   const formattedAmount = Number(amount).toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -154,12 +155,45 @@ export function invoiceSent(recipientName, invoiceTitle, amount, dueDate, paymen
     ? new Date(dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : 'Upon receipt';
 
+  const lineItemRows = lineItems.map(item => {
+    const qty = Number(item.quantity);
+    const unitPrice = Number(item.unitPrice).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    const total = Number(item.total).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return `<tr>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px;">${item.description}</td>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px; text-align:center;">${qty}</td>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px; text-align:right;">${unitPrice}</td>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px; text-align:right; font-weight:600;">${total}</td>
+    </tr>`;
+  }).join('');
+
+  const lineItemsTable = lineItems.length > 0
+    ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0; border:1px solid #eee; border-radius:8px; overflow:hidden;">
+        <thead>
+          <tr style="background:#f8f9fa;">
+            <th style="padding:10px 12px; text-align:left; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Description</th>
+            <th style="padding:10px 12px; text-align:center; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Qty</th>
+            <th style="padding:10px 12px; text-align:right; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Unit Price</th>
+            <th style="padding:10px 12px; text-align:right; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Total</th>
+          </tr>
+        </thead>
+        <tbody>${lineItemRows}</tbody>
+        <tfoot>
+          <tr style="background:#f8f9fa;">
+            <td colspan="3" style="padding:12px; text-align:right; font-weight:bold; color:#033457; font-size:15px; border-top:2px solid #033457;">Grand Total</td>
+            <td style="padding:12px; text-align:right; font-weight:bold; color:#033457; font-size:18px; border-top:2px solid #033457;">${formattedAmount}</td>
+          </tr>
+        </tfoot>
+      </table>`
+    : '';
+
   const bodyHtml = `<p style="margin:0 0 16px; color:#333;">You have a new invoice from Botmakers.ai:</p>
     <div style="border-left:4px solid #03FF00; background:#f8f9fa; padding:16px 20px; margin:20px 0; border-radius:0 8px 8px 0;">
       <h3 style="color:#033457; margin:0 0 8px; font-size:16px;">${invoiceTitle}</h3>
       <p style="margin:0 0 4px; color:#333;">Amount: <strong style="color:#033457;">${formattedAmount}</strong></p>
       <p style="margin:0; color:#333;">Due: ${formattedDue}</p>
     </div>
+    ${lineItemsTable}
     <p style="margin:0 0 16px; color:#333;">If you have any questions about this invoice, reply to this email or reach out to our team.</p>`;
 
   return wrapInBrandedTemplate({
@@ -167,8 +201,8 @@ export function invoiceSent(recipientName, invoiceTitle, amount, dueDate, paymen
     bodyHtml,
     senderName: 'The BotMakers Team',
     senderTitle: null,
-    ctaUrl: paymentUrl,
-    ctaText: 'Pay Now',
+    ctaUrl: viewUrl,
+    ctaText: 'View Full Invoice',
   });
 }
 
@@ -212,15 +246,58 @@ export function discoveryCallFollowUp(recipientName, summary, proposalTitle, por
 
 /**
  * Payment receipt email sent to client after payment is received.
+ * Includes PAID banner, itemized breakdown, and paid date.
  */
-export function paymentReceipt(recipientName, invoiceTitle, amount) {
+export function paymentReceipt(recipientName, invoiceTitle, amount, { lineItems = [], paidDate = null } = {}) {
   const formattedAmount = Number(amount).toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
   });
+  const formattedPaidDate = paidDate
+    ? new Date(paidDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  const bodyHtml = `<p style="margin:0 0 16px; color:#333;">We've received your payment of <strong style="color:#033457;">${formattedAmount}</strong> for <strong style="color:#033457;">${invoiceTitle}</strong>.</p>
-    <p style="margin:0 0 16px; color:#333;">This serves as your payment confirmation. No further action is needed.</p>
+  const paidBanner = `<div style="background:#d4edda; border:2px solid #28a745; border-radius:8px; padding:16px 20px; margin:0 0 20px; text-align:center;">
+      <span style="color:#28a745; font-size:24px; font-weight:bold;">&#10003; PAID</span>
+      <p style="margin:6px 0 0; color:#155724; font-size:14px;">Payment received on ${formattedPaidDate}</p>
+    </div>`;
+
+  const lineItemRows = lineItems.map(item => {
+    const qty = Number(item.quantity);
+    const unitPrice = Number(item.unitPrice).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    const total = Number(item.total).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return `<tr>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px;">${item.description}</td>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px; text-align:center;">${qty}</td>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px; text-align:right;">${unitPrice}</td>
+      <td style="padding:10px 12px; border-bottom:1px solid #eee; color:#333; font-size:14px; text-align:right; font-weight:600;">${total}</td>
+    </tr>`;
+  }).join('');
+
+  const lineItemsTable = lineItems.length > 0
+    ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0; border:1px solid #eee; border-radius:8px; overflow:hidden;">
+        <thead>
+          <tr style="background:#f8f9fa;">
+            <th style="padding:10px 12px; text-align:left; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Description</th>
+            <th style="padding:10px 12px; text-align:center; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Qty</th>
+            <th style="padding:10px 12px; text-align:right; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Unit Price</th>
+            <th style="padding:10px 12px; text-align:right; color:#033457; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #033457;">Total</th>
+          </tr>
+        </thead>
+        <tbody>${lineItemRows}</tbody>
+        <tfoot>
+          <tr style="background:#d4edda;">
+            <td colspan="3" style="padding:12px; text-align:right; font-weight:bold; color:#155724; font-size:15px; border-top:2px solid #28a745;">Total Paid</td>
+            <td style="padding:12px; text-align:right; font-weight:bold; color:#155724; font-size:18px; border-top:2px solid #28a745;">${formattedAmount}</td>
+          </tr>
+        </tfoot>
+      </table>`
+    : '';
+
+  const bodyHtml = `${paidBanner}
+    <p style="margin:0 0 16px; color:#333;">We've received your payment of <strong style="color:#033457;">${formattedAmount}</strong> for <strong style="color:#033457;">${invoiceTitle}</strong>.</p>
+    ${lineItemsTable}
+    <p style="margin:0 0 16px; color:#333;">This serves as your official receipt. No further action is needed.</p>
     <p style="margin:0 0 16px; color:#333;">If you have any questions, reply to this email or reach out to our team.</p>`;
 
   return wrapInBrandedTemplate({

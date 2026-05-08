@@ -7,7 +7,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { toast } from 'react-toastify';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { createInvoice, sendViaSquare, generatePaymentLink } from '@/lib/actions/invoices';
+import { createInvoice, sendInvoice, sendViaSquare, generatePaymentLink } from '@/lib/actions/invoices';
 
 const InvoiceForm = ({
   clients = [],
@@ -38,6 +38,7 @@ const InvoiceForm = ({
   const [clientProjects, setClientProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
   const [sendingSquare, setSendingSquare] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
 
@@ -143,6 +144,32 @@ const InvoiceForm = ({
     }
   };
 
+  const handleSaveAndSend = async () => {
+    if (!validate()) return;
+
+    setSendingInvoice(true);
+    // First create the invoice
+    const createRes = await createInvoice(buildFormData());
+    if (createRes?.error) {
+      toast.error(createRes.error);
+      setSendingInvoice(false);
+      return;
+    }
+
+    // Then send via email
+    const sendRes = await sendInvoice(createRes.invoice.id);
+    setSendingInvoice(false);
+
+    if (sendRes?.error) {
+      toast.error(sendRes.error);
+      // Still redirect to invoice detail since it was created
+      router.push(`/invoices/${createRes.invoice.id}`);
+    } else {
+      toast.success('Invoice created and sent!');
+      router.push(`/invoices/${createRes.invoice.id}`);
+    }
+  };
+
   const handleSendViaSquare = async () => {
     if (!validate()) return;
 
@@ -192,7 +219,7 @@ const InvoiceForm = ({
     }
   };
 
-  const isDisabled = saving || sendingSquare || generatingLink;
+  const isDisabled = saving || sendingInvoice || sendingSquare || generatingLink;
 
   return (
     <>
@@ -397,6 +424,19 @@ const InvoiceForm = ({
             </div>
             <div className="card-body d-flex flex-column gap-3">
               <button
+                className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
+                onClick={handleSaveAndSend}
+                disabled={isDisabled}
+              >
+                {sendingInvoice ? (
+                  <span className="spinner-border spinner-border-sm" />
+                ) : (
+                  <Icon icon="mdi:send" style={{ fontSize: '18px' }} />
+                )}
+                Save & Send
+              </button>
+
+              <button
                 className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2"
                 onClick={handleSaveDraft}
                 disabled={isDisabled}
@@ -411,15 +451,16 @@ const InvoiceForm = ({
 
               {squareConfigured && (
                 <>
+                  <hr className="my-1 border-secondary" />
                   <button
-                    className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
+                    className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2"
                     onClick={handleSendViaSquare}
                     disabled={isDisabled}
                   >
                     {sendingSquare ? (
                       <span className="spinner-border spinner-border-sm" />
                     ) : (
-                      <Icon icon="mdi:send" style={{ fontSize: '18px' }} />
+                      <Icon icon="mdi:square-rounded" style={{ fontSize: '18px' }} />
                     )}
                     Send via Square
                   </button>
@@ -437,15 +478,6 @@ const InvoiceForm = ({
                     Generate Payment Link
                   </button>
                 </>
-              )}
-
-              {!squareConfigured && (
-                <div className="p-3 rounded" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  <p className="text-secondary-light text-xs mb-0">
-                    <Icon icon="mdi:information-outline" className="me-1" style={{ fontSize: '14px' }} />
-                    Configure Square in Settings to enable direct invoice sending and payment links.
-                  </p>
-                </div>
               )}
             </div>
           </div>

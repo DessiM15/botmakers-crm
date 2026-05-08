@@ -281,6 +281,46 @@ export async function getPortalInvoice(invoiceId, clientId) {
 }
 
 /**
+ * Fetch an invoice for public (tokenized) view — no client auth required.
+ * Excludes drafts (only sent/viewed/paid/overdue are visible).
+ */
+export async function getPublicInvoice(invoiceId) {
+  const [invoice] = await db
+    .select({
+      id: invoices.id,
+      title: invoices.title,
+      description: invoices.description,
+      amount: invoices.amount,
+      status: invoices.status,
+      dueDate: invoices.dueDate,
+      sentAt: invoices.sentAt,
+      viewedAt: invoices.viewedAt,
+      paidAt: invoices.paidAt,
+      clientId: invoices.clientId,
+      createdAt: invoices.createdAt,
+      projectName: sql`(SELECT projects.name FROM projects WHERE projects.id = ${invoices.projectId})`.as('project_name'),
+    })
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.id, invoiceId),
+        ne(invoices.status, 'draft')
+      )
+    )
+    .limit(1);
+
+  if (!invoice) return null;
+
+  const lineItemRows = await db
+    .select()
+    .from(invoiceLineItems)
+    .where(eq(invoiceLineItems.invoiceId, invoiceId))
+    .orderBy(invoiceLineItems.sortOrder);
+
+  return { ...invoice, lineItems: lineItemRows };
+}
+
+/**
  * Fetch questions for a project (CRM-side, with client names).
  */
 export async function getProjectQuestions(projectId) {

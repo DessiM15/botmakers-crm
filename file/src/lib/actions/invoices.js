@@ -17,6 +17,7 @@ import {
   isSquareConfigured,
 } from '@/lib/integrations/square';
 import { isDemoMode } from '@/lib/utils/demo';
+import { generateInvoiceViewUrl } from '@/lib/utils/formatters';
 
 /**
  * Create a new invoice with line items.
@@ -192,7 +193,7 @@ export async function sendViaSquare(invoiceId) {
     }).catch(() => {});
 
     // Send notification email (non-blocking)
-    const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/invoices/${invoiceId}`;
+    const viewUrl = generateInvoiceViewUrl(invoiceId);
     sendEmail({
       to: client.email,
       subject: `Invoice from Botmakers.ai: ${invoice.title}`,
@@ -201,7 +202,8 @@ export async function sendViaSquare(invoiceId) {
         invoice.title,
         invoice.amount,
         invoice.dueDate,
-        squareResult.squarePaymentUrl || portalUrl
+        squareResult.squarePaymentUrl || viewUrl,
+        { lineItems }
       ),
     }).catch(() => {});
 
@@ -215,6 +217,114 @@ export async function sendViaSquare(invoiceId) {
       return { error: error.message };
     }
     return { error: 'CB-INT-003: Failed to send via Square' };
+  }
+}
+
+/**
+ * Send an invoice directly via email (no Square required).
+ * Updates status to 'sent', sends branded email with line items + public view URL.
+ */
+export async function sendInvoice(invoiceId) {
+  try {
+    const cookieStore = await cookies();
+    const { teamUser } = await requireTeam(cookieStore);
+    const isDemo = await isDemoMode();
+
+    const [invoice] = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.id, invoiceId))
+      .limit(1);
+
+    if (!invoice) {
+      return { error: 'CB-DB-002: Invoice not found' };
+    }
+
+    if (invoice.status !== 'draft') {
+      return { error: 'Only draft invoices can be sent' };
+    }
+
+    // Get client email
+    const [client] = await db
+      .select({ email: clients.email, fullName: clients.fullName })
+      .from(clients)
+      .where(eq(clients.id, invoice.clientId))
+      .limit(1);
+
+    if (!client?.email) {
+      return { error: 'Client email not found' };
+    }
+
+    // Get line items
+    const lineItems = await db
+      .select()
+      .from(invoiceLineItems)
+      .where(eq(invoiceLineItems.invoiceId, invoiceId))
+      .orderBy(invoiceLineItems.sortOrder);
+
+    // Generate public view URL
+    const viewUrl = generateInvoiceViewUrl(invoiceId);
+
+    // Update invoice status
+    const now = new Date();
+    await db
+      .update(invoices)
+      .set({
+        status: 'sent',
+        sentAt: now,
+        updatedAt: now,
+      })
+      .where(eq(invoices.id, invoiceId));
+
+    // Send email
+    await sendEmail({
+      to: client.email,
+      subject: `Invoice from Botmakers.ai: ${invoice.title}`,
+      html: invoiceSent(
+        client.fullName || 'there',
+        invoice.title,
+        invoice.amount,
+        invoice.dueDate,
+        viewUrl,
+        { lineItems }
+      ),
+    });
+
+    // Log activity
+    await db.insert(activityLog).values({
+      actorId: teamUser.id,
+      actorType: 'team',
+      action: 'invoice.sent',
+      entityType: 'invoice',
+      entityId: invoiceId,
+      metadata: {
+        title: invoice.title,
+        amount: invoice.amount,
+        recipientEmail: client.email,
+        method: 'email',
+      },
+      isDemo,
+    });
+
+    // Team in-app notification (non-blocking)
+    sendTeamNotification({
+      type: 'invoice_sent',
+      title: `Invoice sent: ${invoice.title}`,
+      body: `$${Number(invoice.amount).toFixed(2)} to ${client.email}`,
+      link: `/invoices/${invoiceId}`,
+      excludeUserId: teamUser.id,
+    }).catch(() => {});
+
+    revalidatePath('/invoices');
+    revalidatePath(`/invoices/${invoiceId}`);
+    if (invoice.clientId) revalidatePath(`/clients/${invoice.clientId}`);
+
+    return { success: true };
+  } catch (error) {
+    if (error.message?.startsWith('CB-')) {
+      return { error: error.message };
+    }
+    return { error: 'CB-INT-001: Failed to send invoice' };
   }
 }
 
@@ -333,6 +443,13 @@ export async function markPaid(invoiceId) {
       isDemo,
     });
 
+    // Fetch line items for the receipt
+    const lineItems = await db
+      .select()
+      .from(invoiceLineItems)
+      .where(eq(invoiceLineItems.invoiceId, invoiceId))
+      .orderBy(invoiceLineItems.sortOrder);
+
     // Send client receipt email (matching Square webhook behavior)
     const [client] = await db
       .select({ email: clients.email, fullName: clients.fullName })
@@ -344,7 +461,10 @@ export async function markPaid(invoiceId) {
       sendEmail({
         to: client.email,
         subject: `Payment Receipt: ${invoice.title}`,
-        html: paymentReceipt(client.fullName || 'there', invoice.title, invoice.amount),
+        html: paymentReceipt(client.fullName || 'there', invoice.title, invoice.amount, {
+          lineItems,
+          paidDate: now,
+        }),
       }).catch(() => {});
     }
 
@@ -407,8 +527,14 @@ export async function sendReminder(invoiceId) {
       return { error: 'Client email not found' };
     }
 
-    const paymentUrl = invoice.squarePaymentUrl ||
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/portal/invoices/${invoiceId}`;
+    // Get line items for itemized reminder
+    const lineItems = await db
+      .select()
+      .from(invoiceLineItems)
+      .where(eq(invoiceLineItems.invoiceId, invoiceId))
+      .orderBy(invoiceLineItems.sortOrder);
+
+    const viewUrl = invoice.squarePaymentUrl || generateInvoiceViewUrl(invoiceId);
 
     await sendEmail({
       to: client.email,
@@ -418,7 +544,8 @@ export async function sendReminder(invoiceId) {
         invoice.title,
         invoice.amount,
         invoice.dueDate,
-        paymentUrl
+        viewUrl,
+        { lineItems }
       ),
     });
 

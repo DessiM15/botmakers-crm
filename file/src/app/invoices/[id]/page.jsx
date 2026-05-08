@@ -5,6 +5,7 @@ import InvoiceDetail from '@/components/crm/InvoiceDetail';
 import { requireTeam } from '@/lib/auth/helpers';
 import { getInvoiceById } from '@/lib/db/queries/invoices';
 import { isSquareConfigured } from '@/lib/integrations/square';
+import { generateInvoiceViewUrl } from '@/lib/utils/formatters';
 
 export async function generateMetadata({ params }) {
   try {
@@ -42,10 +43,11 @@ const Page = async ({ params }) => {
   }
 
   const squareConfigured = isSquareConfigured();
+  const publicViewUrl = generateInvoiceViewUrl(id);
 
   return (
     <MasterLayout>
-      <InvoiceDetail invoice={invoice} squareConfigured={squareConfigured} />
+      <InvoiceDetail invoice={invoice} squareConfigured={squareConfigured} publicViewUrl={publicViewUrl} />
     </MasterLayout>
   );
 };
